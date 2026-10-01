@@ -29,10 +29,12 @@ jobs:
       - name: Create Android platform
         working-directory: mobile
         run: flutter create . --platforms=android
+
       - name: Add Internet permission
         working-directory: mobile
         run: |
           sed -i '/<manifest /a\    <uses-permission android:name="android.permission.INTERNET"/>' android/app/src/main/AndroidManifest.xml
+
       - name: Flutter version
         run: flutter --version
 
