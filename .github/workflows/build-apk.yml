@@ -26,6 +26,10 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Create Android platform
+        working-directory: mobile
+        run: flutter create . --platforms=android
+
       - name: Flutter version
         run: flutter --version
 
