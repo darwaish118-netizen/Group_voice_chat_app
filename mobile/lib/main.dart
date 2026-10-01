@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-const String apiBaseUrl = 'https://voicechatapp-d3wa.onrender.com';
+const String apiBaseUrl = 'https://group-voice-chat-app.onrender.com';
 
 void main() {
   runApp(const VoiceChatApp());
