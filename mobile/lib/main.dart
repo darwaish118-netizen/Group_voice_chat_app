@@ -32,22 +32,23 @@ class VoiceChatApp extends StatelessWidget {
 // API SERVICE
 // ============================================================
 
-class ApiService {
-  Future<Map<String, dynamic>> login(
-    String email,
-    String password,
-  ) async {
-    final response = await http.post(
-      Uri.parse('$apiBaseUrl/api/auth/login'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'email': email,
-        'password': password,
-      }),
-    );
+Future<Map<String, dynamic>> login(
+  String email,
+  String password,
+) async {
+  final response = await http.post(
+    Uri.parse('$apiBaseUrl/api/auth/login'),
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: jsonEncode({
+      'username': email,
+      'password': password,
+    }),
+  );
 
-    return _handleResponse(response);
-  }
+  return _handleResponse(response);
+}
 
   Future<Map<String, dynamic>> register(
     String name,
@@ -58,8 +59,7 @@ class ApiService {
       Uri.parse('$apiBaseUrl/api/auth/register'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
-        'name': name,
-        'email': email,
+        'username': email,
         'password': password,
       }),
     );
