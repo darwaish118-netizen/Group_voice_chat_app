@@ -777,7 +777,7 @@ class _RoomsScreenState extends State<RoomsScreen> {
                               builder: (_) => VoiceRoomScreen(
                                 roomId: id,
                                 roomName: name,
-                                seatcount: 10,
+                                seatCount: 10,
                               ),
                             ),
                           );
