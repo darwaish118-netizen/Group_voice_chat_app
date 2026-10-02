@@ -54,9 +54,14 @@ async function initDatabase() {
       owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       password_hash TEXT,
       created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      seat_count INTEGER NOT NULL DEFAULT 10
     );
   `);
-
+await pool.query(`
+  ALTER TABLE rooms
+  ADD COLUMN IF NOT EXISTS seat_count INTEGER NOT NULL DEFAULT 10
+`);
+  
   console.log("Database initialized.");
 }
 
@@ -318,6 +323,7 @@ app.get("/api/rooms", async (req, res) => {
         rooms.id,
         rooms.name,
         rooms.owner_id,
+        rooms.seat_count,
         rooms.created_at,
         users.username AS owner_username
       FROM rooms
@@ -345,7 +351,16 @@ app.post("/api/rooms", authMiddleware, async (req, res) => {
   }
 
   try {
-    const { name, password } = req.body;
+    const { name, password, seat_count } = req.body;
+
+const allowedSeats = [5, 10, 15, 20, 25];
+const seatCount = Number(seat_count) || 10;
+
+if (!allowedSeats.includes(seatCount)) {
+  return res.status(400).json({
+    message: "Seat count must be 5, 10, 15, 20, or 25"
+  });
+}
 
     if (!name || name.trim().length < 2) {
       return res.status(400).json({
@@ -364,15 +379,16 @@ app.post("/api/rooms", authMiddleware, async (req, res) => {
     const result = await pool.query(
       `
       INSERT INTO rooms
-      (id, name, owner_id, password_hash)
-      VALUES ($1, $2, $3, $4)
-      RETURNING id, name, owner_id, created_at
+      (id, name, owner_id, password_hash, seat_count)
+      VALUES ($1, $2, $3, $4 $5)
+      RETURNING id, name, owner_id, seat_count, created_at
       `,
       [
         roomId,
         name.trim(),
         req.user.id,
         passwordHash,
+        seatcount,
       ]
     );
 
