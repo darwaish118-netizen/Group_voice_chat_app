@@ -695,9 +695,9 @@ class _RoomsScreenState extends State<RoomsScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-  body: RefreshIndicator(
+Widget build(BuildContext context) {
+  return Scaffold(
+    body: RefreshIndicator(
       onRefresh: loadRooms,
       child: loading
           ? const Center(
@@ -706,15 +706,15 @@ class _RoomsScreenState extends State<RoomsScreen> {
           : rooms.isEmpty
               ? ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  children: [
-                    const SizedBox(height: 100),
+                  children: const [
+                    SizedBox(height: 100),
                     Icon(
                       Icons.mic_none,
                       size: 80,
-                      color: Colors.grey.shade400,
+                      color: Colors.grey,
                     ),
-                    const SizedBox(height: 20),
-                    const Center(
+                    SizedBox(height: 20),
+                    Center(
                       child: Text(
                         'No voice rooms yet',
                         style: TextStyle(
@@ -723,8 +723,8 @@ class _RoomsScreenState extends State<RoomsScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    const Center(
+                    SizedBox(height: 8),
+                    Center(
                       child: Text(
                         'Create the first room',
                       ),
@@ -737,16 +737,12 @@ class _RoomsScreenState extends State<RoomsScreen> {
                   itemBuilder: (context, index) {
                     final room = rooms[index];
 
-                    final id =
-                        room['id']?.toString() ?? '';
+                    final id = room['id']?.toString() ?? '';
                     final name =
-                        room['name']?.toString() ??
-                            'Voice Room';
+                        room['name']?.toString() ?? 'Voice Room';
 
                     return Card(
-                      margin: const EdgeInsets.only(
-                        bottom: 12,
-                      ),
+                      margin: const EdgeInsets.only(bottom: 12),
                       child: ListTile(
                         contentPadding:
                             const EdgeInsets.all(14),
@@ -765,8 +761,7 @@ class _RoomsScreenState extends State<RoomsScreen> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        subtitle:
-                            const Text('Voice room'),
+                        subtitle: const Text('Voice room'),
                         trailing: const Icon(
                           Icons.arrow_forward_ios,
                           size: 18,
@@ -787,12 +782,13 @@ class _RoomsScreenState extends State<RoomsScreen> {
                     );
                   },
                 ),
+    ),
     floatingActionButton: FloatingActionButton(
-  onPressed: createRoom,
-  child: const Icon(Icons.add),
-),
-    );
-  }
+      onPressed: createRoom,
+      child: const Icon(Icons.add),
+    ),
+  );
+}
 
   @override
   void didChangeDependencies() {
