@@ -696,7 +696,8 @@ class _RoomsScreenState extends State<RoomsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return RefreshIndicator(
+    return Scaffold(
+  body: RefreshIndicator(
       onRefresh: loadRooms,
       child: loading
           ? const Center(
@@ -786,6 +787,10 @@ class _RoomsScreenState extends State<RoomsScreen> {
                     );
                   },
                 ),
+    floatingActionButton: FloatingActionButton(
+  onPressed: createRoom,
+  child: const Icon(Icons.add),
+),
     );
   }
 
