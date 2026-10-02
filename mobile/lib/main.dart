@@ -775,6 +775,7 @@ class _RoomsScreenState extends State<RoomsScreen> {
                             context,
                             MaterialPageRoute(
                               builder: (_) => VoiceRoomScreen(
+                                roomId: id,
                                 roomName: name,
                                 seatcount: 10,
                               ),
@@ -1017,6 +1018,7 @@ class VoiceRoomScreen extends StatefulWidget {
     super.key,
     required this.roomId,
     required this.roomName,
+    required this.seatCount,
   });
 
   @override
