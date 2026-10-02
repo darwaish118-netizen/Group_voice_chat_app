@@ -1013,6 +1013,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 class VoiceRoomScreen extends StatefulWidget {
   final String roomId;
   final String roomName;
+  final int seatCount;
 
   const VoiceRoomScreen({
     super.key,
