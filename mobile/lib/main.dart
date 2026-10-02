@@ -775,8 +775,8 @@ class _RoomsScreenState extends State<RoomsScreen> {
                             context,
                             MaterialPageRoute(
                               builder: (_) => VoiceRoomScreen(
-                                roomId: id,
                                 roomName: name,
+                                seatcount: 10,
                               ),
                             ),
                           );
