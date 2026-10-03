@@ -49,6 +49,36 @@ async function initDatabase() {
   `);
 
   await pool.query(`
+  ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS public_uid INTEGER
+`);
+
+const usersWithoutUid = await pool.query(
+  `SELECT id FROM users WHERE public_uid IS NULL`
+);
+
+for (const existingUser of usersWithoutUid.rows) {
+  let newUid;
+
+  while (true) {
+    newUid = Math.floor(100000 + Math.random() * 900000);
+
+    const uidCheck = await pool.query(
+      `SELECT id FROM users WHERE public_uid = $1`,
+      [newUid]
+    );
+
+    if (uidCheck.rows.length === 0) {
+      break;
+    }
+  }
+
+  await pool.query(
+    `UPDATE users SET public_uid = $1 WHERE id = $2`,
+    [newUid, existingUser.id]
+  );
+}
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS rooms (
       id UUID PRIMARY KEY,
       name VARCHAR(100) NOT NULL,
