@@ -940,6 +940,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         user?['name']?.toString() ?? 'User';
     final email =
         user?['email']?.toString() ?? '';
+    final uid =
+    user?['public_uid']?.toString() ?? '';
 
     return ListView(
       padding: const EdgeInsets.all(20),
