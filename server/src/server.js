@@ -211,17 +211,45 @@ app.post("/api/auth/register", async (req, res) => {
       });
     }
 
+    let publicUid;
+
+    while (true) {
+      publicUid =
+        Math.floor(100000 + Math.random() * 900000);
+
+      const uidCheck = await pool.query(
+        "SELECT id FROM users WHERE public_uid = $1",
+        [publicUid]
+      );
+
+      if (uidCheck.rows.length === 0) {
+        break;
+      }
+    }
+
     const passwordHash = await bcrypt.hash(password, 10);
     const id = uuidv4();
 
     const result = await pool.query(
       `
       INSERT INTO users
-      (id, username, password_hash)
-      VALUES ($1, $2, $3)
-      RETURNING id, username, avatar_url, coins, level, created_at
+      (id, username, public_uid, password_hash)
+      VALUES ($1, $2, $3, $4)
+      RETURNING
+        id,
+        username,
+        public_uid,
+        avatar_url,
+        coins,
+        level,
+        created_at
       `,
-      [id, username, passwordHash]
+      [
+        id,
+        username,
+        publicUid,
+        passwordHash,
+      ]
     );
 
     const user = result.rows[0];
@@ -238,7 +266,6 @@ app.post("/api/auth/register", async (req, res) => {
     });
   }
 });
-
 // -------------------------
 // Login
 // -------------------------
