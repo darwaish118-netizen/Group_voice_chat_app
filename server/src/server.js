@@ -339,7 +339,7 @@ app.get("/api/me", authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
       `
-      SELECT id, username, avatar_url, coins, level, created_at
+      SELECT id, username, public_uid, avatar_url, coins, level, created_at
       FROM users
       WHERE id = $1
       `,
