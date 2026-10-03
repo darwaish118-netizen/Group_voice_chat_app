@@ -1080,7 +1080,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
         const SizedBox(height: 30),
 
-        Card(
+if (selectedImage != null) ...[
+  SizedBox(
+    height: 50,
+    child: ElevatedButton.icon(
+      onPressed: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profile photo selected'),
+          ),
+        );
+      },
+      icon: const Icon(Icons.save),
+      label: const Text('Save Profile Photo'),
+    ),
+  ),
+  const SizedBox(height: 15),
+],
+
+Card(
           child: ListTile(
             leading: const Icon(
               Icons.monetization_on,
