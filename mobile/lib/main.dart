@@ -1055,14 +1055,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
               CircleAvatar(
                 radius: 55,
                 backgroundImage: selectedImage != null
-    ? FileImage(
+    ? (FileImage(
         File(selectedImage!.path),
-      )
+      ) as ImageProvider<Object>)
     : (user?['avatar_url'] != null &&
-       user!['avatar_url'].toString().isNotEmpty)
-        ? NetworkImage(
+       user?['avatar_url'].toString().isNotEmpty)
+        ? (NetworkImage(
             user!['avatar_url'].toString(),
-          )
+          ) as ImageProvider<Object>)
         : null,
                 child: selectedImage == null
                     ? const Icon(
