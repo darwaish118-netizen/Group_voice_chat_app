@@ -876,6 +876,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Map<String, dynamic>? user;
   bool loading = true;
 
+  final ImagePicker _picker = ImagePicker();
+  XFile? selectedImage;
+
   @override
   void initState() {
     super.initState();
@@ -913,6 +916,65 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Future<void> pickProfileImage(ImageSource source) async {
+    try {
+      final image = await _picker.pickImage(
+        source: source,
+        imageQuality: 80,
+        maxWidth: 800,
+        maxHeight: 800,
+      );
+
+      if (image == null) return;
+
+      if (mounted) {
+        setState(() {
+          selectedImage = image;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Image select failed: $e',
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  void showImageOptions() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Choose from Gallery'),
+                onTap: () {
+                  Navigator.pop(context);
+                  pickProfileImage(ImageSource.gallery);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('Take Photo'),
+                onTap: () {
+                  Navigator.pop(context);
+                  pickProfileImage(ImageSource.camera);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('token');
@@ -938,23 +1000,59 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     final name =
         user?['username']?.toString() ?? 'User';
-    final email =
-        user?['email']?.toString() ?? '';
+
     final uid =
-    user?['public_uid']?.toString() ?? '';
+        user?['public_uid']?.toString() ?? '';
 
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
         const SizedBox(height: 20),
-        const CircleAvatar(
-          radius: 55,
-          child: Icon(
-            Icons.person,
-            size: 55,
+
+        // Profile DP
+        Center(
+          child: Stack(
+            children: [
+              CircleAvatar(
+                radius: 55,
+                backgroundImage: selectedImage != null
+                    ? FileImage(
+                        File(selectedImage!.path),
+                      )
+                    : null,
+                child: selectedImage == null
+                    ? const Icon(
+                        Icons.person,
+                        size: 55,
+                      )
+                    : null,
+              ),
+
+              Positioned(
+                right: 0,
+                bottom: 0,
+                child: InkWell(
+                  onTap: showImageOptions,
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: const BoxDecoration(
+                      color: Colors.deepPurple,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.camera_alt,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
+
         const SizedBox(height: 18),
+
         Center(
           child: Text(
             name,
@@ -964,7 +1062,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
         ),
-        const SizedBox(height: 5),
+
+        const SizedBox(height: 8),
+
         Center(
           child: Text(
             'UID: $uid',
@@ -975,10 +1075,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
         ),
+
         const SizedBox(height: 30),
+
         Card(
           child: ListTile(
-            leading: const Icon(Icons.monetization_on),
+            leading: const Icon(
+              Icons.monetization_on,
+            ),
             title: const Text('Coins'),
             trailing: Text(
               '${user?['coins'] ?? 0}',
@@ -988,16 +1092,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
         ),
+
         Card(
           child: ListTile(
-            leading: const Icon(Icons.star),
+            leading: const Icon(
+              Icons.star,
+            ),
             title: const Text('Level'),
             trailing: Text(
               '${user?['level'] ?? 1}',
             ),
           ),
         ),
+
         const SizedBox(height: 20),
+
         SizedBox(
           height: 50,
           child: OutlinedButton.icon(
@@ -1010,6 +1119,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 }
+    
 
 // ============================================================
 // VOICE ROOM UI
