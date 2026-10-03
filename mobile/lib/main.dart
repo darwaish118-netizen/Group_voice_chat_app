@@ -1055,10 +1055,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
               CircleAvatar(
                 radius: 55,
                 backgroundImage: selectedImage != null
-                    ? FileImage(
-                        File(selectedImage!.path),
-                      )
-                    : null,
+    ? FileImage(
+        File(selectedImage!.path),
+      )
+    : (user?['avatar_url'] != null &&
+       user!['avatar_url'].toString().isNotEmpty)
+        ? NetworkImage(
+            user!['avatar_url'].toString(),
+          )
+        : null,
                 child: selectedImage == null
                     ? const Icon(
                         Icons.person,
@@ -1121,13 +1126,65 @@ if (selectedImage != null) ...[
   SizedBox(
     height: 50,
     child: ElevatedButton.icon(
-      onPressed: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Profile photo selected'),
+      onPressed: () async {
+  if (selectedImage == null) return;
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text('Uploading profile photo...'),
+    ),
+  );
+
+  final avatarUrl =
+      await uploadProfilePhotoToCloudinary(
+    selectedImage!.path,
+  );
+
+  if (avatarUrl == null) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Photo upload failed'),
+      ),
+    );
+
+    return;
+  }
+
+  try {
+    final result = await saveProfilePhoto(
+      widget.token,
+      avatarUrl,
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      user = result['user'];
+      selectedImage = null;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Profile photo saved successfully'),
+      ),
+    );
+  } catch (e) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          e.toString().replaceFirst(
+            'Exception: ',
+            '',
           ),
-        );
-      },
+        ),
+      ),
+    );
+  }
+},
       icon: const Icon(Icons.save),
       label: const Text('Save Profile Photo'),
     ),
