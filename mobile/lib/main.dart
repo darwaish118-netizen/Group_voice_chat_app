@@ -967,9 +967,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         const SizedBox(height: 5),
         Center(
           child: Text(
-            email,
+            'UID: $uid',
             style: const TextStyle(
-              color: Colors.grey,
+              color: Colors.deepPurple,
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
             ),
           ),
         ),
