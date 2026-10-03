@@ -937,7 +937,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     final name =
-        user?['name']?.toString() ?? 'User';
+        user?['username']?.toString() ?? 'User';
     final email =
         user?['email']?.toString() ?? '';
     final uid =
