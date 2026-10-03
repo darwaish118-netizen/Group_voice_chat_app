@@ -141,7 +141,44 @@ Future<Map<String, dynamic>> login(
 }
 
 final ApiService api = ApiService();
+Future<String?> uploadProfilePhotoToCloudinary(
+  String imagePath,
+) async {
+  try {
+    final request = http.MultipartRequest(
+      'POST',
+      Uri.parse(
+        'https://api.cloudinary.com/v1_1/tfeew7qa/image/upload',
+      ),
+    );
 
+    request.fields['upload_preset'] =
+        'mindo_profile_photos';
+
+    request.files.add(
+      await http.MultipartFile.fromPath(
+        'file',
+        imagePath,
+      ),
+    );
+
+    final response = await request.send();
+
+    final responseBody =
+        await response.stream.bytesToString();
+
+    if (response.statusCode >= 200 &&
+        response.statusCode < 300) {
+      final data = jsonDecode(responseBody);
+
+      return data['secure_url']?.toString();
+    }
+
+    return null;
+  } catch (e) {
+    return null;
+  }
+}
 // ============================================================
 // AUTH GATE
 // ============================================================
