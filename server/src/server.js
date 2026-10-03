@@ -363,7 +363,62 @@ app.get("/api/me", authMiddleware, async (req, res) => {
     });
   }
 });
+app.put("/api/me/avatar", authMiddleware, async (req, res) => {
+  if (!pool) {
+    return res.status(500).json({
+      message: "Database is not configured",
+    });
+  }
 
+  try {
+    const { avatar_url } = req.body;
+
+    if (!avatar_url) {
+      return res.status(400).json({
+        message: "Avatar URL is required",
+      });
+    }
+
+    if (!avatar_url.startsWith("https://res.cloudinary.com/")) {
+      return res.status(400).json({
+        message: "Invalid avatar URL",
+      });
+    }
+
+    const result = await pool.query(
+      `
+      UPDATE users
+      SET avatar_url = $1
+      WHERE id = $2
+      RETURNING
+        id,
+        username,
+        public_uid,
+        avatar_url,
+        coins,
+        level,
+        created_at
+      `,
+      [avatar_url, req.user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        message: "User not found",
+      });
+    }
+
+    res.json({
+      user: result.rows[0],
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      message: "Could not save profile photo",
+    });
+  }
+});
 // -------------------------
 // Rooms
 // -------------------------
