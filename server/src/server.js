@@ -39,6 +39,7 @@ async function initDatabase() {
     CREATE TABLE IF NOT EXISTS users (
       id UUID PRIMARY KEY,
       username VARCHAR(50) UNIQUE NOT NULL,
+      public_uid INTEGER UNIQUE,
       password_hash TEXT NOT NULL,
       avatar_url TEXT,
       coins INTEGER NOT NULL DEFAULT 0,
