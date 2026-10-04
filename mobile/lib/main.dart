@@ -1147,85 +1147,89 @@ class _ProfileScreenState extends State<ProfileScreen> {
             'UID: $uid',
             style: const TextStyle(
               color: Colors.deepPurple,
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-            ),
-          ),
-        ),
-
         const SizedBox(height: 30),
 
-if (selectedImage != null) ...[
-  SizedBox(
-    height: 50,
-    child: ElevatedButton.icon(
-      onPressed: () async {
-  if (selectedImage == null) return;
+        selectedImage != null
+            ? SizedBox(
+                height: 50,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    if (selectedImage == null) return;
 
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(
-      content: Text('Uploading profile photo...'),
-    ),
-  );
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Uploading profile photo...',
+                        ),
+                      ),
+                    );
 
-  final avatarUrl =
-      await uploadProfilePhotoToCloudinary(
-    selectedImage!.path,
-  );
+                    final avatarUrl =
+                        await uploadProfilePhotoToCloudinary(
+                      selectedImage!.path,
+                    );
 
-  if (avatarUrl == null) {
-    if (!mounted) return;
+                    if (avatarUrl == null) {
+                      if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Photo upload failed'),
-      ),
-    );
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Photo upload failed',
+                          ),
+                        ),
+                      );
 
-    return;
-  }
+                      return;
+                    }
 
-  try {
-    final result = await api.saveProfilePhoto(
-      widget.token,
-      avatarUrl,
-    );
+                    try {
+                      final result =
+                          await api.saveProfilePhoto(
+                        widget.token,
+                        avatarUrl,
+                      );
 
-    if (!mounted) return;
+                      if (!mounted) return;
 
-    setState(() {
-      user = result['user'];
-      selectedImage = null;
-    });
+                      setState(() {
+                        user = result['user'];
+                        selectedImage = null;
+                      });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Profile photo saved successfully'),
-      ),
-    );
-  } catch (e) {
-    if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Profile photo saved successfully',
+                          ),
+                        ),
+                      );
+                    } catch (e) {
+                      if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          e.toString().replaceFirst(
-            'Exception: ',
-            '',
-          ),
-        ),
-      ),
-    );
-  }
-},
-      icon: const Icon(Icons.save),
-      label: const Text('Save Profile Photo'),
-    ),
-  ),
-  const SizedBox(height: 15),
-],
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            e.toString().replaceFirst(
+                              'Exception: ',
+                              '',
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.save),
+                  label: const Text(
+                    'Save Profile Photo',
+                  ),
+                ),
+              )
+            : const SizedBox.shrink(),
 
-Card(
+        const SizedBox(height: 15),
+
+        Card(
           child: ListTile(
             leading: const Icon(
               Icons.monetization_on,
