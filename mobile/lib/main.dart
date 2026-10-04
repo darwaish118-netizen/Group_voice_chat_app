@@ -1068,7 +1068,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final name =
         user?['username']?.toString() ?? 'User';
 
-    final uid =
+        final uid =
         user?['public_uid']?.toString() ?? '';
 
     return ListView(
@@ -1083,17 +1083,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
               CircleAvatar(
                 radius: 55,
                 backgroundImage: selectedImage != null
-    ? (FileImage(
-        File(selectedImage!.path),
-      ) as ImageProvider<Object>)
-    : user != null &&
-user!['avatar_url'] != null &&
-user!['avatar_url'].toString().isNotEmpty)
-        ? (NetworkImage(
-            user!['avatar_url'].toString(),
-          ) as ImageProvider<Object>)
-        : null,
-                child: selectedImage == null
+                    ? FileImage(
+                        File(selectedImage!.path),
+                      )
+                    : (user != null &&
+                            user!['avatar_url'] != null &&
+                            user!['avatar_url']
+                                .toString()
+                                .isNotEmpty)
+                        ? NetworkImage(
+                            user!['avatar_url'].toString(),
+                          )
+                        : null,
+                child: selectedImage == null &&
+                        (user == null ||
+                            user!['avatar_url'] == null ||
+                            user!['avatar_url']
+                                .toString()
+                                .isEmpty)
                     ? const Icon(
                         Icons.person,
                         size: 55,
