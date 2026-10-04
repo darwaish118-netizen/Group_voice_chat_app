@@ -967,9 +967,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           SnackBar(
             content: Text(
               e.toString().replaceFirst(
-                    'Exception: ',
-                    '',
-                  ),
+                'Exception: ',
+                '',
+              ),
             ),
           ),
         );
@@ -983,7 +983,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  Future<void> pickProfileImage(ImageSource source) async {
+  Future<void> pickProfileImage(
+    ImageSource source,
+  ) async {
     try {
       final image = await _picker.pickImage(
         source: source,
@@ -1020,19 +1022,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Wrap(
             children: [
               ListTile(
-                leading: const Icon(Icons.photo_library),
-                title: const Text('Choose from Gallery'),
+                leading: const Icon(
+                  Icons.photo_library,
+                ),
+                title: const Text(
+                  'Choose from Gallery',
+                ),
                 onTap: () {
                   Navigator.pop(context);
-                  pickProfileImage(ImageSource.gallery);
+                  pickProfileImage(
+                    ImageSource.gallery,
+                  );
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.camera_alt),
-                title: const Text('Take Photo'),
+                leading: const Icon(
+                  Icons.camera_alt,
+                ),
+                title: const Text(
+                  'Take Photo',
+                ),
                 onTap: () {
                   Navigator.pop(context);
-                  pickProfileImage(ImageSource.camera);
+                  pickProfileImage(
+                    ImageSource.camera,
+                  );
                 },
               ),
             ],
@@ -1043,7 +1057,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs =
+        await SharedPreferences.getInstance();
+
     await prefs.remove('token');
 
     if (!mounted) return;
@@ -1057,6 +1073,73 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  Future<void> saveProfilePhoto() async {
+    if (selectedImage == null) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Uploading profile photo...',
+        ),
+      ),
+    );
+
+    final avatarUrl =
+        await uploadProfilePhotoToCloudinary(
+      selectedImage!.path,
+    );
+
+    if (avatarUrl == null) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Photo upload failed',
+          ),
+        ),
+      );
+
+      return;
+    }
+
+    try {
+      final result =
+          await api.saveProfilePhoto(
+        widget.token,
+        avatarUrl,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        user = result['user'];
+        selectedImage = null;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Profile photo saved successfully',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e.toString().replaceFirst(
+              'Exception: ',
+              '',
+            ),
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (loading) {
@@ -1068,8 +1151,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final name =
         user?['username']?.toString() ?? 'User';
 
-        final uid =
+    final uid =
         user?['public_uid']?.toString() ?? '';
+
+    final avatarUrl =
+        user?['avatar_url']?.toString() ?? '';
 
     return ListView(
       padding: const EdgeInsets.all(20),
@@ -1082,22 +1168,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               CircleAvatar(
                 radius: 55,
-                backgroundImage: selectedImage != null
-                    ? (FileImage(
-                        File(selectedImage!.path),
-                      ) as ImageProvider<Object>)
-                    : (user != null &&
-                            user!['avatar_url'] != null &&
-                            user!['avatar_url']
-                                .toString()
-                                .isNotEmpty)
-                        ? (NetworkImage(
-                            user!['avatar_url'].toString(),
-                          ) as ImageProvider<Object>)
-                        : null,
-                            user!['avatar_url']
-                                .toString()
-                                .isEmpty)
+                backgroundImage:
+                    selectedImage != null
+                        ? FileImage(
+                            File(
+                              selectedImage!.path,
+                            ),
+                          )
+                        : avatarUrl.isNotEmpty
+                            ? NetworkImage(
+                                avatarUrl,
+                              )
+                            : null,
+                child: selectedImage == null &&
+                        avatarUrl.isEmpty
                     ? const Icon(
                         Icons.person,
                         size: 55,
@@ -1111,8 +1195,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: InkWell(
                   onTap: showImageOptions,
                   child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: const BoxDecoration(
+                    padding:
+                        const EdgeInsets.all(8),
+                    decoration:
+                        const BoxDecoration(
                       color: Colors.deepPurple,
                       shape: BoxShape.circle,
                     ),
@@ -1147,94 +1233,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
             'UID: $uid',
             style: const TextStyle(
               color: Colors.deepPurple,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+
         const SizedBox(height: 30),
 
-        selectedImage != null
-            ? SizedBox(
-                height: 50,
-                child: ElevatedButton.icon(
-                  onPressed: () async {
-                    if (selectedImage == null) return;
+        if (selectedImage != null)
+          SizedBox(
+            height: 50,
+            child: ElevatedButton.icon(
+              onPressed: saveProfilePhoto,
+              icon: const Icon(
+                Icons.save,
+              ),
+              label: const Text(
+                'Save Profile Photo',
+              ),
+            ),
+          ),
 
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Uploading profile photo...',
-                        ),
-                      ),
-                    );
-
-                    final avatarUrl =
-                        await uploadProfilePhotoToCloudinary(
-                      selectedImage!.path,
-                    );
-
-                    if (avatarUrl == null) {
-                      if (!mounted) return;
-
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Photo upload failed',
-                          ),
-                        ),
-                      );
-
-                      return;
-                    }
-
-                    try {
-                      final result =
-                          await api.saveProfilePhoto(
-                        widget.token,
-                        avatarUrl,
-                      );
-
-                      if (!mounted) return;
-
-                      setState(() {
-                        user = result['user'];
-                        selectedImage = null;
-                      });
-
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Profile photo saved successfully',
-                          ),
-                        ),
-                      );
-                    } catch (e) {
-                      if (!mounted) return;
-
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            e.toString().replaceFirst(
-                              'Exception: ',
-                              '',
-                            ),
-                          ),
-                        ),
-                      );
-                    }
-                  },
-                  icon: const Icon(Icons.save),
-                  label: const Text(
-                    'Save Profile Photo',
-                  ),
-                ),
-              )
-            : const SizedBox.shrink(),
-
-        const SizedBox(height: 15),
+        if (selectedImage != null)
+          const SizedBox(height: 15),
 
         Card(
           child: ListTile(
             leading: const Icon(
               Icons.monetization_on,
             ),
-            title: const Text('Coins'),
+            title: const Text(
+              'Coins',
+            ),
             trailing: Text(
               '${user?['coins'] ?? 0}',
               style: const TextStyle(
@@ -1249,7 +1280,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             leading: const Icon(
               Icons.star,
             ),
-            title: const Text('Level'),
+            title: const Text(
+              'Level',
+            ),
             trailing: Text(
               '${user?['level'] ?? 1}',
             ),
@@ -1262,8 +1295,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
           height: 50,
           child: OutlinedButton.icon(
             onPressed: logout,
-            icon: const Icon(Icons.logout),
-            label: const Text('Logout'),
+            icon: const Icon(
+              Icons.logout,
+            ),
+            label: const Text(
+              'Logout',
+            ),
           ),
         ),
       ],
