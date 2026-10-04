@@ -1086,8 +1086,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     ? (FileImage(
         File(selectedImage!.path),
       ) as ImageProvider<Object>)
-    : (user?['avatar_url'] != null &&
-       user?['avatar_url'].toString().isNotEmpty)
+    : user != null &&
+user!['avatar_url'] != null &&
+user!['avatar_url'].toString().isNotEmpty)
         ? (NetworkImage(
             user!['avatar_url'].toString(),
           ) as ImageProvider<Object>)
