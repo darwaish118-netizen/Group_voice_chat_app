@@ -1168,18 +1168,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               CircleAvatar(
                 radius: 55,
-                backgroundImage:
-                    selectedImage != null
-                        ? FileImage(
-                            File(
-                              selectedImage!.path,
-                            ),
-                          )
-                        : avatarUrl.isNotEmpty
-                            ? NetworkImage(
-                                avatarUrl,
-                              )
-                            : null,
+backgroundImage: selectedImage != null
+    ? (FileImage(
+        File(selectedImage!.path),
+      ) as ImageProvider<Object>)
+    : avatarUrl.isNotEmpty
+        ? (NetworkImage(
+            avatarUrl,
+          ) as ImageProvider<Object>)
+        : null,
                 child: selectedImage == null &&
                         avatarUrl.isEmpty
                     ? const Icon(
