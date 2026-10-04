@@ -36,24 +36,23 @@ class VoiceChatApp extends StatelessWidget {
 // ============================================================
 
 class ApiService {
-  
-Future<Map<String, dynamic>> login(
-  String email,
-  String password,
-) async {
-  final response = await http.post(
-    Uri.parse('$apiBaseUrl/api/auth/login'),
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: jsonEncode({
-      'username': email,
-      'password': password,
-    }),
-  );
+  Future<Map<String, dynamic>> login(
+    String email,
+    String password,
+  ) async {
+    final response = await http.post(
+      Uri.parse('$apiBaseUrl/api/auth/login'),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'username': email,
+        'password': password,
+      }),
+    );
 
-  return _handleResponse(response);
-}
+    return _handleResponse(response);
+  }
 
   Future<Map<String, dynamic>> register(
     String name,
@@ -62,7 +61,9 @@ Future<Map<String, dynamic>> login(
   ) async {
     final response = await http.post(
       Uri.parse('$apiBaseUrl/api/auth/register'),
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+      },
       body: jsonEncode({
         'username': email,
         'password': password,
@@ -81,6 +82,7 @@ Future<Map<String, dynamic>> login(
     );
 
     final data = _handleResponse(response);
+
     return data['rooms'] ?? [];
   }
 
@@ -102,7 +104,9 @@ Future<Map<String, dynamic>> login(
     return _handleResponse(response);
   }
 
-  Future<Map<String, dynamic>> me(String token) async {
+  Future<Map<String, dynamic>> me(
+    String token,
+  ) async {
     final response = await http.get(
       Uri.parse('$apiBaseUrl/api/me'),
       headers: {
@@ -113,7 +117,27 @@ Future<Map<String, dynamic>> login(
     return _handleResponse(response);
   }
 
-  Map<String, dynamic> _handleResponse(http.Response response) {
+  Future<Map<String, dynamic>> saveProfilePhoto(
+    String token,
+    String avatarUrl,
+  ) async {
+    final response = await http.put(
+      Uri.parse('$apiBaseUrl/api/me/avatar'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'avatar_url': avatarUrl,
+      }),
+    );
+
+    return _handleResponse(response);
+  }
+
+  Map<String, dynamic> _handleResponse(
+    http.Response response,
+  ) {
     dynamic body;
 
     try {
@@ -122,7 +146,8 @@ Future<Map<String, dynamic>> login(
       body = {};
     }
 
-    if (response.statusCode >= 200 && response.statusCode < 300) {
+    if (response.statusCode >= 200 &&
+        response.statusCode < 300) {
       if (body is Map<String, dynamic>) {
         return body;
       }
@@ -132,7 +157,9 @@ Future<Map<String, dynamic>> login(
 
     String message = 'Something went wrong';
 
-    if (body is Map && body['error'] != null) {
+    if (body is Map && body['message'] != null) {
+      message = body['message'].toString();
+    } else if (body is Map && body['error'] != null) {
       message = body['error'].toString();
     }
 
@@ -141,6 +168,7 @@ Future<Map<String, dynamic>> login(
 }
 
 final ApiService api = ApiService();
+
 Future<String?> uploadProfilePhotoToCloudinary(
   String imagePath,
 ) async {
@@ -175,7 +203,7 @@ Future<String?> uploadProfilePhotoToCloudinary(
     }
 
     return null;
-  } catch (e) {
+  } catch (_) {
     return null;
   }
 }
@@ -1153,7 +1181,7 @@ if (selectedImage != null) ...[
   }
 
   try {
-    final result = await saveProfilePhoto(
+    final result = await api.saveProfilePhoto(
       widget.token,
       avatarUrl,
     );
