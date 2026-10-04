@@ -337,9 +337,16 @@ app.get("/api/me", authMiddleware, async (req, res) => {
   }
 
   try {
-    const result = await pool.query(
+    let result = await pool.query(
       `
-      SELECT id, username, public_uid, avatar_url, coins, level, created_at
+      SELECT
+        id,
+        username,
+        public_uid,
+        avatar_url,
+        coins,
+        level,
+        created_at
       FROM users
       WHERE id = $1
       `,
@@ -352,70 +359,58 @@ app.get("/api/me", authMiddleware, async (req, res) => {
       });
     }
 
+    let user = result.rows[0];
+
+    // Generate a UID if this user does not have one
+    if (!user.public_uid) {
+      let newUid;
+
+      while (true) {
+        newUid =
+          Math.floor(100000 + Math.random() * 900000);
+
+        const uidCheck = await pool.query(
+          `
+          SELECT id
+          FROM users
+          WHERE public_uid = $1
+          `,
+          [newUid]
+        );
+
+        if (uidCheck.rows.length === 0) {
+          break;
+        }
+      }
+
+      result = await pool.query(
+        `
+        UPDATE users
+        SET public_uid = $1
+        WHERE id = $2
+        RETURNING
+          id,
+          username,
+          public_uid,
+          avatar_url,
+          coins,
+          level,
+          created_at
+        `,
+        [newUid, req.user.id]
+      );
+
+      user = result.rows[0];
+    }
+
     res.json({
-      user: result.rows[0],
+      user,
     });
   } catch (error) {
     console.error(error);
 
     res.status(500).json({
       message: "Could not load profile",
-    });
-  }
-});
-app.put("/api/me/avatar", authMiddleware, async (req, res) => {
-  if (!pool) {
-    return res.status(500).json({
-      message: "Database is not configured",
-    });
-  }
-
-  try {
-    const { avatar_url } = req.body;
-
-    if (!avatar_url) {
-      return res.status(400).json({
-        message: "Avatar URL is required",
-      });
-    }
-
-    if (!avatar_url.startsWith("https://res.cloudinary.com/")) {
-      return res.status(400).json({
-        message: "Invalid avatar URL",
-      });
-    }
-
-    const result = await pool.query(
-      `
-      UPDATE users
-      SET avatar_url = $1
-      WHERE id = $2
-      RETURNING
-        id,
-        username,
-        public_uid,
-        avatar_url,
-        coins,
-        level,
-        created_at
-      `,
-      [avatar_url, req.user.id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        message: "User not found",
-      });
-    }
-
-    res.json({
-      user: result.rows[0],
-    });
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      message: "Could not save profile photo",
     });
   }
 });
