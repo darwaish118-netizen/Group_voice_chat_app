@@ -489,6 +489,43 @@ app.get("/api/users/:id/profile", async (req, res) => {
 });
 
 // -------------------------
+// Public Users List
+// -------------------------
+
+app.get("/api/users/public", async (req, res) => {
+  if (!pool) {
+    return res.status(500).json({
+      message: "Database is not configured",
+    });
+  }
+
+  try {
+    const result = await pool.query(`
+      SELECT
+        id,
+        public_uid,
+        username,
+        display_name,
+        avatar_url,
+        signature,
+        level
+      FROM users
+      ORDER BY created_at DESC
+    `);
+
+    res.json({
+      users: result.rows,
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      message: "Could not load users",
+    });
+  }
+});
+
+// -------------------------
 // Save Profile Details
 // -------------------------
 
