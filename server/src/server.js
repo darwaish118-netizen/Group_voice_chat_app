@@ -365,6 +365,9 @@ app.get("/api/me", authMiddleware, async (req, res) => {
         username,
         public_uid,
         avatar_url,
+        display_name,
+        signature,
+        birthday,
         coins,
         level,
         created_at
@@ -414,6 +417,9 @@ app.get("/api/me", authMiddleware, async (req, res) => {
           username,
           public_uid,
           avatar_url,
+          display_name,
+          signature,
+          birthday,
           coins,
           level,
           created_at
