@@ -84,7 +84,7 @@ for (const existingUser of usersWithoutUid.rows) {
       name VARCHAR(100) NOT NULL,
       owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       password_hash TEXT,
-      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      created_at TIMESTAMP NOT NULL DEFAULT NOW() ,
       seat_count INTEGER NOT NULL DEFAULT 10
     );
   `);
