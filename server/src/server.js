@@ -54,7 +54,7 @@ async function initDatabase() {
   `);
 
   const usersWithoutUid = await pool.query(
-    \`SELECT id FROM users WHERE public_uid IS NULL\`
+    `SELECT id FROM users WHERE public_uid IS NULL`
   );
 
   for (const existingUser of usersWithoutUid.rows) {
@@ -64,7 +64,7 @@ async function initDatabase() {
       newUid = Math.floor(100000 + Math.random() * 900000);
 
       const uidCheck = await pool.query(
-        \`SELECT id FROM users WHERE public_uid = $1\`,
+        `SELECT id FROM users WHERE public_uid = $1`,
         [newUid]
       );
 
@@ -74,7 +74,7 @@ async function initDatabase() {
     }
 
     await pool.query(
-      \`UPDATE users SET public_uid = $1 WHERE id = $2\`,
+      `UPDATE users SET public_uid = $1 WHERE id = $2`,
       [newUid, existingUser.id]
     );
   }
