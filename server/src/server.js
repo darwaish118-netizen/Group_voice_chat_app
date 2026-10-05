@@ -42,6 +42,9 @@ async function initDatabase() {
       public_uid INTEGER UNIQUE,
       password_hash TEXT NOT NULL,
       avatar_url TEXT,
+      display_name VARCHAR(50),
+      signature VARCHAR(150),
+      birthday DATE,
       coins INTEGER NOT NULL DEFAULT 0,
       level INTEGER NOT NULL DEFAULT 1,
       created_at TIMESTAMP NOT NULL DEFAULT NOW()
@@ -51,6 +54,21 @@ async function initDatabase() {
   await pool.query(`
     ALTER TABLE users
     ADD COLUMN IF NOT EXISTS public_uid INTEGER
+  `);
+
+  await pool.query(`
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS display_name VARCHAR(50)
+  `);
+
+  await pool.query(`
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS signature VARCHAR(150)
+  `);
+
+  await pool.query(`
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS birthday DATE
   `);
 
   const usersWithoutUid = await pool.query(
@@ -97,6 +115,7 @@ async function initDatabase() {
 
   console.log("Database initialized.");
 }
+
 
 // -------------------------
 // Authentication
