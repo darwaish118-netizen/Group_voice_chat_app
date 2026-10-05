@@ -443,6 +443,104 @@ app.get("/api/me", authMiddleware, async (req, res) => {
 });
 
 // -------------------------
+// Save Profile Details
+// -------------------------
+
+app.put("/api/me/profile", authMiddleware, async (req, res) => {
+  if (!pool) {
+    return res.status(500).json({
+      message: "Database is not configured",
+    });
+  }
+
+  try {
+    const {
+      display_name,
+      signature,
+      birthday,
+    } = req.body;
+
+    const cleanName =
+      display_name?.toString().trim() || null;
+
+    const cleanSignature =
+      signature?.toString().trim() || null;
+
+    const cleanBirthday =
+      birthday?.toString().trim() || null;
+
+    if (cleanName && cleanName.length > 50) {
+      return res.status(400).json({
+        message: "Name must be 50 characters or less",
+      });
+    }
+
+    if (cleanSignature && cleanSignature.length > 150) {
+      return res.status(400).json({
+        message: "Signature must be 150 characters or less",
+      });
+    }
+
+    if (cleanBirthday) {
+      const birthdayDate = new Date(
+        `${cleanBirthday}T00:00:00Z`
+      );
+
+      if (Number.isNaN(birthdayDate.getTime())) {
+        return res.status(400).json({
+          message: "Invalid birthday",
+        });
+      }
+    }
+
+    const result = await pool.query(
+      `
+      UPDATE users
+      SET
+        display_name = $1,
+        signature = $2,
+        birthday = $3
+      WHERE id = $4
+      RETURNING
+        id,
+        username,
+        public_uid,
+        avatar_url,
+        display_name,
+        signature,
+        birthday,
+        coins,
+        level,
+        created_at
+      `,
+      [
+        cleanName,
+        cleanSignature,
+        cleanBirthday,
+        req.user.id,
+      ]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        message: "User not found",
+      });
+    }
+
+    res.json({
+      message: "Profile updated successfully",
+      user: result.rows[0],
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      message: "Could not update profile",
+    });
+  }
+});
+
+// -------------------------
 // Save Profile Avatar
 // -------------------------
 
