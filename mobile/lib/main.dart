@@ -6,8 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'voice_room_screen.dart';
-const String apiBaseUrl = 'https://group-voice-chat-app.onrender.com';
+const String apiBaseUrl =
+    'https://group-voice-chat-app.onrender.com';
 
 void main() {
   runApp(const VoiceChatApp());
@@ -24,7 +24,8 @@ class VoiceChatApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         colorSchemeSeed: Colors.deepPurple,
-        scaffoldBackgroundColor: const Color(0xFFF7F5FA),
+        scaffoldBackgroundColor:
+            const Color(0xFFF7F5FA),
       ),
       home: const AuthGate(),
     );
@@ -41,7 +42,9 @@ class ApiService {
     String password,
   ) async {
     final response = await http.post(
-      Uri.parse('$apiBaseUrl/api/auth/login'),
+      Uri.parse(
+        '$apiBaseUrl/api/auth/login',
+      ),
       headers: {
         'Content-Type': 'application/json',
       },
@@ -60,7 +63,9 @@ class ApiService {
     String password,
   ) async {
     final response = await http.post(
-      Uri.parse('$apiBaseUrl/api/auth/register'),
+      Uri.parse(
+        '$apiBaseUrl/api/auth/register',
+      ),
       headers: {
         'Content-Type': 'application/json',
       },
@@ -73,9 +78,13 @@ class ApiService {
     return _handleResponse(response);
   }
 
-  Future<List<dynamic>> getRooms(String token) async {
+  Future<List<dynamic>> getRooms(
+    String token,
+  ) async {
     final response = await http.get(
-      Uri.parse('$apiBaseUrl/api/rooms'),
+      Uri.parse(
+        '$apiBaseUrl/api/rooms',
+      ),
       headers: {
         'Authorization': 'Bearer $token',
       },
@@ -91,7 +100,9 @@ class ApiService {
     String name,
   ) async {
     final response = await http.post(
-      Uri.parse('$apiBaseUrl/api/rooms'),
+      Uri.parse(
+        '$apiBaseUrl/api/rooms',
+      ),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
@@ -108,7 +119,9 @@ class ApiService {
     String token,
   ) async {
     final response = await http.get(
-      Uri.parse('$apiBaseUrl/api/me'),
+      Uri.parse(
+        '$apiBaseUrl/api/me',
+      ),
       headers: {
         'Authorization': 'Bearer $token',
       },
@@ -117,12 +130,51 @@ class ApiService {
     return _handleResponse(response);
   }
 
+  // ==========================================================
+  // SAVE PROFILE DETAILS
+  // ==========================================================
+
+  Future<Map<String, dynamic>> saveProfileDetails(
+    String token,
+    String displayName,
+    String signature,
+    String birthday,
+  ) async {
+    final response = await http.put(
+      Uri.parse(
+        '$apiBaseUrl/api/me/profile',
+      ),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'display_name':
+            displayName.trim(),
+        'signature':
+            signature.trim(),
+        'birthday':
+            birthday.trim().isEmpty
+                ? null
+                : birthday.trim(),
+      }),
+    );
+
+    return _handleResponse(response);
+  }
+
+  // ==========================================================
+  // SAVE PROFILE PHOTO
+  // ==========================================================
+
   Future<Map<String, dynamic>> saveProfilePhoto(
     String token,
     String avatarUrl,
   ) async {
     final response = await http.put(
-      Uri.parse('$apiBaseUrl/api/me/avatar'),
+      Uri.parse(
+        '$apiBaseUrl/api/me/avatar',
+      ),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
@@ -155,12 +207,17 @@ class ApiService {
       return {};
     }
 
-    String message = 'Something went wrong';
+    String message =
+        'Something went wrong';
 
-    if (body is Map && body['message'] != null) {
-      message = body['message'].toString();
-    } else if (body is Map && body['error'] != null) {
-      message = body['error'].toString();
+    if (body is Map &&
+        body['message'] != null) {
+      message =
+          body['message'].toString();
+    } else if (body is Map &&
+        body['error'] != null) {
+      message =
+          body['error'].toString();
     }
 
     throw Exception(message);
@@ -168,6 +225,10 @@ class ApiService {
 }
 
 final ApiService api = ApiService();
+
+// ============================================================
+// CLOUDINARY PROFILE PHOTO UPLOAD
+// ============================================================
 
 Future<String?> uploadProfilePhotoToCloudinary(
   String imagePath,
@@ -190,16 +251,19 @@ Future<String?> uploadProfilePhotoToCloudinary(
       ),
     );
 
-    final response = await request.send();
+    final response =
+        await request.send();
 
     final responseBody =
         await response.stream.bytesToString();
 
     if (response.statusCode >= 200 &&
         response.statusCode < 300) {
-      final data = jsonDecode(responseBody);
+      final data =
+          jsonDecode(responseBody);
 
-      return data['secure_url']?.toString();
+      return data['secure_url']
+          ?.toString();
     }
 
     return null;
@@ -207,6 +271,7 @@ Future<String?> uploadProfilePhotoToCloudinary(
     return null;
   }
 }
+
 // ============================================================
 // AUTH GATE
 // ============================================================
@@ -215,10 +280,12 @@ class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
 
   @override
-  State<AuthGate> createState() => _AuthGateState();
+  State<AuthGate> createState() =>
+      _AuthGateState();
 }
 
-class _AuthGateState extends State<AuthGate> {
+class _AuthGateState
+    extends State<AuthGate> {
   bool loading = true;
   String? token;
 
@@ -229,8 +296,12 @@ class _AuthGateState extends State<AuthGate> {
   }
 
   Future<void> checkLogin() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedToken = prefs.getString('token');
+    final prefs =
+        await SharedPreferences
+            .getInstance();
+
+    final savedToken =
+        prefs.getString('token');
 
     if (!mounted) return;
 
@@ -241,20 +312,26 @@ class _AuthGateState extends State<AuthGate> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+    BuildContext context,
+  ) {
     if (loading) {
       return const Scaffold(
         body: Center(
-          child: CircularProgressIndicator(),
+          child:
+              CircularProgressIndicator(),
         ),
       );
     }
 
-    if (token == null || token!.isEmpty) {
+    if (token == null ||
+        token!.isEmpty) {
       return const LoginScreen();
     }
 
-    return HomeScreen(token: token!);
+    return HomeScreen(
+      token: token!,
+    );
   }
 }
 
@@ -262,26 +339,40 @@ class _AuthGateState extends State<AuthGate> {
 // LOGIN
 // ============================================================
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class LoginScreen
+    extends StatefulWidget {
+  const LoginScreen({
+    super.key,
+  });
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<LoginScreen> createState() =>
+      _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
-  final emailController = TextEditingController();
-  final passwordController = TextEditingController();
+class _LoginScreenState
+    extends State<LoginScreen> {
+  final emailController =
+      TextEditingController();
+
+  final passwordController =
+      TextEditingController();
 
   bool loading = false;
   bool obscure = true;
 
   Future<void> login() async {
-    final email = emailController.text.trim();
-    final password = passwordController.text;
+    final email =
+        emailController.text.trim();
 
-    if (email.isEmpty || password.isEmpty) {
-      showMessage('Email and password required');
+    final password =
+        passwordController.text;
+
+    if (email.isEmpty ||
+        password.isEmpty) {
+      showMessage(
+        'Email and password required',
+      );
       return;
     }
 
@@ -290,26 +381,49 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      final data = await api.login(email, password);
-      final token = data['token']?.toString();
+      final data =
+          await api.login(
+        email,
+        password,
+      );
 
-      if (token == null || token.isEmpty) {
-        throw Exception('Token not received');
+      final token =
+          data['token']?.toString();
+
+      if (token == null ||
+          token.isEmpty) {
+        throw Exception(
+          'Token not received',
+        );
       }
 
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('token', token);
+      final prefs =
+          await SharedPreferences
+              .getInstance();
+
+      await prefs.setString(
+        'token',
+        token,
+      );
 
       if (!mounted) return;
 
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => HomeScreen(token: token),
+          builder: (_) =>
+              HomeScreen(
+            token: token,
+          ),
         ),
       );
     } catch (e) {
-      showMessage(e.toString().replaceFirst('Exception: ', ''));
+      showMessage(
+        e.toString().replaceFirst(
+              'Exception: ',
+              '',
+            ),
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -319,100 +433,156 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
+  void showMessage(
+    String message,
+  ) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(
+      SnackBar(
+        content: Text(message),
+      ),
     );
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+    BuildContext context,
+  ) {
     return Scaffold(
       body: SafeArea(
         child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+          child:
+              SingleChildScrollView(
+            padding:
+                const EdgeInsets.all(24),
             child: Column(
               children: [
                 const Icon(
                   Icons.mic,
                   size: 80,
-                  color: Colors.deepPurple,
+                  color:
+                      Colors.deepPurple,
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(
+                  height: 20,
+                ),
                 const Text(
                   'Group Voice Chat',
                   style: TextStyle(
                     fontSize: 30,
-                    fontWeight: FontWeight.bold,
+                    fontWeight:
+                        FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(
+                  height: 8,
+                ),
                 const Text(
                   'Talk • Meet • Connect',
                   style: TextStyle(
                     color: Colors.grey,
                   ),
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(
+                  height: 40,
+                ),
                 TextField(
-                  controller: emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
+                  controller:
+                      emailController,
+                  keyboardType:
+                      TextInputType
+                          .emailAddress,
+                  decoration:
+                      const InputDecoration(
                     labelText: 'Email',
-                    prefixIcon: Icon(Icons.email_outlined),
-                    border: OutlineInputBorder(),
+                    prefixIcon:
+                        Icon(
+                      Icons
+                          .email_outlined,
+                    ),
+                    border:
+                        OutlineInputBorder(),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(
+                  height: 16,
+                ),
                 TextField(
-                  controller: passwordController,
-                  obscureText: obscure,
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    suffixIcon: IconButton(
+                  controller:
+                      passwordController,
+                  obscureText:
+                      obscure,
+                  decoration:
+                      InputDecoration(
+                    labelText:
+                        'Password',
+                    prefixIcon:
+                        const Icon(
+                      Icons
+                          .lock_outline,
+                    ),
+                    suffixIcon:
+                        IconButton(
                       onPressed: () {
                         setState(() {
-                          obscure = !obscure;
+                          obscure =
+                              !obscure;
                         });
                       },
                       icon: Icon(
                         obscure
-                            ? Icons.visibility
-                            : Icons.visibility_off,
+                            ? Icons
+                                .visibility
+                            : Icons
+                                .visibility_off,
                       ),
                     ),
-                    border: const OutlineInputBorder(),
+                    border:
+                        const OutlineInputBorder(),
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(
+                  height: 24,
+                ),
                 SizedBox(
-                  width: double.infinity,
+                  width:
+                      double.infinity,
                   height: 52,
-                  child: ElevatedButton(
-                    onPressed: loading ? null : login,
+                  child:
+                      ElevatedButton(
+                    onPressed:
+                        loading
+                            ? null
+                            : login,
                     child: loading
                         ? const CircularProgressIndicator()
                         : const Text(
                             'LOGIN',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
+                            style:
+                                TextStyle(
+                              fontWeight:
+                                  FontWeight
+                                      .bold,
                             ),
                           ),
                   ),
                 ),
-                const SizedBox(height: 15),
+                const SizedBox(
+                  height: 15,
+                ),
                 TextButton(
                   onPressed: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => const RegisterScreen(),
+                        builder: (_) =>
+                            const RegisterScreen(),
                       ),
                     );
                   },
-                  child: const Text(
+                  child:
+                      const Text(
                     'Create new account',
                   ),
                 ),
@@ -429,32 +599,53 @@ class _LoginScreenState extends State<LoginScreen> {
 // REGISTER
 // ============================================================
 
-class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({super.key});
+class RegisterScreen
+    extends StatefulWidget {
+  const RegisterScreen({
+    super.key,
+  });
 
   @override
-  State<RegisterScreen> createState() => _RegisterScreenState();
+  State<RegisterScreen> createState() =>
+      _RegisterScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> {
-  final nameController = TextEditingController();
-  final emailController = TextEditingController();
-  final passwordController = TextEditingController();
+class _RegisterScreenState
+    extends State<RegisterScreen> {
+  final nameController =
+      TextEditingController();
+
+  final emailController =
+      TextEditingController();
+
+  final passwordController =
+      TextEditingController();
 
   bool loading = false;
 
   Future<void> register() async {
-    final name = nameController.text.trim();
-    final email = emailController.text.trim();
-    final password = passwordController.text;
+    final name =
+        nameController.text.trim();
 
-    if (name.isEmpty || email.isEmpty || password.isEmpty) {
-      showMessage('Please fill all fields');
+    final email =
+        emailController.text.trim();
+
+    final password =
+        passwordController.text;
+
+    if (name.isEmpty ||
+        email.isEmpty ||
+        password.isEmpty) {
+      showMessage(
+        'Please fill all fields',
+      );
       return;
     }
 
     if (password.length < 6) {
-      showMessage('Password must be at least 6 characters');
+      showMessage(
+        'Password must be at least 6 characters',
+      );
       return;
     }
 
@@ -463,33 +654,50 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
 
     try {
-      final data = await api.register(
+      final data =
+          await api.register(
         name,
         email,
         password,
       );
 
-      final token = data['token']?.toString();
+      final token =
+          data['token']?.toString();
 
-      if (token == null || token.isEmpty) {
-        throw Exception('Registration successful but token missing');
+      if (token == null ||
+          token.isEmpty) {
+        throw Exception(
+          'Registration successful but token missing',
+        );
       }
 
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('token', token);
+      final prefs =
+          await SharedPreferences
+              .getInstance();
+
+      await prefs.setString(
+        'token',
+        token,
+      );
 
       if (!mounted) return;
 
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(
-          builder: (_) => HomeScreen(token: token),
+          builder: (_) =>
+              HomeScreen(
+            token: token,
+          ),
         ),
         (route) => false,
       );
     } catch (e) {
       showMessage(
-        e.toString().replaceFirst('Exception: ', ''),
+        e.toString().replaceFirst(
+              'Exception: ',
+              '',
+            ),
       );
     } finally {
       if (mounted) {
@@ -500,70 +708,125 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  void showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
+  void showMessage(
+    String message,
+  ) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(
+      SnackBar(
+        content: Text(message),
+      ),
     );
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+    BuildContext context,
+  ) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Create Account'),
+        title: const Text(
+          'Create Account',
+        ),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+        child:
+            SingleChildScrollView(
+          padding:
+              const EdgeInsets.all(24),
           child: Column(
             children: [
-              const SizedBox(height: 20),
+              const SizedBox(
+                height: 20,
+              ),
               const Icon(
                 Icons.person_add,
                 size: 70,
-                color: Colors.deepPurple,
+                color:
+                    Colors.deepPurple,
               ),
-              const SizedBox(height: 25),
+              const SizedBox(
+                height: 25,
+              ),
               TextField(
-                controller: nameController,
-                decoration: const InputDecoration(
+                controller:
+                    nameController,
+                decoration:
+                    const InputDecoration(
                   labelText: 'Name',
-                  prefixIcon: Icon(Icons.person_outline),
-                  border: OutlineInputBorder(),
+                  prefixIcon:
+                      Icon(
+                    Icons
+                        .person_outline,
+                  ),
+                  border:
+                      OutlineInputBorder(),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(
+                height: 16,
+              ),
               TextField(
-                controller: emailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(
+                controller:
+                    emailController,
+                keyboardType:
+                    TextInputType
+                        .emailAddress,
+                decoration:
+                    const InputDecoration(
                   labelText: 'Email',
-                  prefixIcon: Icon(Icons.email_outlined),
-                  border: OutlineInputBorder(),
+                  prefixIcon:
+                      Icon(
+                    Icons
+                        .email_outlined,
+                  ),
+                  border:
+                      OutlineInputBorder(),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(
+                height: 16,
+              ),
               TextField(
-                controller: passwordController,
+                controller:
+                    passwordController,
                 obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'Password',
-                  prefixIcon: Icon(Icons.lock_outline),
-                  border: OutlineInputBorder(),
+                decoration:
+                    const InputDecoration(
+                  labelText:
+                      'Password',
+                  prefixIcon:
+                      Icon(
+                    Icons
+                        .lock_outline,
+                  ),
+                  border:
+                      OutlineInputBorder(),
                 ),
               ),
-              const SizedBox(height: 25),
+              const SizedBox(
+                height: 25,
+              ),
               SizedBox(
-                width: double.infinity,
+                width:
+                    double.infinity,
                 height: 52,
-                child: ElevatedButton(
-                  onPressed: loading ? null : register,
+                child:
+                    ElevatedButton(
+                  onPressed:
+                      loading
+                          ? null
+                          : register,
                   child: loading
                       ? const CircularProgressIndicator()
                       : const Text(
                           'CREATE ACCOUNT',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
+                          style:
+                              TextStyle(
+                            fontWeight:
+                                FontWeight
+                                    .bold,
                           ),
                         ),
                 ),
@@ -580,7 +843,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 // HOME
 // ============================================================
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen
+    extends StatefulWidget {
   final String token;
 
   const HomeScreen({
@@ -589,10 +853,12 @@ class HomeScreen extends StatefulWidget {
   });
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  State<HomeScreen> createState() =>
+      _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState
+    extends State<HomeScreen> {
   int selectedIndex = 0;
 
   final titles = const [
@@ -602,40 +868,61 @@ class _HomeScreenState extends State<HomeScreen> {
   ];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+    BuildContext context,
+  ) {
     final pages = [
-      RoomsScreen(token: widget.token),
+      RoomsScreen(
+        token: widget.token,
+      ),
       const FriendsScreen(),
-      ProfileScreen(token: widget.token),
+      ProfileScreen(
+        token: widget.token,
+      ),
     ];
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(titles[selectedIndex]),
+        title: Text(
+          titles[selectedIndex],
+        ),
         centerTitle: true,
       ),
       body: pages[selectedIndex],
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: selectedIndex,
-        onDestinationSelected: (index) {
+      bottomNavigationBar:
+          NavigationBar(
+        selectedIndex:
+            selectedIndex,
+        onDestinationSelected:
+            (index) {
           setState(() {
-            selectedIndex = index;
+            selectedIndex =
+                index;
           });
         },
         destinations: const [
           NavigationDestination(
-            icon: Icon(Icons.groups_outlined),
-            selectedIcon: Icon(Icons.groups),
+            icon: Icon(
+              Icons.groups_outlined,
+            ),
+            selectedIcon:
+                Icon(Icons.groups),
             label: 'Rooms',
           ),
           NavigationDestination(
-            icon: Icon(Icons.people_outline),
-            selectedIcon: Icon(Icons.people),
+            icon: Icon(
+              Icons.people_outline,
+            ),
+            selectedIcon:
+                Icon(Icons.people),
             label: 'Friends',
           ),
           NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
+            icon: Icon(
+              Icons.person_outline,
+            ),
+            selectedIcon:
+                Icon(Icons.person),
             label: 'Profile',
           ),
         ],
@@ -648,7 +935,8 @@ class _HomeScreenState extends State<HomeScreen> {
 // ROOMS
 // ============================================================
 
-class RoomsScreen extends StatefulWidget {
+class RoomsScreen
+    extends StatefulWidget {
   final String token;
 
   const RoomsScreen({
@@ -657,10 +945,12 @@ class RoomsScreen extends StatefulWidget {
   });
 
   @override
-  State<RoomsScreen> createState() => _RoomsScreenState();
+  State<RoomsScreen> createState() =>
+      _RoomsScreenState();
 }
 
-class _RoomsScreenState extends State<RoomsScreen> {
+class _RoomsScreenState
+    extends State<RoomsScreen> {
   List<dynamic> rooms = [];
   bool loading = true;
 
@@ -676,7 +966,10 @@ class _RoomsScreenState extends State<RoomsScreen> {
     });
 
     try {
-      final result = await api.getRooms(widget.token);
+      final result =
+          await api.getRooms(
+        widget.token,
+      );
 
       if (mounted) {
         setState(() {
@@ -686,7 +979,10 @@ class _RoomsScreenState extends State<RoomsScreen> {
     } catch (e) {
       if (mounted) {
         showMessage(
-          e.toString().replaceFirst('Exception: ', ''),
+          e.toString().replaceFirst(
+                'Exception: ',
+                '',
+              ),
         );
       }
     } finally {
@@ -699,43 +995,58 @@ class _RoomsScreenState extends State<RoomsScreen> {
   }
 
   Future<void> createRoom() async {
-    final controller = TextEditingController();
+    final controller =
+        TextEditingController();
 
-    final name = await showDialog<String>(
+    final name =
+        await showDialog<String>(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Create Voice Room'),
+          title: const Text(
+            'Create Voice Room',
+          ),
           content: TextField(
             controller: controller,
             autofocus: true,
-            decoration: const InputDecoration(
-              labelText: 'Room name',
-              hintText: 'Example: Friends Chat',
+            decoration:
+                const InputDecoration(
+              labelText:
+                  'Room name',
+              hintText:
+                  'Example: Friends Chat',
             ),
           ),
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.pop(context);
+                Navigator.pop(
+                  context,
+                );
               },
-              child: const Text('Cancel'),
+              child:
+                  const Text('Cancel'),
             ),
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(
                   context,
-                  controller.text.trim(),
+                  controller.text
+                      .trim(),
                 );
               },
-              child: const Text('Create'),
+              child:
+                  const Text('Create'),
             ),
           ],
         );
       },
     );
 
-    if (name == null || name.isEmpty) return;
+    if (name == null ||
+        name.isEmpty) {
+      return;
+    }
 
     try {
       await api.createRoom(
@@ -746,116 +1057,182 @@ class _RoomsScreenState extends State<RoomsScreen> {
       await loadRooms();
 
       if (mounted) {
-        showMessage('Room created');
+        showMessage(
+          'Room created',
+        );
       }
     } catch (e) {
       showMessage(
-        e.toString().replaceFirst('Exception: ', ''),
+        e.toString().replaceFirst(
+              'Exception: ',
+              '',
+            ),
       );
     }
   }
 
-  void showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
+  void showMessage(
+    String message,
+  ) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(
+      SnackBar(
+        content: Text(message),
+      ),
     );
   }
 
   @override
-Widget build(BuildContext context) {
-  return Scaffold(
-    body: RefreshIndicator(
-      onRefresh: loadRooms,
-      child: loading
-          ? const Center(
-              child: CircularProgressIndicator(),
-            )
-          : rooms.isEmpty
-              ? ListView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  children: const [
-                    SizedBox(height: 100),
-                    Icon(
-                      Icons.mic_none,
-                      size: 80,
-                      color: Colors.grey,
-                    ),
-                    SizedBox(height: 20),
-                    Center(
-                      child: Text(
-                        'No voice rooms yet',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
+  Widget build(
+    BuildContext context,
+  ) {
+    return Scaffold(
+      body:
+          RefreshIndicator(
+        onRefresh: loadRooms,
+        child: loading
+            ? const Center(
+                child:
+                    CircularProgressIndicator(),
+              )
+            : rooms.isEmpty
+                ? ListView(
+                    physics:
+                        const AlwaysScrollableScrollPhysics(),
+                    children: const [
+                      SizedBox(
+                        height: 100,
                       ),
-                    ),
-                    SizedBox(height: 8),
-                    Center(
-                      child: Text(
-                        'Create the first room',
+                      Icon(
+                        Icons.mic_none,
+                        size: 80,
+                        color:
+                            Colors.grey,
                       ),
-                    ),
-                  ],
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: rooms.length,
-                  itemBuilder: (context, index) {
-                    final room = rooms[index];
-
-                    final id = room['id']?.toString() ?? '';
-                    final name =
-                        room['name']?.toString() ?? 'Voice Room';
-
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: ListTile(
-                        contentPadding:
-                            const EdgeInsets.all(14),
-                        leading: CircleAvatar(
-                          radius: 28,
-                          backgroundColor:
-                              Colors.deepPurple.shade100,
-                          child: const Icon(
-                            Icons.mic,
-                            color: Colors.deepPurple,
+                      SizedBox(
+                        height: 20,
+                      ),
+                      Center(
+                        child: Text(
+                          'No voice rooms yet',
+                          style:
+                              TextStyle(
+                            fontSize: 20,
+                            fontWeight:
+                                FontWeight
+                                    .bold,
                           ),
                         ),
-                        title: Text(
-                          name,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
+                      ),
+                      SizedBox(
+                        height: 8,
+                      ),
+                      Center(
+                        child: Text(
+                          'Create the first room',
+                        ),
+                      ),
+                    ],
+                  )
+                : ListView.builder(
+                    padding:
+                        const EdgeInsets
+                            .all(16),
+                    itemCount:
+                        rooms.length,
+                    itemBuilder:
+                        (context, index) {
+                      final room =
+                          rooms[index];
+
+                      final id =
+                          room['id']
+                                  ?.toString() ??
+                              '';
+
+                      final name =
+                          room['name']
+                                  ?.toString() ??
+                              'Voice Room';
+
+                      return Card(
+                        margin:
+                            const EdgeInsets
+                                .only(
+                          bottom: 12,
+                        ),
+                        child:
+                            ListTile(
+                          contentPadding:
+                              const EdgeInsets
+                                  .all(
+                            14,
                           ),
-                        ),
-                        subtitle: const Text('Voice room'),
-                        trailing: const Icon(
-                          Icons.arrow_forward_ios,
-                          size: 18,
-                        ),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => VoiceRoomScreen(
-                                roomId: id,
-                                roomName: name,
-                                seatCount: 10,
-                              ),
+                          leading:
+                              CircleAvatar(
+                            radius: 28,
+                            backgroundColor:
+                                Colors
+                                    .deepPurple
+                                    .shade100,
+                            child:
+                                const Icon(
+                              Icons.mic,
+                              color: Colors
+                                  .deepPurple,
                             ),
-                          );
-                        },
-                      ),
-                    );
-                  },
-                ),
-    ),
-    floatingActionButton: FloatingActionButton(
-      onPressed: createRoom,
-      child: const Icon(Icons.add),
-    ),
-  );
-}
+                          ),
+                          title: Text(
+                            name,
+                            style:
+                                const TextStyle(
+                              fontWeight:
+                                  FontWeight
+                                      .bold,
+                            ),
+                          ),
+                          subtitle:
+                              const Text(
+                            'Voice room',
+                          ),
+                          trailing:
+                              const Icon(
+                            Icons
+                                .arrow_forward_ios,
+                            size: 18,
+                          ),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder:
+                                    (_) =>
+                                        VoiceRoomScreen(
+                                  roomId:
+                                      id,
+                                  roomName:
+                                      name,
+                                  seatCount:
+                                      10,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      );
+                    },
+                  ),
+      ),
+      floatingActionButton:
+          FloatingActionButton(
+        onPressed:
+            createRoom,
+        child:
+            const Icon(Icons.add),
+      ),
+    );
+  }
 
   @override
   void didChangeDependencies() {
@@ -867,7 +1244,8 @@ Widget build(BuildContext context) {
 // CREATE ROOM FLOATING BUTTON
 // ============================================================
 
-class RoomsScreenWithButton extends StatelessWidget {
+class RoomsScreenWithButton
+    extends StatelessWidget {
   final String token;
 
   const RoomsScreenWithButton({
@@ -876,8 +1254,12 @@ class RoomsScreenWithButton extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return RoomsScreen(token: token);
+  Widget build(
+    BuildContext context,
+  ) {
+    return RoomsScreen(
+      token: token,
+    );
   }
 }
 
@@ -885,30 +1267,45 @@ class RoomsScreenWithButton extends StatelessWidget {
 // FRIENDS
 // ============================================================
 
-class FriendsScreen extends StatelessWidget {
-  const FriendsScreen({super.key});
+class FriendsScreen
+    extends StatelessWidget {
+  const FriendsScreen({
+    super.key,
+  });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+    BuildContext context,
+  ) {
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding:
+          const EdgeInsets.all(16),
       children: [
         Card(
           child: ListTile(
-            leading: const CircleAvatar(
-              child: Icon(Icons.person),
+            leading:
+                const CircleAvatar(
+              child:
+                  Icon(Icons.person),
             ),
-            title: const Text('Friends'),
-            subtitle: const Text(
+            title:
+                const Text('Friends'),
+            subtitle:
+                const Text(
               'Friends system will be connected here.',
             ),
-            trailing: IconButton(
+            trailing:
+                IconButton(
               onPressed: () {},
-              icon: const Icon(Icons.search),
+              icon: const Icon(
+                Icons.search,
+              ),
             ),
           ),
         ),
-        const SizedBox(height: 15),
+        const SizedBox(
+          height: 15,
+        ),
         const Center(
           child: Text(
             'No friends yet',
@@ -927,7 +1324,8 @@ class FriendsScreen extends StatelessWidget {
 // PROFILE
 // ============================================================
 
-class ProfileScreen extends StatefulWidget {
+class ProfileScreen
+    extends StatefulWidget {
   final String token;
 
   const ProfileScreen({
@@ -936,15 +1334,14 @@ class ProfileScreen extends StatefulWidget {
   });
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  State<ProfileScreen> createState() =>
+      _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _ProfileScreenState
+    extends State<ProfileScreen> {
   Map<String, dynamic>? user;
   bool loading = true;
-
-  final ImagePicker _picker = ImagePicker();
-  XFile? selectedImage;
 
   @override
   void initState() {
@@ -954,19 +1351,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> loadProfile() async {
     try {
-      final result = await api.me(widget.token);
+      final result =
+          await api.me(
+        widget.token,
+      );
 
       if (mounted) {
         setState(() {
-          user = result['user'];
+          user =
+              result['user'];
         });
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(
           SnackBar(
             content: Text(
-              e.toString().replaceFirst(
+              e.toString()
+                  .replaceFirst(
                 'Exception: ',
                 '',
               ),
@@ -983,36 +1387,475 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Future<void> openEditProfile() async {
+    if (user == null) return;
+
+    final updatedUser =
+        await Navigator.push<
+            Map<String, dynamic>>(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            EditProfileScreen(
+          token: widget.token,
+          user: user!,
+        ),
+      ),
+    );
+
+    if (!mounted) return;
+
+    if (updatedUser != null) {
+      setState(() {
+        user = updatedUser;
+      });
+    } else {
+      await loadProfile();
+    }
+  }
+
+  Future<void> logout() async {
+    final prefs =
+        await SharedPreferences
+            .getInstance();
+
+    await prefs.remove('token');
+
+    if (!mounted) return;
+
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            const LoginScreen(),
+      ),
+      (route) => false,
+    );
+  }
+
+  @override
+  Widget build(
+    BuildContext context,
+  ) {
+    if (loading) {
+      return const Center(
+        child:
+            CircularProgressIndicator(),
+      );
+    }
+
+    final displayName =
+        user?['display_name']
+                ?.toString()
+                .trim() ??
+            '';
+
+    final username =
+        user?['username']
+                ?.toString() ??
+            'User';
+
+    final name =
+        displayName.isNotEmpty
+            ? displayName
+            : username;
+
+    final uid =
+        user?['public_uid']
+                ?.toString() ??
+            '';
+
+    final avatarUrl =
+        user?['avatar_url']
+                ?.toString() ??
+            '';
+
+    final signature =
+        user?['signature']
+                ?.toString()
+                .trim() ??
+            '';
+
+    final birthday =
+        user?['birthday']
+                ?.toString() ??
+            '';
+
+    return RefreshIndicator(
+      onRefresh: loadProfile,
+      child: ListView(
+        physics:
+            const AlwaysScrollableScrollPhysics(),
+        padding:
+            const EdgeInsets.all(20),
+        children: [
+          const SizedBox(
+            height: 20,
+          ),
+
+          // ==================================================
+          // PROFILE DP
+          // ==================================================
+
+          Center(
+            child: GestureDetector(
+              onTap:
+                  openEditProfile,
+              child: Stack(
+                children: [
+                  CircleAvatar(
+                    radius: 55,
+                    backgroundImage:
+                        avatarUrl.isNotEmpty
+                            ? NetworkImage(
+                                avatarUrl,
+                              )
+                            : null,
+                    child: avatarUrl
+                            .isEmpty
+                        ? const Icon(
+                            Icons.person,
+                            size: 55,
+                          )
+                        : null,
+                  ),
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
+                    child:
+                        Container(
+                      padding:
+                          const EdgeInsets
+                              .all(8),
+                      decoration:
+                          const BoxDecoration(
+                        color: Colors
+                            .deepPurple,
+                        shape:
+                            BoxShape
+                                .circle,
+                      ),
+                      child:
+                          const Icon(
+                        Icons
+                            .edit,
+                        color: Colors
+                            .white,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(
+            height: 18,
+          ),
+
+          Center(
+            child: Text(
+              name,
+              style:
+                  const TextStyle(
+                fontSize: 25,
+                fontWeight:
+                    FontWeight.bold,
+              ),
+            ),
+          ),
+
+          const SizedBox(
+            height: 8,
+          ),
+
+          Center(
+            child: Text(
+              'UID: $uid',
+              style:
+                  const TextStyle(
+                color:
+                    Colors.deepPurple,
+                fontSize: 16,
+                fontWeight:
+                    FontWeight.bold,
+              ),
+            ),
+          ),
+
+          if (signature.isNotEmpty) ...[
+            const SizedBox(
+              height: 8,
+            ),
+            Center(
+              child: Text(
+                signature,
+                textAlign:
+                    TextAlign.center,
+                style:
+                    const TextStyle(
+                  color:
+                      Colors.grey,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ],
+
+          if (birthday.isNotEmpty) ...[
+            const SizedBox(
+              height: 6,
+            ),
+            Center(
+              child: Text(
+                'Birthday: $birthday',
+                style:
+                    const TextStyle(
+                  color:
+                      Colors.grey,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ],
+
+          const SizedBox(
+            height: 30,
+          ),
+
+          // ==================================================
+          // EDIT PROFILE BUTTON
+          // ==================================================
+
+          SizedBox(
+            height: 50,
+            child:
+                ElevatedButton.icon(
+              onPressed:
+                  openEditProfile,
+              icon:
+                  const Icon(
+                Icons.edit,
+              ),
+              label:
+                  const Text(
+                'Edit Profile',
+              ),
+            ),
+          ),
+
+          const SizedBox(
+            height: 15,
+          ),
+
+          // ==================================================
+          // COINS
+          // ==================================================
+
+          Card(
+            child: ListTile(
+              leading:
+                  const Icon(
+                Icons
+                    .monetization_on,
+              ),
+              title:
+                  const Text(
+                'Coins',
+              ),
+              trailing:
+                  Text(
+                '${user?['coins'] ?? 0}',
+                style:
+                    const TextStyle(
+                  fontWeight:
+                      FontWeight
+                          .bold,
+                ),
+              ),
+            ),
+          ),
+
+          // ==================================================
+          // LEVEL
+          // ==================================================
+
+          Card(
+            child: ListTile(
+              leading:
+                  const Icon(
+                Icons.star,
+              ),
+              title:
+                  const Text(
+                'Level',
+              ),
+              trailing:
+                  Text(
+                '${user?['level'] ?? 1}',
+              ),
+            ),
+          ),
+
+          const SizedBox(
+            height: 20,
+          ),
+
+          // ==================================================
+          // LOGOUT
+          // ==================================================
+
+          SizedBox(
+            height: 50,
+            child:
+                OutlinedButton.icon(
+              onPressed: logout,
+              icon:
+                  const Icon(
+                Icons.logout,
+              ),
+              label:
+                  const Text(
+                'Logout',
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================
+// EDIT PROFILE SCREEN
+// ============================================================
+
+class EditProfileScreen
+    extends StatefulWidget {
+  final String token;
+  final Map<String, dynamic> user;
+
+  const EditProfileScreen({
+    super.key,
+    required this.token,
+    required this.user,
+  });
+
+  @override
+  State<EditProfileScreen> createState() =>
+      _EditProfileScreenState();
+}
+
+class _EditProfileScreenState
+    extends State<EditProfileScreen> {
+  late final TextEditingController
+      nameController;
+
+  late final TextEditingController
+      signatureController;
+
+  String birthday = '';
+
+  String currentAvatarUrl = '';
+
+  final ImagePicker _picker =
+      ImagePicker();
+
+  XFile? selectedImage;
+
+  bool saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    final displayName =
+        widget.user['display_name']
+                ?.toString()
+                .trim() ??
+            '';
+
+    final username =
+        widget.user['username']
+                ?.toString() ??
+            '';
+
+    nameController =
+        TextEditingController(
+      text: displayName.isNotEmpty
+          ? displayName
+          : username,
+    );
+
+    signatureController =
+        TextEditingController(
+      text: widget.user['signature']
+              ?.toString() ??
+          '',
+    );
+
+    birthday =
+        widget.user['birthday']
+                ?.toString() ??
+            '';
+
+    currentAvatarUrl =
+        widget.user['avatar_url']
+                ?.toString() ??
+            '';
+  }
+
+  @override
+  void dispose() {
+    nameController.dispose();
+    signatureController.dispose();
+    super.dispose();
+  }
+
+  // ==========================================================
+  // IMAGE PICKER
+  // ==========================================================
+
   Future<void> pickProfileImage(
     ImageSource source,
   ) async {
     try {
-      final image = await _picker.pickImage(
+      final image =
+          await _picker.pickImage(
         source: source,
         imageQuality: 80,
         maxWidth: 800,
         maxHeight: 800,
       );
 
-      if (image == null) return;
+      if (image == null) {
+        return;
+      }
 
-      if (mounted) {
-        setState(() {
-          selectedImage = image;
-        });
-      }
+      if (!mounted) return;
+
+      setState(() {
+        selectedImage = image;
+      });
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Image select failed: $e',
-            ),
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Image select failed: $e',
           ),
-        );
-      }
+        ),
+      );
     }
   }
+
+  // ==========================================================
+  // IMAGE OPTIONS
+  // ==========================================================
 
   void showImageOptions() {
     showModalBottomSheet(
@@ -1022,30 +1865,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Wrap(
             children: [
               ListTile(
-                leading: const Icon(
+                leading:
+                    const Icon(
                   Icons.photo_library,
                 ),
-                title: const Text(
+                title:
+                    const Text(
                   'Choose from Gallery',
                 ),
                 onTap: () {
-                  Navigator.pop(context);
+                  Navigator.pop(
+                    context,
+                  );
+
                   pickProfileImage(
-                    ImageSource.gallery,
+                    ImageSource
+                        .gallery,
                   );
                 },
               ),
               ListTile(
-                leading: const Icon(
+                leading:
+                    const Icon(
                   Icons.camera_alt,
                 ),
-                title: const Text(
+                title:
+                    const Text(
                   'Take Photo',
                 ),
                 onTap: () {
-                  Navigator.pop(context);
+                  Navigator.pop(
+                    context,
+                  );
+
                   pickProfileImage(
-                    ImageSource.camera,
+                    ImageSource
+                        .camera,
                   );
                 },
               ),
@@ -1056,46 +1911,97 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Future<void> logout() async {
-    final prefs =
-        await SharedPreferences.getInstance();
+  // ==========================================================
+  // DATE PICKER
+  // ==========================================================
 
-    await prefs.remove('token');
+  Future<void> pickBirthday() async {
+    DateTime initialDate =
+        DateTime(2000, 1, 1);
+
+    if (birthday.isNotEmpty) {
+      try {
+        final parsed =
+            DateTime.tryParse(
+          birthday,
+        );
+
+        if (parsed != null) {
+          initialDate = parsed;
+        }
+      } catch (_) {}
+    }
+
+    final now = DateTime.now();
+
+    if (initialDate.isAfter(now)) {
+      initialDate = now;
+    }
+
+    final selected =
+        await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate:
+          DateTime(1900),
+      lastDate: now,
+      helpText:
+          'Select your birthday',
+    );
+
+    if (selected == null) {
+      return;
+    }
 
     if (!mounted) return;
 
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const LoginScreen(),
-      ),
-      (route) => false,
-    );
+    final month =
+        selected.month
+            .toString()
+            .padLeft(2, '0');
+
+    final day =
+        selected.day
+            .toString()
+            .padLeft(2, '0');
+
+    setState(() {
+      birthday =
+          '${selected.year}-$month-$day';
+    });
   }
 
-  Future<void> saveProfilePhoto() async {
-    if (selectedImage == null) return;
+  // ==========================================================
+  // SAVE PROFILE
+  // ==========================================================
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Uploading profile photo...',
+  Future<void> saveProfile() async {
+    final name =
+        nameController.text.trim();
+
+    final signature =
+        signatureController.text.trim();
+
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(
+        const SnackBar(
+          content:
+              Text('Name is required'),
         ),
-      ),
-    );
+      );
 
-    final avatarUrl =
-        await uploadProfilePhotoToCloudinary(
-      selectedImage!.path,
-    );
+      return;
+    }
 
-    if (avatarUrl == null) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
+    if (name.length > 50) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(
         const SnackBar(
           content: Text(
-            'Photo upload failed',
+            'Name must be 50 characters or less',
           ),
         ),
       );
@@ -1103,214 +2009,402 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return;
     }
 
-    try {
-      final result =
-          await api.saveProfilePhoto(
-        widget.token,
-        avatarUrl,
+    if (signature.length > 150) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Signature must be 150 characters or less',
+          ),
+        ),
       );
+
+      return;
+    }
+
+    setState(() {
+      saving = true;
+    });
+
+    try {
+      // ------------------------------------------------------
+      // STEP 1: SAVE NAME / SIGNATURE / BIRTHDAY
+      // ------------------------------------------------------
+
+      await api.saveProfileDetails(
+        widget.token,
+        name,
+        signature,
+        birthday,
+      );
+
+      // ------------------------------------------------------
+      // STEP 2: UPLOAD NEW DP IF SELECTED
+      // ------------------------------------------------------
+
+      if (selectedImage != null) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Uploading profile photo...',
+              ),
+            ),
+          );
+        }
+
+        final avatarUrl =
+            await uploadProfilePhotoToCloudinary(
+          selectedImage!.path,
+        );
+
+        if (avatarUrl == null) {
+          throw Exception(
+            'Profile photo upload failed',
+          );
+        }
+
+        await api.saveProfilePhoto(
+          widget.token,
+          avatarUrl,
+        );
+      }
+
+      // ------------------------------------------------------
+      // STEP 3: LOAD COMPLETE UPDATED USER
+      // ------------------------------------------------------
+
+      final result =
+          await api.me(
+        widget.token,
+      );
+
+      final updatedUser =
+          result['user'];
 
       if (!mounted) return;
 
-      setState(() {
-        user = result['user'];
-        selectedImage = null;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(
         const SnackBar(
           content: Text(
-            'Profile photo saved successfully',
+            'Profile updated successfully',
           ),
+        ),
+      );
+
+      Navigator.pop(
+        context,
+        Map<String, dynamic>.from(
+          updatedUser,
         ),
       );
     } catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(
         SnackBar(
           content: Text(
             e.toString().replaceFirst(
-              'Exception: ',
-              '',
-            ),
+                  'Exception: ',
+                  '',
+                ),
           ),
         ),
       );
+    } finally {
+      if (mounted) {
+        setState(() {
+          saving = false;
+        });
+      }
     }
   }
 
+  // ==========================================================
+  // EDIT PROFILE UI
+  // ==========================================================
+
   @override
-  Widget build(BuildContext context) {
-    if (loading) {
-      return const Center(
-        child: CircularProgressIndicator(),
+  Widget build(
+    BuildContext context,
+  ) {
+    ImageProvider<Object>?
+        avatarImage;
+
+    if (selectedImage != null) {
+      avatarImage =
+          FileImage(
+        File(
+          selectedImage!.path,
+        ),
+      );
+    } else if (currentAvatarUrl
+        .isNotEmpty) {
+      avatarImage =
+          NetworkImage(
+        currentAvatarUrl,
       );
     }
 
-    final name =
-        user?['username']?.toString() ?? 'User';
-
-    final uid =
-        user?['public_uid']?.toString() ?? '';
-
-    final avatarUrl =
-        user?['avatar_url']?.toString() ?? '';
-
-    return ListView(
-      padding: const EdgeInsets.all(20),
-      children: [
-        const SizedBox(height: 20),
-
-        // Profile DP
-        Center(
-          child: Stack(
+    return Scaffold(
+      appBar: AppBar(
+        title:
+            const Text(
+          'Edit Profile',
+        ),
+      ),
+      body: SafeArea(
+        child:
+            SingleChildScrollView(
+          padding:
+              const EdgeInsets.all(20),
+          child: Column(
             children: [
-              CircleAvatar(
-                radius: 55,
-backgroundImage: selectedImage != null
-    ? (FileImage(
-        File(selectedImage!.path),
-      ) as ImageProvider<Object>)
-    : avatarUrl.isNotEmpty
-        ? (NetworkImage(
-            avatarUrl,
-          ) as ImageProvider<Object>)
-        : null,
-                child: selectedImage == null &&
-                        avatarUrl.isEmpty
-                    ? const Icon(
-                        Icons.person,
-                        size: 55,
-                      )
-                    : null,
+              const SizedBox(
+                height: 15,
               ),
 
-              Positioned(
-                right: 0,
-                bottom: 0,
-                child: InkWell(
-                  onTap: showImageOptions,
-                  child: Container(
-                    padding:
-                        const EdgeInsets.all(8),
-                    decoration:
-                        const BoxDecoration(
-                      color: Colors.deepPurple,
-                      shape: BoxShape.circle,
+              // ==================================================
+              // PROFILE PHOTO
+              // ==================================================
+
+              GestureDetector(
+                onTap:
+                    saving
+                        ? null
+                        : showImageOptions,
+                child: Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 65,
+                      backgroundImage:
+                          avatarImage,
+                      child: avatarImage ==
+                              null
+                          ? const Icon(
+                              Icons.person,
+                              size: 65,
+                            )
+                          : null,
                     ),
-                    child: const Icon(
-                      Icons.camera_alt,
-                      color: Colors.white,
-                      size: 20,
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child:
+                          Container(
+                        padding:
+                            const EdgeInsets
+                                .all(10),
+                        decoration:
+                            const BoxDecoration(
+                          color: Colors
+                              .deepPurple,
+                          shape:
+                              BoxShape
+                                  .circle,
+                        ),
+                        child:
+                            const Icon(
+                          Icons
+                              .camera_alt,
+                          color: Colors
+                              .white,
+                          size: 22,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(
+                height: 10,
+              ),
+
+              const Text(
+                'Tap photo to change',
+                style: TextStyle(
+                  color: Colors.grey,
+                ),
+              ),
+
+              const SizedBox(
+                height: 30,
+              ),
+
+              // ==================================================
+              // NAME
+              // ==================================================
+
+              TextField(
+                controller:
+                    nameController,
+                maxLength: 50,
+                textCapitalization:
+                    TextCapitalization
+                        .words,
+                decoration:
+                    const InputDecoration(
+                  labelText:
+                      'Name',
+                  hintText:
+                      'Enter your name',
+                  prefixIcon:
+                      Icon(
+                    Icons
+                        .person_outline,
+                  ),
+                  border:
+                      OutlineInputBorder(),
+                ),
+              ),
+
+              const SizedBox(
+                height: 10,
+              ),
+
+              // ==================================================
+              // SIGNATURE
+              // ==================================================
+
+              TextField(
+                controller:
+                    signatureController,
+                maxLength: 150,
+                maxLines: 3,
+                decoration:
+                    const InputDecoration(
+                  labelText:
+                      'Signature',
+                  hintText:
+                      'Write something about yourself',
+                  prefixIcon:
+                      Icon(
+                    Icons
+                        .edit_note,
+                  ),
+                  border:
+                      OutlineInputBorder(),
+                ),
+              ),
+
+              const SizedBox(
+                height: 10,
+              ),
+
+              // ==================================================
+              // BIRTHDAY
+              // ==================================================
+
+              InkWell(
+                onTap:
+                    saving
+                        ? null
+                        : pickBirthday,
+                borderRadius:
+                    BorderRadius
+                        .circular(12),
+                child:
+                    InputDecorator(
+                  decoration:
+                      const InputDecoration(
+                    labelText:
+                        'Birthday',
+                    prefixIcon:
+                        Icon(
+                      Icons
+                          .cake_outlined,
+                    ),
+                    suffixIcon:
+                        Icon(
+                      Icons
+                          .calendar_month,
+                    ),
+                    border:
+                        OutlineInputBorder(),
+                  ),
+                  child: Text(
+                    birthday.isEmpty
+                        ? 'Select birthday'
+                        : birthday,
+                    style:
+                        TextStyle(
+                      color:
+                          birthday.isEmpty
+                              ? Colors
+                                  .grey
+                              : Colors
+                                  .black87,
                     ),
                   ),
                 ),
               ),
+
+              const SizedBox(
+                height: 30,
+              ),
+
+              // ==================================================
+              // SAVE BUTTON
+              // ==================================================
+
+              SizedBox(
+                width:
+                    double.infinity,
+                height: 52,
+                child:
+                    ElevatedButton.icon(
+                  onPressed:
+                      saving
+                          ? null
+                          : saveProfile,
+                  icon: saving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child:
+                              CircularProgressIndicator(
+                            strokeWidth:
+                                2,
+                            color: Colors
+                                .white,
+                          ),
+                        )
+                      : const Icon(
+                          Icons.save,
+                        ),
+                  label: Text(
+                    saving
+                        ? 'Saving...'
+                        : 'Save Profile',
+                  ),
+                ),
+              ),
+
+              const SizedBox(
+                height: 20,
+              ),
             ],
           ),
         ),
-
-        const SizedBox(height: 18),
-
-        Center(
-          child: Text(
-            name,
-            style: const TextStyle(
-              fontSize: 25,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 8),
-
-        Center(
-          child: Text(
-            'UID: $uid',
-            style: const TextStyle(
-              color: Colors.deepPurple,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 30),
-
-        if (selectedImage != null)
-          SizedBox(
-            height: 50,
-            child: ElevatedButton.icon(
-              onPressed: saveProfilePhoto,
-              icon: const Icon(
-                Icons.save,
-              ),
-              label: const Text(
-                'Save Profile Photo',
-              ),
-            ),
-          ),
-
-        if (selectedImage != null)
-          const SizedBox(height: 15),
-
-        Card(
-          child: ListTile(
-            leading: const Icon(
-              Icons.monetization_on,
-            ),
-            title: const Text(
-              'Coins',
-            ),
-            trailing: Text(
-              '${user?['coins'] ?? 0}',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ),
-
-        Card(
-          child: ListTile(
-            leading: const Icon(
-              Icons.star,
-            ),
-            title: const Text(
-              'Level',
-            ),
-            trailing: Text(
-              '${user?['level'] ?? 1}',
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 20),
-
-        SizedBox(
-          height: 50,
-          child: OutlinedButton.icon(
-            onPressed: logout,
-            icon: const Icon(
-              Icons.logout,
-            ),
-            label: const Text(
-              'Logout',
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
-    
 
 // ============================================================
 // VOICE ROOM UI
 // ============================================================
 
-class VoiceRoomScreen extends StatefulWidget {
+class VoiceRoomScreen
+    extends StatefulWidget {
   final String roomId;
   final String roomName;
   final int seatCount;
@@ -1343,64 +2437,96 @@ class _VoiceRoomScreenState
   ];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+    BuildContext context,
+  ) {
     return Scaffold(
-      backgroundColor: const Color(0xFF211A35),
+      backgroundColor:
+          const Color(0xFF211A35),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF211A35),
-        foregroundColor: Colors.white,
-        title: Text(widget.roomName),
+        backgroundColor:
+            const Color(0xFF211A35),
+        foregroundColor:
+            Colors.white,
+        title: Text(
+          widget.roomName,
+        ),
         actions: [
           IconButton(
             onPressed: () {},
-            icon: const Icon(Icons.share),
+            icon: const Icon(
+              Icons.share,
+            ),
           ),
         ],
       ),
       body: Column(
         children: [
-          const SizedBox(height: 20),
+          const SizedBox(
+            height: 20,
+          ),
           const Text(
             'VOICE ROOM',
             style: TextStyle(
               color: Colors.white70,
               letterSpacing: 2,
-              fontWeight: FontWeight.bold,
+              fontWeight:
+                  FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 25),
+          const SizedBox(
+            height: 25,
+          ),
           Expanded(
-            child: GridView.builder(
-              padding: const EdgeInsets.all(20),
+            child:
+                GridView.builder(
+              padding:
+                  const EdgeInsets.all(
+                      20),
               gridDelegate:
                   const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 4,
-                crossAxisSpacing: 15,
-                mainAxisSpacing: 25,
+                crossAxisSpacing:
+                    15,
+                mainAxisSpacing:
+                    25,
               ),
-              itemCount: speakers.length,
-              itemBuilder: (context, index) {
-                final speaker = speakers[index];
+              itemCount:
+                  speakers.length,
+              itemBuilder:
+                  (context, index) {
+                final speaker =
+                    speakers[index];
 
                 return Column(
                   children: [
                     CircleAvatar(
                       radius: 32,
                       backgroundColor:
-                          Colors.deepPurple.shade300,
-                      child: const Icon(
+                          Colors
+                              .deepPurple
+                              .shade300,
+                      child:
+                          const Icon(
                         Icons.person,
-                        color: Colors.white,
+                        color:
+                            Colors.white,
                         size: 32,
                       ),
                     ),
-                    const SizedBox(height: 7),
+                    const SizedBox(
+                      height: 7,
+                    ),
                     Text(
                       speaker,
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      overflow:
+                          TextOverflow
+                              .ellipsis,
+                      style:
+                          const TextStyle(
+                        color:
+                            Colors.white,
                         fontSize: 11,
                       ),
                     ),
@@ -1410,52 +2536,73 @@ class _VoiceRoomScreenState
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(
+            padding:
+                const EdgeInsets
+                    .symmetric(
               horizontal: 20,
               vertical: 15,
             ),
-            decoration: const BoxDecoration(
-              color: Color(0xFF171225),
-              borderRadius: BorderRadius.vertical(
-                top: Radius.circular(25),
+            decoration:
+                const BoxDecoration(
+              color:
+                  Color(0xFF171225),
+              borderRadius:
+                  BorderRadius.vertical(
+                top:
+                    Radius.circular(
+                  25,
+                ),
               ),
             ),
             child: Row(
               mainAxisAlignment:
-                  MainAxisAlignment.spaceEvenly,
+                  MainAxisAlignment
+                      .spaceEvenly,
               children: [
                 _roomButton(
                   icon: microphoneOn
                       ? Icons.mic
                       : Icons.mic_off,
                   label: 'Mic',
-                  active: microphoneOn,
+                  active:
+                      microphoneOn,
                   onTap: () {
                     setState(() {
-                      microphoneOn = !microphoneOn;
+                      microphoneOn =
+                          !microphoneOn;
                     });
                   },
                 ),
                 _roomButton(
-                  icon: Icons.card_giftcard,
+                  icon: Icons
+                      .card_giftcard,
                   label: 'Gift',
                   onTap: () {
                     showDialog(
-                      context: context,
+                      context:
+                          context,
                       builder: (_) {
                         return AlertDialog(
-                          title: const Text(
+                          title:
+                              const Text(
                             'Send Gift',
                           ),
-                          content: const Text(
+                          content:
+                              const Text(
                             'Gift system will be connected here.',
                           ),
                           actions: [
                             TextButton(
-                              onPressed: () {
-                                Navigator.pop(context);
+                              onPressed:
+                                  () {
+                                Navigator.pop(
+                                  context,
+                                );
                               },
-                              child: const Text('OK'),
+                              child:
+                                  const Text(
+                                'OK',
+                              ),
                             ),
                           ],
                         );
@@ -1464,16 +2611,20 @@ class _VoiceRoomScreenState
                   },
                 ),
                 _roomButton(
-                  icon: Icons.chat_bubble_outline,
+                  icon: Icons
+                      .chat_bubble_outline,
                   label: 'Chat',
                   onTap: () {},
                 ),
                 _roomButton(
-                  icon: Icons.call_end,
+                  icon:
+                      Icons.call_end,
                   label: 'Leave',
                   danger: true,
                   onTap: () {
-                    Navigator.pop(context);
+                    Navigator.pop(
+                      context,
+                    );
                   },
                 ),
               ],
@@ -1497,21 +2648,26 @@ class _VoiceRoomScreenState
         children: [
           CircleAvatar(
             radius: 27,
-            backgroundColor: danger
-                ? Colors.red
-                : active
-                    ? Colors.green
-                    : Colors.white12,
+            backgroundColor:
+                danger
+                    ? Colors.red
+                    : active
+                        ? Colors.green
+                        : Colors.white12,
             child: Icon(
               icon,
               color: Colors.white,
             ),
           ),
-          const SizedBox(height: 5),
+          const SizedBox(
+            height: 5,
+          ),
           Text(
             label,
-            style: const TextStyle(
-              color: Colors.white70,
+            style:
+                const TextStyle(
+              color:
+                  Colors.white70,
               fontSize: 11,
             ),
           ),
