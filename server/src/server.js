@@ -49,50 +49,52 @@ async function initDatabase() {
   `);
 
   await pool.query(`
-  ALTER TABLE users
-  ADD COLUMN IF NOT EXISTS public_uid INTEGER
-`);
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS public_uid INTEGER
+  `);
 
-const usersWithoutUid = await pool.query(
-  `SELECT id FROM users WHERE public_uid IS NULL`
-);
+  const usersWithoutUid = await pool.query(
+    \`SELECT id FROM users WHERE public_uid IS NULL\`
+  );
 
-for (const existingUser of usersWithoutUid.rows) {
-  let newUid;
+  for (const existingUser of usersWithoutUid.rows) {
+    let newUid;
 
-  while (true) {
-    newUid = Math.floor(100000 + Math.random() * 900000);
+    while (true) {
+      newUid = Math.floor(100000 + Math.random() * 900000);
 
-    const uidCheck = await pool.query(
-      `SELECT id FROM users WHERE public_uid = $1`,
-      [newUid]
-    );
+      const uidCheck = await pool.query(
+        \`SELECT id FROM users WHERE public_uid = $1\`,
+        [newUid]
+      );
 
-    if (uidCheck.rows.length === 0) {
-      break;
+      if (uidCheck.rows.length === 0) {
+        break;
+      }
     }
+
+    await pool.query(
+      \`UPDATE users SET public_uid = $1 WHERE id = $2\`,
+      [newUid, existingUser.id]
+    );
   }
 
-  await pool.query(
-    `UPDATE users SET public_uid = $1 WHERE id = $2`,
-    [newUid, existingUser.id]
-  );
-}
   await pool.query(`
     CREATE TABLE IF NOT EXISTS rooms (
       id UUID PRIMARY KEY,
       name VARCHAR(100) NOT NULL,
       owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       password_hash TEXT,
-      created_at TIMESTAMP NOT NULL DEFAULT NOW() ,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
       seat_count INTEGER NOT NULL DEFAULT 10
     );
   `);
-await pool.query(`
-  ALTER TABLE rooms
-  ADD COLUMN IF NOT EXISTS seat_count INTEGER NOT NULL DEFAULT 10
-`);
-  
+
+  await pool.query(`
+    ALTER TABLE rooms
+    ADD COLUMN IF NOT EXISTS seat_count INTEGER NOT NULL DEFAULT 10
+  `);
+
   console.log("Database initialized.");
 }
 
