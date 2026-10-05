@@ -443,6 +443,52 @@ app.get("/api/me", authMiddleware, async (req, res) => {
 });
 
 // -------------------------
+// Public User Profile
+// -------------------------
+
+app.get("/api/users/:id/profile", async (req, res) => {
+  if (!pool) {
+    return res.status(500).json({
+      message: "Database is not configured",
+    });
+  }
+
+  try {
+    const result = await pool.query(
+      `
+      SELECT
+        id,
+        username,
+        public_uid,
+        avatar_url,
+        display_name,
+        signature,
+        level
+      FROM users
+      WHERE id = $1
+      `,
+      [req.params.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        message: "User not found",
+      });
+    }
+
+    res.json({
+      user: result.rows[0],
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      message: "Could not load public profile",
+    });
+  }
+});
+
+// -------------------------
 // Save Profile Details
 // -------------------------
 
