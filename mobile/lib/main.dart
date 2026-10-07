@@ -1321,11 +1321,10 @@ class FriendsScreen
 }
 
 // ============================================================
-// PROFILE
+// PERSONAL PROFILE
 // ============================================================
 
-class ProfileScreen
-    extends StatefulWidget {
+class ProfileScreen extends StatefulWidget {
   final String token;
 
   const ProfileScreen({
@@ -1352,38 +1351,34 @@ class _ProfileScreenState
   Future<void> loadProfile() async {
     try {
       final result =
-          await api.me(
-        widget.token,
-      );
+          await api.me(widget.token);
 
-      if (mounted) {
-        setState(() {
-          user =
-              result['user'];
-        });
-      }
+      if (!mounted) return;
+
+      setState(() {
+        user = Map<String, dynamic>.from(
+          result['user'] ?? {},
+        );
+      });
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(
-          SnackBar(
-            content: Text(
-              e.toString()
-                  .replaceFirst(
-                'Exception: ',
-                '',
-              ),
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e.toString().replaceFirst(
+              'Exception: ',
+              '',
             ),
           ),
-        );
-      }
+        ),
+      );
     } finally {
-      if (mounted) {
-        setState(() {
-          loading = false;
-        });
-      }
+      if (!mounted) return;
+
+      setState(() {
+        loading = false;
+      });
     }
   }
 
@@ -1391,12 +1386,10 @@ class _ProfileScreenState
     if (user == null) return;
 
     final updatedUser =
-        await Navigator.push<
-            Map<String, dynamic>>(
+        await Navigator.push<Map<String, dynamic>>(
       context,
       MaterialPageRoute(
-        builder: (_) =>
-            EditProfileScreen(
+        builder: (_) => EditProfileScreen(
           token: widget.token,
           user: user!,
         ),
@@ -1414,10 +1407,52 @@ class _ProfileScreenState
     }
   }
 
-  Future<void> logout() async {
+  Future<void> confirmLogout() async {
+    final shouldLogout =
+        await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text(
+            'Logout',
+          ),
+          content: const Text(
+            'Are you sure you want to logout?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(
+                  dialogContext,
+                  false,
+                );
+              },
+              child: const Text(
+                'Cancel',
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(
+                  dialogContext,
+                  true,
+                );
+              },
+              child: const Text(
+                'Confirm',
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldLogout != true) {
+      return;
+    }
+
     final prefs =
-        await SharedPreferences
-            .getInstance();
+        await SharedPreferences.getInstance();
 
     await prefs.remove('token');
 
@@ -1433,14 +1468,87 @@ class _ProfileScreenState
     );
   }
 
+  void openComingSoon(
+    String title,
+  ) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          '$title will be connected next.',
+        ),
+      ),
+    );
+  }
+
+  Widget profileAction(
+    IconData icon,
+    String title, {
+    VoidCallback? onTap,
+  }) {
+    return Card(
+      margin: const EdgeInsets.only(
+        bottom: 10,
+      ),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor:
+              Colors.deepPurple.shade50,
+          child: Icon(
+            icon,
+            color: Colors.deepPurple,
+          ),
+        ),
+        title: Text(
+          title,
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        trailing: const Icon(
+          Icons.chevron_right,
+        ),
+        onTap: onTap ??
+            () => openComingSoon(title),
+      ),
+    );
+  }
+
+  Widget statItem(
+    String value,
+    String label,
+  ) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(
+            height: 4,
+          ),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.grey,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(
     BuildContext context,
   ) {
     if (loading) {
       return const Center(
-        child:
-            CircularProgressIndicator(),
+        child: CircularProgressIndicator(),
       );
     }
 
@@ -1476,72 +1584,62 @@ class _ProfileScreenState
                 .trim() ??
             '';
 
-    final birthday =
-        user?['birthday']
-                ?.toString() ??
-            '';
-
     return RefreshIndicator(
       onRefresh: loadProfile,
       child: ListView(
         physics:
             const AlwaysScrollableScrollPhysics(),
         padding:
-            const EdgeInsets.all(20),
+            const EdgeInsets.fromLTRB(
+          16,
+          20,
+          16,
+          30,
+        ),
         children: [
-          const SizedBox(
-            height: 20,
-          ),
-
-          // ==================================================
-          // PROFILE DP
-          // ==================================================
+          // ======================================================
+          // TOP PROFILE
+          // ======================================================
 
           Center(
             child: GestureDetector(
-              onTap:
-                  openEditProfile,
+              onTap: openEditProfile,
               child: Stack(
                 children: [
                   CircleAvatar(
-                    radius: 55,
+                    radius: 58,
                     backgroundImage:
                         avatarUrl.isNotEmpty
                             ? NetworkImage(
                                 avatarUrl,
                               )
                             : null,
-                    child: avatarUrl
-                            .isEmpty
+                    child: avatarUrl.isEmpty
                         ? const Icon(
                             Icons.person,
-                            size: 55,
+                            size: 58,
                           )
                         : null,
                   ),
                   Positioned(
                     right: 0,
                     bottom: 0,
-                    child:
-                        Container(
+                    child: Container(
                       padding:
-                          const EdgeInsets
-                              .all(8),
+                          const EdgeInsets.all(
+                        8,
+                      ),
                       decoration:
                           const BoxDecoration(
-                        color: Colors
-                            .deepPurple,
+                        color:
+                            Colors.deepPurple,
                         shape:
-                            BoxShape
-                                .circle,
+                            BoxShape.circle,
                       ),
-                      child:
-                          const Icon(
-                        Icons
-                            .edit,
-                        color: Colors
-                            .white,
-                        size: 20,
+                      child: const Icon(
+                        Icons.edit,
+                        color: Colors.white,
+                        size: 18,
                       ),
                     ),
                   ),
@@ -1551,69 +1649,29 @@ class _ProfileScreenState
           ),
 
           const SizedBox(
-            height: 18,
+            height: 12,
           ),
 
           Center(
             child: Text(
               name,
-              style:
-                  const TextStyle(
-                fontSize: 25,
-                fontWeight:
-                    FontWeight.bold,
-              ),
-            ),
-          ),
-
-          const SizedBox(
-            height: 8,
-          ),
-
-          Center(
-            child: Text(
-              'UID: $uid',
-              style:
-                  const TextStyle(
-                color:
-                    Colors.deepPurple,
-                fontSize: 16,
-                fontWeight:
-                    FontWeight.bold,
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ),
 
           if (signature.isNotEmpty) ...[
             const SizedBox(
-              height: 8,
+              height: 5,
             ),
             Center(
               child: Text(
                 signature,
-                textAlign:
-                    TextAlign.center,
-                style:
-                    const TextStyle(
-                  color:
-                      Colors.grey,
-                  fontSize: 14,
-                ),
-              ),
-            ),
-          ],
-
-          if (birthday.isNotEmpty) ...[
-            const SizedBox(
-              height: 6,
-            ),
-            Center(
-              child: Text(
-                'Birthday: $birthday',
-                style:
-                    const TextStyle(
-                  color:
-                      Colors.grey,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.grey,
                   fontSize: 13,
                 ),
               ),
@@ -1621,25 +1679,104 @@ class _ProfileScreenState
           ],
 
           const SizedBox(
-            height: 30,
+            height: 14,
           ),
 
-          // ==================================================
-          // EDIT PROFILE BUTTON
-          // ==================================================
+          // ======================================================
+          // LEVEL / UID / VIP
+          // ======================================================
+
+          Card(
+            child: Padding(
+              padding:
+                  const EdgeInsets.symmetric(
+                vertical: 16,
+                horizontal: 8,
+              ),
+              child: Row(
+                children: [
+                  statItem(
+                    'Lv.${user?['level'] ?? 1}',
+                    'Level',
+                  ),
+                  Container(
+                    width: 1,
+                    height: 35,
+                    color: Colors.grey.shade300,
+                  ),
+                  statItem(
+                    uid.isEmpty
+                        ? '------'
+                        : uid,
+                    'UID',
+                  ),
+                  Container(
+                    width: 1,
+                    height: 35,
+                    color: Colors.grey.shade300,
+                  ),
+                  statItem(
+                    'VIP 0',
+                    'VIP',
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(
+            height: 10,
+          ),
+
+          // ======================================================
+          // SOCIAL STATS
+          // ======================================================
+
+          Card(
+            child: Padding(
+              padding:
+                  const EdgeInsets.symmetric(
+                vertical: 16,
+              ),
+              child: Row(
+                children: [
+                  statItem(
+                    '0',
+                    'Following',
+                  ),
+                  statItem(
+                    '0',
+                    'Fans',
+                  ),
+                  statItem(
+                    '0',
+                    'Gift Received',
+                  ),
+                  statItem(
+                    '0',
+                    'Visits',
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(
+            height: 15,
+          ),
+
+          // ======================================================
+          // EDIT PROFILE
+          // ======================================================
 
           SizedBox(
             height: 50,
-            child:
-                ElevatedButton.icon(
-              onPressed:
-                  openEditProfile,
-              icon:
-                  const Icon(
+            child: ElevatedButton.icon(
+              onPressed: openEditProfile,
+              icon: const Icon(
                 Icons.edit,
               ),
-              label:
-                  const Text(
+              label: const Text(
                 'Edit Profile',
               ),
             ),
@@ -1649,74 +1786,71 @@ class _ProfileScreenState
             height: 15,
           ),
 
-          // ==================================================
-          // COINS
-          // ==================================================
+          // ======================================================
+          // PROFILE FEATURES
+          // ======================================================
 
-          Card(
-            child: ListTile(
-              leading:
-                  const Icon(
-                Icons
-                    .monetization_on,
-              ),
-              title:
-                  const Text(
-                'Coins',
-              ),
-              trailing:
-                  Text(
-                '${user?['coins'] ?? 0}',
-                style:
-                    const TextStyle(
-                  fontWeight:
-                      FontWeight
-                          .bold,
-                ),
-              ),
-            ),
+          profileAction(
+            Icons.account_balance_wallet,
+            'Wallet',
           ),
 
-          // ==================================================
-          // LEVEL
-          // ==================================================
+          profileAction(
+            Icons.shopping_bag,
+            'Mall',
+          ),
 
-          Card(
-            child: ListTile(
-              leading:
-                  const Icon(
-                Icons.star,
-              ),
-              title:
-                  const Text(
-                'Level',
-              ),
-              trailing:
-                  Text(
-                '${user?['level'] ?? 1}',
-              ),
-            ),
+          profileAction(
+            Icons.star,
+            'Level',
+          ),
+
+          profileAction(
+            Icons.workspace_premium,
+            'VIP',
+          ),
+
+          profileAction(
+            Icons.military_tech,
+            'HONOR',
+          ),
+
+          profileAction(
+            Icons.business,
+            'My Agency',
+          ),
+
+          profileAction(
+            Icons.attach_money,
+            'My Income',
+          ),
+
+          profileAction(
+            Icons.feedback_outlined,
+            'Feedback',
+          ),
+
+          profileAction(
+            Icons.settings,
+            'Settings',
           ),
 
           const SizedBox(
-            height: 20,
+            height: 8,
           ),
 
-          // ==================================================
+          // ======================================================
           // LOGOUT
-          // ==================================================
+          // ======================================================
 
           SizedBox(
             height: 50,
-            child:
-                OutlinedButton.icon(
-              onPressed: logout,
-              icon:
-                  const Icon(
+            child: OutlinedButton.icon(
+              onPressed: confirmLogout,
+              icon: const Icon(
                 Icons.logout,
               ),
-              label:
-                  const Text(
+              label: const Text(
                 'Logout',
               ),
             ),
