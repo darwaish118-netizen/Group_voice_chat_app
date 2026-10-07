@@ -1727,43 +1727,185 @@ class _ProfileScreenState
           const SizedBox(
             height: 10,
           ),
+            
+ // ======================================================
+// SOCIAL STATS
+// ======================================================
 
-          // ======================================================
-          // SOCIAL STATS
-          // ======================================================
-
-          Card(
+Card(
+  child: Padding(
+    padding: const EdgeInsets.symmetric(
+      vertical: 16,
+      horizontal: 4,
+    ),
+    child: Row(
+      children: [
+        // Following
+        Expanded(
+          child: InkWell(
+            onTap: () {
+              openComingSoon('Following');
+            },
+            borderRadius: BorderRadius.circular(12),
             child: Padding(
-              padding:
-                  const EdgeInsets.symmetric(
-                vertical: 16,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 2,
               ),
-              child: Row(
+              child: Column(
                 children: [
-                  statItem(
+                  const Text(
                     '0',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  const Text(
                     'Following',
-                  ),
-                  statItem(
-                    '0',
-                    'Fans',
-                  ),
-                  statItem(
-                    '0',
-                    'Gift Received',
-                  ),
-                  statItem(
-                    '0',
-                    'Visits',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontSize: 11,
+                    ),
                   ),
                 ],
               ),
             ),
           ),
+        ),
 
-          const SizedBox(
-            height: 15,
+        // Fans
+        Expanded(
+          child: InkWell(
+            onTap: () {
+              openComingSoon('Fans');
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 2,
+              ),
+              child: Column(
+                children: [
+                  const Text(
+                    '0',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  const Text(
+                    'Fans',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
+        ),
+
+        // Gift Received - COINS ONLY
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 2,
+            ),
+            child: Column(
+              children: [
+                const Text(
+                  '0',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                const Text(
+                  'Gift Received',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 10,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        // Gift Sent - COINS ONLY
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 2,
+            ),
+            child: Column(
+              children: [
+                const Text(
+                  '0',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                const Text(
+                  'Gift Sent',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 10,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        // Visits
+        Expanded(
+          child: InkWell(
+            onTap: () {
+              openComingSoon('Visits');
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 2,
+              ),
+              child: Column(
+                children: [
+                  const Text(
+                    '0',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  const Text(
+                    'Visits',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  ),
+),
 
           // ======================================================
           // EDIT PROFILE
