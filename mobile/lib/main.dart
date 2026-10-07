@@ -138,8 +138,10 @@ class ApiService {
     String token,
     String displayName,
     String signature,
-    String birthday,
-  ) async {
+    String birthday, {
+    String? country,
+    String? gender,
+  }) async {
     final response = await http.put(
       Uri.parse(
         '$apiBaseUrl/api/me/profile',
@@ -157,6 +159,14 @@ class ApiService {
             birthday.trim().isEmpty
                 ? null
                 : birthday.trim(),
+        'country':
+            country?.trim().isEmpty ?? true
+                ? null
+                : country!.trim(),
+        'gender':
+            gender?.trim().isEmpty ?? true
+                ? null
+                : gender!.trim(),
       }),
     );
 
@@ -309,6 +319,29 @@ class _AuthGateState
       token = savedToken;
       loading = false;
     });
+  }
+
+  String countryFlag(String country) {
+    const flags = {
+      'Pakistan': '🇵🇰',
+      'India': '🇮🇳',
+      'United Arab Emirates': '🇦🇪',
+      'United Kingdom': '🇬🇧',
+      'Saudi Arabia': '🇸🇦',
+      'Bangladesh': '🇧🇩',
+      'Nepal': '🇳🇵',
+      'Qatar': '🇶🇦',
+      'Kuwait': '🇰🇼',
+      'Oman': '🇴🇲',
+      'Bahrain': '🇧🇭',
+      'United States': '🇺🇸',
+      'Canada': '🇨🇦',
+      'Australia': '🇦🇺',
+      'Germany': '🇩🇪',
+      'France': '🇫🇷',
+      'Turkey': '🇹🇷',
+    };
+    return flags[country] ?? '🌍';
   }
 
   @override
@@ -1584,6 +1617,17 @@ class _ProfileScreenState
                 .trim() ??
             '';
 
+    final country =
+        user?['country']
+                ?.toString()
+                .trim() ??
+            '';
+
+    final flag =
+        country.isNotEmpty
+            ? countryFlag(country)
+            : '';
+
     return RefreshIndicator(
       onRefresh: loadProfile,
       child: ListView(
@@ -1653,10 +1697,38 @@ class _ProfileScreenState
           ),
 
           Center(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: Text(
+                    name,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                if (flag.isNotEmpty) ...[
+                  const SizedBox(width: 6),
+                  Text(
+                    flag,
+                    style: const TextStyle(fontSize: 21),
+                  ),
+                ],
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 4),
+
+          Center(
             child: Text(
-              name,
+              uid.isEmpty ? '------' : uid,
               style: const TextStyle(
-                fontSize: 24,
+                color: Colors.deepPurple,
+                fontSize: 15,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -1683,7 +1755,7 @@ class _ProfileScreenState
           ),
 
           // ======================================================
-          // LEVEL / UID / VIP
+          // WEALTH / CHARM / VIP
           // ======================================================
 
           Card(
@@ -1697,7 +1769,7 @@ class _ProfileScreenState
                 children: [
                   statItem(
                     'Lv.${user?['level'] ?? 1}',
-                    'Level',
+                    'Wealth Level',
                   ),
                   Container(
                     width: 1,
@@ -1705,10 +1777,8 @@ class _ProfileScreenState
                     color: Colors.grey.shade300,
                   ),
                   statItem(
-                    uid.isEmpty
-                        ? '------'
-                        : uid,
-                    'UID',
+                    'Lv.1',
+                    'Charm Level',
                   ),
                   Container(
                     width: 1,
@@ -1908,27 +1978,6 @@ Card(
 ),
 
           // ======================================================
-          // EDIT PROFILE
-          // ======================================================
-
-          SizedBox(
-            height: 50,
-            child: ElevatedButton.icon(
-              onPressed: openEditProfile,
-              icon: const Icon(
-                Icons.edit,
-              ),
-              label: const Text(
-                'Edit Profile',
-              ),
-            ),
-          ),
-
-          const SizedBox(
-            height: 15,
-          ),
-
-          // ======================================================
           // PROFILE FEATURES
           // ======================================================
 
@@ -1944,7 +1993,7 @@ Card(
 
           profileAction(
             Icons.star,
-            'Level',
+            'Wealth Level',
           ),
 
           profileAction(
@@ -2032,6 +2081,8 @@ class _EditProfileScreenState
       signatureController;
 
   String birthday = '';
+  String country = '';
+  String gender = '';
 
   String currentAvatarUrl = '';
 
@@ -2041,6 +2092,31 @@ class _EditProfileScreenState
   XFile? selectedImage;
 
   bool saving = false;
+
+  final List<String> countries = const [
+    'Pakistan',
+    'India',
+    'United Arab Emirates',
+    'United Kingdom',
+    'Saudi Arabia',
+    'Bangladesh',
+    'Nepal',
+    'Qatar',
+    'Kuwait',
+    'Oman',
+    'Bahrain',
+    'United States',
+    'Canada',
+    'Australia',
+    'Germany',
+    'France',
+    'Turkey',
+  ];
+
+  final List<String> genders = const [
+    'Male',
+    'Female',
+  ];
 
   @override
   void initState() {
@@ -2073,6 +2149,16 @@ class _EditProfileScreenState
 
     birthday =
         widget.user['birthday']
+                ?.toString() ??
+            '';
+
+    country =
+        widget.user['country']
+                ?.toString() ??
+            '';
+
+    gender =
+        widget.user['gender']
                 ?.toString() ??
             '';
 
@@ -2247,6 +2333,29 @@ class _EditProfileScreenState
     });
   }
 
+  String countryFlag(String value) {
+    const flags = {
+      'Pakistan': '🇵🇰',
+      'India': '🇮🇳',
+      'United Arab Emirates': '🇦🇪',
+      'United Kingdom': '🇬🇧',
+      'Saudi Arabia': '🇸🇦',
+      'Bangladesh': '🇧🇩',
+      'Nepal': '🇳🇵',
+      'Qatar': '🇶🇦',
+      'Kuwait': '🇰🇼',
+      'Oman': '🇴🇲',
+      'Bahrain': '🇧🇭',
+      'United States': '🇺🇸',
+      'Canada': '🇨🇦',
+      'Australia': '🇦🇺',
+      'Germany': '🇩🇪',
+      'France': '🇫🇷',
+      'Turkey': '🇹🇷',
+    };
+    return flags[value] ?? '🌍';
+  }
+
   // ==========================================================
   // SAVE PROFILE
   // ==========================================================
@@ -2268,6 +2377,32 @@ class _EditProfileScreenState
         ),
       );
 
+      return;
+    }
+
+    if (country.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Please choose your country',
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (gender.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Please choose your gender',
+          ),
+        ),
+      );
       return;
     }
 
@@ -2313,6 +2448,8 @@ class _EditProfileScreenState
         name,
         signature,
         birthday,
+        country: country,
+        gender: gender,
       );
 
       // ------------------------------------------------------
@@ -2373,11 +2510,17 @@ class _EditProfileScreenState
         ),
       );
 
+      final updatedUserMap =
+          Map<String, dynamic>.from(
+        updatedUser,
+      );
+
+      updatedUserMap['country'] = country;
+      updatedUserMap['gender'] = gender;
+
       Navigator.pop(
         context,
-        Map<String, dynamic>.from(
-          updatedUser,
-        ),
+        updatedUserMap,
       );
     } catch (e) {
       if (!mounted) return;
@@ -2576,6 +2719,84 @@ class _EditProfileScreenState
               ),
 
               // ==================================================
+              // COUNTRY
+              // ==================================================
+
+              DropdownButtonFormField<String>(
+                value: countries.contains(country)
+                    ? country
+                    : null,
+                decoration:
+                    const InputDecoration(
+                  labelText: 'Country',
+                  prefixIcon:
+                      Icon(Icons.public),
+                  border:
+                      OutlineInputBorder(),
+                ),
+                items: countries.map(
+                  (item) {
+                    return DropdownMenuItem<String>(
+                      value: item,
+                      child: Text(
+                        '${countryFlag(item)}  $item',
+                      ),
+                    );
+                  },
+                ).toList(),
+                onChanged: saving
+                    ? null
+                    : (value) {
+                        if (value == null) return;
+                        setState(() {
+                          country = value;
+                        });
+                      },
+              ),
+
+              const SizedBox(
+                height: 15,
+              ),
+
+              // ==================================================
+              // GENDER
+              // ==================================================
+
+              DropdownButtonFormField<String>(
+                value: genders.contains(gender)
+                    ? gender
+                    : null,
+                decoration:
+                    const InputDecoration(
+                  labelText: 'Gender',
+                  prefixIcon:
+                      Icon(Icons.person),
+                  border:
+                      OutlineInputBorder(),
+                ),
+                items: genders.map(
+                  (item) {
+                    return DropdownMenuItem<String>(
+                      value: item,
+                      child: Text(item),
+                    );
+                  },
+                ).toList(),
+                onChanged: saving
+                    ? null
+                    : (value) {
+                        if (value == null) return;
+                        setState(() {
+                          gender = value;
+                        });
+                      },
+              ),
+
+              const SizedBox(
+                height: 15,
+              ),
+
+              // ==================================================
               // BIRTHDAY
               // ==================================================
 
@@ -2701,16 +2922,10 @@ class _VoiceRoomScreenState
     extends State<VoiceRoomScreen> {
   bool microphoneOn = false;
 
-  final List<String> speakers = [
-    'Host',
-    'Speaker 1',
-    'Speaker 2',
-    'Speaker 3',
-    'Speaker 4',
-    'Speaker 5',
-    'Speaker 6',
-    'Speaker 7',
-  ];
+  final List<String> speakers = List.generate(
+    10,
+    (index) => 'Seat ${index + 1}',
+  );
 
   @override
   Widget build(
