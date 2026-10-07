@@ -1574,7 +1574,29 @@ class _ProfileScreenState
       ),
     );
   }
+  String countryFlag(String country) {
+    const flags = {
+      'Pakistan': '🇵🇰',
+      'India': '🇮🇳',
+      'United Arab Emirates': '🇦🇪',
+      'United Kingdom': '🇬🇧',
+      'Saudi Arabia': '🇸🇦',
+      'Bangladesh': '🇧🇩',
+      'Nepal': '🇳🇵',
+      'Qatar': '🇶🇦',
+      'Kuwait': '🇰🇼',
+      'Oman': '🇴🇲',
+      'Bahrain': '🇧🇭',
+      'United States': '🇺🇸',
+      'Canada': '🇨🇦',
+      'Australia': '🇦🇺',
+      'Germany': '🇩🇪',
+      'France': '🇫🇷',
+      'Turkey': '🇹🇷',
+    };
 
+    return flags[country] ?? '🌍';
+  }
   @override
   Widget build(
     BuildContext context,
