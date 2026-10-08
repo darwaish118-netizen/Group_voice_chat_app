@@ -404,7 +404,7 @@ class _LoginScreenState
     if (email.isEmpty ||
         password.isEmpty) {
       showMessage(
-        'Email and password required',
+        'Email/phone and password required',
       );
       return;
     }
@@ -478,83 +478,336 @@ class _LoginScreenState
     );
   }
 
+  void socialLogin(String provider) {
+    showMessage(
+      '$provider login will be connected next.',
+    );
+  }
+
+  InputDecoration fieldDecoration({
+    required String hint,
+    required IconData icon,
+    Widget? suffixIcon,
+  }) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: const TextStyle(
+        color: Color(0xFF8E8795),
+        fontSize: 17,
+      ),
+      prefixIcon: Icon(
+        icon,
+        color: const Color(0xFF5F2DB8),
+      ),
+      suffixIcon: suffixIcon,
+      filled: true,
+      fillColor: Colors.white.withOpacity(0.92),
+      contentPadding:
+          const EdgeInsets.symmetric(
+        vertical: 18,
+        horizontal: 18,
+      ),
+      border: OutlineInputBorder(
+        borderRadius:
+            BorderRadius.circular(18),
+        borderSide: BorderSide.none,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius:
+            BorderRadius.circular(18),
+        borderSide: const BorderSide(
+          color: Color(0xFFE0D8E8),
+        ),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius:
+            BorderRadius.circular(18),
+        borderSide: const BorderSide(
+          color: Color(0xFF7B3FC6),
+          width: 1.5,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(
     BuildContext context,
   ) {
     return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child:
-              SingleChildScrollView(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFFFFF8FD),
+              Color(0xFFF4ECFA),
+              Color(0xFFEDE4F7),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
             padding:
-                const EdgeInsets.all(24),
+                const EdgeInsets.fromLTRB(
+              24,
+              28,
+              24,
+              30,
+            ),
             child: Column(
               children: [
-                const Icon(
-                  Icons.mic,
-                  size: 80,
-                  color:
-                      Colors.deepPurple,
-                ),
-                const SizedBox(
-                  height: 20,
-                ),
-                const Text(
-                  'Group Voice Chat',
-                  style: TextStyle(
-                    fontSize: 30,
-                    fontWeight:
-                        FontWeight.bold,
+                const SizedBox(height: 8),
+
+                // MINDO VOICE CHAT logo area
+                Container(
+                  width: 92,
+                  height: 92,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color(
+                      0xFFE8D7F8,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.deepPurple
+                            .withOpacity(0.12),
+                        blurRadius: 20,
+                        offset:
+                            const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.mic_rounded,
+                    size: 54,
+                    color: Color(0xFF6D35B8),
                   ),
                 ),
-                const SizedBox(
-                  height: 8,
+
+                const SizedBox(height: 18),
+
+                const Text(
+                  'MINDO',
+                  style: TextStyle(
+                    fontSize: 34,
+                    fontWeight:
+                        FontWeight.w900,
+                    letterSpacing: 2,
+                    color:
+                        Color(0xFF24162D),
+                  ),
                 ),
+
+                const Text(
+                  'VOICE CHAT',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight:
+                        FontWeight.w700,
+                    letterSpacing: 3,
+                    color:
+                        Color(0xFF6D35B8),
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+
                 const Text(
                   'Talk • Meet • Connect',
                   style: TextStyle(
-                    color: Colors.grey,
+                    color: Color(0xFF8E8795),
+                    fontSize: 14,
                   ),
                 ),
-                const SizedBox(
-                  height: 40,
+
+                const SizedBox(height: 30),
+
+                // Social login buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: loading
+                            ? null
+                            : () =>
+                                socialLogin(
+                                  'Google',
+                                ),
+                        icon: const Icon(
+                          Icons
+                              .g_mobiledata_rounded,
+                          size: 27,
+                        ),
+                        label: const Text(
+                          'Google',
+                          style: TextStyle(
+                            fontWeight:
+                                FontWeight.w600,
+                          ),
+                        ),
+                        style:
+                            OutlinedButton.styleFrom(
+                          foregroundColor:
+                              const Color(
+                            0xFF302936,
+                          ),
+                          backgroundColor:
+                              Colors.white
+                                  .withOpacity(
+                            0.86,
+                          ),
+                          side:
+                              const BorderSide(
+                            color:
+                                Color(0xFFE0D8E8),
+                          ),
+                          padding:
+                              const EdgeInsets
+                                  .symmetric(
+                            vertical: 15,
+                          ),
+                          shape:
+                              RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius
+                                    .circular(16),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: loading
+                            ? null
+                            : () =>
+                                socialLogin(
+                                  'Facebook',
+                                ),
+                        icon: const Icon(
+                          Icons.facebook_rounded,
+                          size: 23,
+                        ),
+                        label: const Text(
+                          'Facebook',
+                          style: TextStyle(
+                            fontWeight:
+                                FontWeight.w600,
+                          ),
+                        ),
+                        style:
+                            OutlinedButton.styleFrom(
+                          foregroundColor:
+                              const Color(
+                            0xFF302936,
+                          ),
+                          backgroundColor:
+                              Colors.white
+                                  .withOpacity(
+                            0.86,
+                          ),
+                          side:
+                              const BorderSide(
+                            color:
+                                Color(0xFFE0D8E8),
+                          ),
+                          padding:
+                              const EdgeInsets
+                                  .symmetric(
+                            vertical: 15,
+                          ),
+                          shape:
+                              RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius
+                                    .circular(16),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
+
+                const SizedBox(height: 22),
+
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Divider(
+                        color:
+                            Color(0xFFD6CDD9),
+                      ),
+                    ),
+                    Padding(
+                      padding:
+                          const EdgeInsets
+                              .symmetric(
+                        horizontal: 14,
+                      ),
+                      child: Text(
+                        'OR',
+                        style: TextStyle(
+                          color:
+                              Colors.grey.shade600,
+                          fontWeight:
+                              FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const Expanded(
+                      child: Divider(
+                        color:
+                            Color(0xFFD6CDD9),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 20),
+
+                Align(
+                  alignment:
+                      Alignment.centerLeft,
+                  child: const Text(
+                    'Login to your account',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight:
+                          FontWeight.w800,
+                      color:
+                          Color(0xFF24162D),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 14),
+
                 TextField(
                   controller:
                       emailController,
                   keyboardType:
-                      TextInputType
-                          .emailAddress,
+                      TextInputType.emailAddress,
                   decoration:
-                      const InputDecoration(
-                    labelText: 'Email',
-                    prefixIcon:
-                        Icon(
-                      Icons
-                          .email_outlined,
-                    ),
-                    border:
-                        OutlineInputBorder(),
+                      fieldDecoration(
+                    hint: 'Email or Phone',
+                    icon:
+                        Icons.person_outline,
                   ),
                 ),
-                const SizedBox(
-                  height: 16,
-                ),
+
+                const SizedBox(height: 14),
+
                 TextField(
                   controller:
                       passwordController,
-                  obscureText:
-                      obscure,
+                  obscureText: obscure,
                   decoration:
-                      InputDecoration(
-                    labelText:
-                        'Password',
-                    prefixIcon:
-                        const Icon(
-                      Icons
-                          .lock_outline,
-                    ),
+                      fieldDecoration(
+                    hint: 'Password',
+                    icon:
+                        Icons.lock_outline_rounded,
                     suffixIcon:
                         IconButton(
                       onPressed: () {
@@ -566,58 +819,122 @@ class _LoginScreenState
                       icon: Icon(
                         obscure
                             ? Icons
-                                .visibility
+                                .visibility_rounded
                             : Icons
-                                .visibility_off,
+                                .visibility_off_rounded,
+                        color: const Color(
+                          0xFF5F2DB8,
+                        ),
                       ),
                     ),
-                    border:
-                        const OutlineInputBorder(),
                   ),
                 ),
-                const SizedBox(
-                  height: 24,
+
+                const SizedBox(height: 8),
+
+                Align(
+                  alignment:
+                      Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () {
+                      showMessage(
+                        'Password reset will be connected next.',
+                      );
+                    },
+                    child: const Text(
+                      'Forgot Password?',
+                      style: TextStyle(
+                        color:
+                            Color(0xFF6D35B8),
+                        fontWeight:
+                            FontWeight.w600,
+                      ),
+                    ),
+                  ),
                 ),
+
+                const SizedBox(height: 6),
+
                 SizedBox(
-                  width:
-                      double.infinity,
-                  height: 52,
-                  child:
-                      ElevatedButton(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton(
                     onPressed:
-                        loading
-                            ? null
-                            : login,
+                        loading ? null : login,
+                    style:
+                        ElevatedButton.styleFrom(
+                      backgroundColor:
+                          const Color(
+                        0xFFD34C9A,
+                      ),
+                      foregroundColor:
+                          Colors.white,
+                      elevation: 3,
+                      shape:
+                          RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(
+                          18,
+                        ),
+                      ),
+                    ),
                     child: loading
-                        ? const CircularProgressIndicator()
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child:
+                                CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              color:
+                                  Colors.white,
+                            ),
+                          )
                         : const Text(
                             'LOGIN',
-                            style:
-                                TextStyle(
+                            style: TextStyle(
+                              fontSize: 17,
                               fontWeight:
-                                  FontWeight
-                                      .bold,
+                                  FontWeight.w800,
+                              letterSpacing: 1,
                             ),
                           ),
                   ),
                 ),
-                const SizedBox(
-                  height: 15,
-                ),
-                TextButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            const RegisterScreen(),
+
+                const SizedBox(height: 22),
+
+                Row(
+                  mainAxisAlignment:
+                      MainAxisAlignment.center,
+                  children: [
+                    const Text(
+                      "Don't have an account? ",
+                      style: TextStyle(
+                        color:
+                            Color(0xFF746D78),
                       ),
-                    );
-                  },
-                  child:
-                      const Text(
-                    'Create new account',
-                  ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                const RegisterScreen(),
+                          ),
+                        );
+                      },
+                      child: const Text(
+                        'Register Now',
+                        style: TextStyle(
+                          color:
+                              Color(0xFF6D35B8),
+                          fontWeight:
+                              FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
