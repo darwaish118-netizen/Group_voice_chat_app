@@ -8,7 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 const String apiBaseUrl =
-    'https://group-voice-chat-app.onrender.com';
+    'https://group-voice-chat-app-gsb9.onrender.com';
 
 void main() {
   runApp(const VoiceChatApp());
