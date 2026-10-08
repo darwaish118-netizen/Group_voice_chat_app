@@ -4012,14 +4012,166 @@ class _VoiceRoomScreenState
         title: Text(
           widget.roomName,
         ),
-        actions: [
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(
-              Icons.share,
-            ),
+actions: [
+  // Share
+  IconButton(
+    onPressed: () {},
+    icon: const Icon(
+      Icons.share,
+    ),
+  ),
+
+  // Off / Room Options
+  IconButton(
+    onPressed: () {
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: const Color(0xFF171225),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(24),
           ),
-        ],
+        ),
+        builder: (context) {
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                20,
+                12,
+                20,
+                20,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 45,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  const Text(
+                    'Room Options',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+
+                  const SizedBox(height: 15),
+
+                  ListTile(
+                    leading: const Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      color: Colors.white,
+                    ),
+                    title: const Text(
+                      'Minimize Room',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pop(context);
+                    },
+                  ),
+
+                  ListTile(
+                    leading: const Icon(
+                      Icons.exit_to_app_rounded,
+                      color: Colors.redAccent,
+                    ),
+                    title: const Text(
+                      'Exit Room',
+                      style: TextStyle(
+                        color: Colors.redAccent,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+
+                      showDialog(
+                        context: context,
+                        builder: (dialogContext) {
+                          return AlertDialog(
+                            backgroundColor:
+                                const Color(0xFF211A35),
+                            title: const Text(
+                              'Exit Room?',
+                              style: TextStyle(
+                                color: Colors.white,
+                              ),
+                            ),
+                            content: const Text(
+                              'Are you sure you want to leave this room?',
+                              style: TextStyle(
+                                color: Colors.white70,
+                              ),
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.pop(dialogContext);
+                                },
+                                child: const Text('Cancel'),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.pop(dialogContext);
+                                  Navigator.pop(context);
+                                },
+                                child: const Text(
+                                  'Exit',
+                                  style: TextStyle(
+                                    color: Colors.redAccent,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                    },
+                  ),
+
+                  ListTile(
+                    leading: const Icon(
+                      Icons.close_rounded,
+                      color: Colors.white54,
+                    ),
+                    title: const Text(
+                      'Cancel',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 16,
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+                    },
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    },
+    icon: const Icon(
+      Icons.power_settings_new_rounded,
+    ),
+  ),
+],
       ),
       body: Column(
         children: [
