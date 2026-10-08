@@ -2603,6 +2603,451 @@ Card(
   }
 }
 
+
+// ============================================================
+// PUBLIC PROFILE SCREEN
+// ============================================================
+
+class PublicProfileScreen extends StatelessWidget {
+  final Map<String, dynamic> user;
+
+  const PublicProfileScreen({
+    super.key,
+    required this.user,
+  });
+
+  void showMessage(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  void showMoreMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.flag_outlined),
+                title: const Text('Report'),
+                onTap: () {
+                  Navigator.pop(context);
+                  showReportReasons(context);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.block),
+                title: const Text('Blacklist'),
+                onTap: () {
+                  Navigator.pop(context);
+                  showBlacklistConfirmation(context);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.close),
+                title: const Text('Cancel'),
+                onTap: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void showReportReasons(BuildContext context) {
+    const reasons = [
+      'Politically Sensitive',
+      'Pornographic vulgarity',
+      'User Harassment',
+      'Country Disrespect',
+      'Religious Disrespect',
+      'Cancel',
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              const Padding(
+                padding: EdgeInsets.fromLTRB(20, 18, 20, 10),
+                child: Text(
+                  'Report User',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              ...reasons.map(
+                (reason) => ListTile(
+                  title: Text(reason),
+                  onTap: () {
+                    Navigator.pop(context);
+                    if (reason != 'Cancel') {
+                      showMessage(
+                        context,
+                        'Report reason: $reason',
+                      );
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void showBlacklistConfirmation(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Blacklist'),
+          content: const Text(
+            'Blacklist ke baad woh user aapko text nahi bhej sakega '
+            'aur aapki personal profile visit nahi kar sakega.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                showMessage(context, 'User blacklisted');
+              },
+              child: const Text('Blacklist'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget actionButton(
+    BuildContext context,
+    IconData icon,
+    String label,
+  ) {
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: OutlinedButton.icon(
+          onPressed: () => showMessage(
+            context,
+            '$label will be connected next',
+          ),
+          icon: Icon(icon, size: 18),
+          label: Text(label),
+        ),
+      ),
+    );
+  }
+
+  Widget infoCard({
+    required IconData icon,
+    required String title,
+    required String value,
+  }) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: Colors.deepPurple.shade50,
+          child: Icon(
+            icon,
+            color: Colors.deepPurple,
+          ),
+        ),
+        title: Text(
+          title,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        subtitle: Text(value),
+        trailing: const Icon(Icons.chevron_right),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final name = user['display_name']?.toString().trim().isNotEmpty == true
+        ? user['display_name'].toString().trim()
+        : user['username']?.toString() ?? 'User';
+
+    final uid = user['public_uid']?.toString() ?? '------';
+    final signature = user['signature']?.toString().trim() ?? '';
+    final country = user['country']?.toString().trim() ?? '';
+    final avatarUrl = user['avatar_url']?.toString().trim() ?? '';
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Profile'),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            onPressed: () => showMoreMenu(context),
+            icon: const Icon(Icons.more_vert),
+          ),
+        ],
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(18, 20, 18, 30),
+          child: Column(
+            children: [
+              CircleAvatar(
+                radius: 62,
+                backgroundImage: avatarUrl.isNotEmpty
+                    ? NetworkImage(avatarUrl)
+                    : null,
+                child: avatarUrl.isEmpty
+                    ? const Icon(Icons.person, size: 62)
+                    : null,
+              ),
+
+              const SizedBox(height: 14),
+
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(
+                    child: Text(
+                      name,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 25,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  if (country.isNotEmpty) ...[
+                    const SizedBox(width: 6),
+                    const Text(
+                      '🌍',
+                      style: TextStyle(fontSize: 20),
+                    ),
+                  ],
+                ],
+              ),
+
+              const SizedBox(height: 5),
+
+              Text(
+                'UID: $uid',
+                style: const TextStyle(
+                  color: Colors.deepPurple,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+
+              if (signature.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  signature,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.grey,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+
+              const SizedBox(height: 20),
+
+              Row(
+                children: [
+                  actionButton(
+                    context,
+                    Icons.track_changes,
+                    'Track',
+                  ),
+                  actionButton(
+                    context,
+                    Icons.mic,
+                    'Room',
+                  ),
+                  actionButton(
+                    context,
+                    Icons.person_add_alt_1,
+                    'Follow',
+                  ),
+                  actionButton(
+                    context,
+                    Icons.chat_bubble_outline,
+                    'Chat',
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 18),
+
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.deepPurple.shade50,
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Row(
+                  children: [
+                    const CircleAvatar(
+                      backgroundColor: Colors.white,
+                      child: Icon(
+                        Icons.business,
+                        color: Colors.deepPurple,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Agency',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          SizedBox(height: 3),
+                          Text(
+                            'Agency information',
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 18),
+
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Profile Items',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              infoCard(
+                icon: Icons.crop_square,
+                title: 'Frame',
+                value: 'Profile frame',
+              ),
+
+              infoCard(
+                icon: Icons.login,
+                title: 'Entry',
+                value: 'Entry effect',
+              ),
+
+              infoCard(
+                icon: Icons.card_giftcard,
+                title: 'Gifts',
+                value: 'Received gifts',
+              ),
+
+              const SizedBox(height: 8),
+
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Received Gifts',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Column(
+                          children: [
+                            const Icon(
+                              Icons.card_giftcard,
+                              color: Colors.deepPurple,
+                              size: 34,
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              '${user['gift_count'] ?? 0}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 17,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Column(
+                          children: [
+                            const Icon(
+                              Icons.redeem,
+                              color: Colors.deepPurple,
+                              size: 34,
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              '${user['gift_count_2'] ?? 0}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 17,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 8),
+
+              // Birthday and coins are intentionally NOT shown
+              // on another user's public profile.
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 // ============================================================
 // EDIT PROFILE SCREEN
 // ============================================================
