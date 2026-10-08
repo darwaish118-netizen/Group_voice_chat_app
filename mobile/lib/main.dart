@@ -198,6 +198,77 @@ class ApiService {
     return _handleResponse(response);
   }
 
+  // ==========================================================
+  // ROOM SEATS
+  // ==========================================================
+
+  Future<Map<String, dynamic>> getRoomMembers(
+    String token,
+    String roomId,
+  ) async {
+    final response = await http.get(
+      Uri.parse(
+        '$apiBaseUrl/api/rooms/$roomId/members',
+      ),
+      headers: {
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    return _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> joinRoomSeat(
+    String token,
+    String roomId,
+    int seatNumber,
+  ) async {
+    final response = await http.post(
+      Uri.parse(
+        '$apiBaseUrl/api/rooms/$roomId/seats/$seatNumber/join',
+      ),
+      headers: {
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    return _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> leaveRoomSeat(
+    String token,
+    String roomId,
+    int seatNumber,
+  ) async {
+    final response = await http.post(
+      Uri.parse(
+        '$apiBaseUrl/api/rooms/$roomId/seats/$seatNumber/leave',
+      ),
+      headers: {
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    return _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> leaveRoom(
+    String token,
+    String roomId,
+  ) async {
+    final response = await http.post(
+      Uri.parse(
+        '$apiBaseUrl/api/rooms/$roomId/leave',
+      ),
+      headers: {
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    return _handleResponse(response);
+  }
+
+    
   Map<String, dynamic> _handleResponse(
     http.Response response,
   ) {
