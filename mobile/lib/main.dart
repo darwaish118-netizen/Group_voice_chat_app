@@ -4329,17 +4329,6 @@ actions: [
                   label: 'Chat',
                   onTap: () {},
                 ),
-                _roomButton(
-                  icon:
-                      Icons.call_end,
-                  label: 'Leave',
-                  danger: true,
-                  onTap: () {
-                    Navigator.pop(
-                      context,
-                    );
-                  },
-                ),
               ],
             ),
           ),
