@@ -1807,8 +1807,11 @@ class _RoomsScreenState
                                       id,
                                   roomName:
                                       name,
-                                  seatCount:
-                                      10,
+seatCount:
+    int.tryParse(
+          room['seat_count']?.toString() ?? '',
+        ) ??
+        10,
                                 ),
                               ),
                             );
