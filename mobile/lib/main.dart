@@ -4046,7 +4046,7 @@ class _VoiceRoomScreenState
                       20),
               gridDelegate:
                   const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 4,
+                crossAxisCount: 5,
                 crossAxisSpacing:
                     15,
                 mainAxisSpacing:
