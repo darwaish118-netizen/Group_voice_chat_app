@@ -783,6 +783,394 @@ if (!allowedSeats.includes(seatCount)) {
 });
 
 // -------------------------
+// Room Members / Seats
+// -------------------------
+
+app.get("/api/rooms/:roomId/members", async (req, res) => {
+  if (!pool) {
+    return res.status(500).json({
+      message: "Database is not configured",
+    });
+  }
+
+  try {
+    const roomResult = await pool.query(
+      `
+      SELECT id, name, seat_count, owner_id
+      FROM rooms
+      WHERE id = $1
+      `,
+      [req.params.roomId]
+    );
+
+    if (roomResult.rows.length === 0) {
+      return res.status(404).json({
+        message: "Room not found",
+      });
+    }
+
+    const room = roomResult.rows[0];
+
+    const result = await pool.query(
+      `
+      SELECT
+        rs.seat_number,
+        u.id,
+        u.public_uid,
+        u.username,
+        u.display_name,
+        u.avatar_url,
+        u.signature,
+        u.level
+      FROM room_seats rs
+      JOIN users u ON u.id = rs.user_id
+      WHERE rs.room_id = $1
+      ORDER BY rs.seat_number ASC
+      `,
+      [req.params.roomId]
+    );
+
+    const occupiedSeats = new Map();
+
+    for (const row of result.rows) {
+      occupiedSeats.set(Number(row.seat_number), {
+        id: row.id,
+        public_uid: row.public_uid,
+        username: row.username,
+        display_name: row.display_name,
+        avatar_url: row.avatar_url,
+        signature: row.signature,
+        level: row.level,
+      });
+    }
+
+    const seats = [];
+
+    for (
+      let seatNumber = 1;
+      seatNumber <= Number(room.seat_count);
+      seatNumber++
+    ) {
+      seats.push({
+        seatNumber,
+        user: occupiedSeats.get(seatNumber) || null,
+      });
+    }
+
+    res.json({
+      room: {
+        id: room.id,
+        name: room.name,
+        owner_id: room.owner_id,
+        seat_count: Number(room.seat_count),
+      },
+      seats,
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      message: "Could not load room members",
+    });
+  }
+});
+
+app.post(
+  "/api/rooms/:roomId/seats/:seatNumber/join",
+  authMiddleware,
+  async (req, res) => {
+    if (!pool) {
+      return res.status(500).json({
+        message: "Database is not configured",
+      });
+    }
+
+    const client = await pool.connect();
+
+    try {
+      await client.query("BEGIN");
+
+      const roomResult = await client.query(
+        `
+        SELECT id, name, seat_count, owner_id
+        FROM rooms
+        WHERE id = $1
+        FOR UPDATE
+        `,
+        [req.params.roomId]
+      );
+
+      if (roomResult.rows.length === 0) {
+        await client.query("ROLLBACK");
+
+        return res.status(404).json({
+          message: "Room not found",
+        });
+      }
+
+      const room = roomResult.rows[0];
+      const seatNumber = Number(req.params.seatNumber);
+
+      if (
+        !Number.isInteger(seatNumber) ||
+        seatNumber < 1 ||
+        seatNumber > Number(room.seat_count)
+      ) {
+        await client.query("ROLLBACK");
+
+        return res.status(400).json({
+          message: "Invalid seat number",
+        });
+      }
+
+      const currentSeat = await client.query(
+        `
+        SELECT
+          rs.room_id,
+          rs.seat_number,
+          r.name AS room_name
+        FROM room_seats rs
+        JOIN rooms r ON r.id = rs.room_id
+        WHERE rs.user_id = $1
+        FOR UPDATE
+        `,
+        [req.user.id]
+      );
+
+      if (currentSeat.rows.length > 0) {
+        const current = currentSeat.rows[0];
+
+        if (
+          current.room_id === req.params.roomId &&
+          Number(current.seat_number) === seatNumber
+        ) {
+          const userResult = await client.query(
+            `
+            SELECT
+              id,
+              public_uid,
+              username,
+              display_name,
+              avatar_url,
+              signature,
+              level
+            FROM users
+            WHERE id = $1
+            `,
+            [req.user.id]
+          );
+
+          await client.query("COMMIT");
+
+          return res.json({
+            message: "Already sitting on this seat",
+            seat: {
+              seatNumber,
+              user: userResult.rows[0],
+            },
+          });
+        }
+
+        await client.query("ROLLBACK");
+
+        return res.status(409).json({
+          message:
+            "You are already sitting in a voice room. Leave that seat first.",
+          room_id: current.room_id,
+          seat_number: Number(current.seat_number),
+          room_name: current.room_name,
+        });
+      }
+
+      const occupied = await client.query(
+        `
+        SELECT
+          rs.seat_number,
+          u.id AS user_id,
+          u.public_uid,
+          u.username,
+          u.display_name,
+          u.avatar_url,
+          u.signature,
+          u.level
+        FROM room_seats rs
+        JOIN users u ON u.id = rs.user_id
+        WHERE rs.room_id = $1
+          AND rs.seat_number = $2
+        FOR UPDATE
+        `,
+        [req.params.roomId, seatNumber]
+      );
+
+      if (occupied.rows.length > 0) {
+        await client.query("ROLLBACK");
+
+        return res.status(409).json({
+          message: "This seat is already occupied",
+        });
+      }
+
+      await client.query(
+        `
+        INSERT INTO room_seats
+          (id, room_id, seat_number, user_id)
+        VALUES
+          ($1, $2, $3, $4)
+        `,
+        [
+          uuidv4(),
+          req.params.roomId,
+          seatNumber,
+          req.user.id,
+        ]
+      );
+
+      const userResult = await client.query(
+        `
+        SELECT
+          id,
+          public_uid,
+          username,
+          display_name,
+          avatar_url,
+          signature,
+          level
+        FROM users
+        WHERE id = $1
+        `,
+        [req.user.id]
+      );
+
+      await client.query("COMMIT");
+
+      res.status(201).json({
+        message: "Seat joined successfully",
+        seat: {
+          seatNumber,
+          user: userResult.rows[0],
+        },
+      });
+    } catch (error) {
+      try {
+        await client.query("ROLLBACK");
+      } catch (_) {}
+
+      console.error(error);
+
+      if (error.code === "23505") {
+        return res.status(409).json({
+          message: "This seat or user is already occupied",
+        });
+      }
+
+      res.status(500).json({
+        message: "Could not join seat",
+      });
+    } finally {
+      client.release();
+    }
+  }
+);
+
+app.post(
+  "/api/rooms/:roomId/seats/:seatNumber/leave",
+  authMiddleware,
+  async (req, res) => {
+    if (!pool) {
+      return res.status(500).json({
+        message: "Database is not configured",
+      });
+    }
+
+    try {
+      const seatNumber = Number(req.params.seatNumber);
+
+      if (!Number.isInteger(seatNumber) || seatNumber < 1) {
+        return res.status(400).json({
+          message: "Invalid seat number",
+        });
+      }
+
+      const result = await pool.query(
+        `
+        DELETE FROM room_seats
+        WHERE room_id = $1
+          AND seat_number = $2
+          AND user_id = $3
+        RETURNING seat_number
+        `,
+        [
+          req.params.roomId,
+          seatNumber,
+          req.user.id,
+        ]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({
+          message: "You are not sitting on this seat",
+        });
+      }
+
+      res.json({
+        message: "Seat left successfully",
+        seatNumber: Number(result.rows[0].seat_number),
+      });
+    } catch (error) {
+      console.error(error);
+
+      res.status(500).json({
+        message: "Could not leave seat",
+      });
+    }
+  }
+);
+
+app.post(
+  "/api/rooms/:roomId/leave",
+  authMiddleware,
+  async (req, res) => {
+    if (!pool) {
+      return res.status(500).json({
+        message: "Database is not configured",
+      });
+    }
+
+    try {
+      const result = await pool.query(
+        `
+        DELETE FROM room_seats
+        WHERE room_id = $1
+          AND user_id = $2
+        RETURNING seat_number
+        `,
+        [
+          req.params.roomId,
+          req.user.id,
+        ]
+      );
+
+      res.json({
+        message:
+          result.rows.length > 0
+            ? "Room seat left successfully"
+            : "You were not sitting in this room",
+        seatNumber:
+          result.rows.length > 0
+            ? Number(result.rows[0].seat_number)
+            : null,
+      });
+    } catch (error) {
+      console.error(error);
+
+      res.status(500).json({
+        message: "Could not leave room",
+      });
+    }
+  }
+);
+
+// -------------------------
 // Demo Coins
 // -------------------------
 
