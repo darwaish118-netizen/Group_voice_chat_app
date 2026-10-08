@@ -3,6 +3,7 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -971,31 +972,139 @@ class _RegisterScreenState
   final passwordController =
       TextEditingController();
 
+  final ImagePicker _picker =
+      ImagePicker();
+
+  XFile? selectedImage;
+  String birthday = '';
+  String country = '';
+  String gender = '';
   bool loading = false;
 
-  Future<void> register() async {
-    final name =
-        nameController.text.trim();
+  final List<String> countries = const [
+    'Pakistan',
+    'India',
+    'United Arab Emirates',
+    'United Kingdom',
+    'Saudi Arabia',
+    'Bangladesh',
+    'Nepal',
+    'Qatar',
+    'Kuwait',
+    'Oman',
+    'Bahrain',
+    'United States',
+    'Canada',
+    'Australia',
+    'Germany',
+    'France',
+    'Turkey',
+  ];
 
-    final email =
-        emailController.text.trim();
+  final List<String> genders = const [
+    'Male',
+    'Female',
+  ];
 
-    final password =
-        passwordController.text;
+  Future<void> pickBirthday() async {
+    final now = DateTime.now();
+    DateTime initialDate =
+        DateTime(now.year - 18, now.month, now.day);
 
-    if (name.isEmpty ||
-        email.isEmpty ||
-        password.isEmpty) {
-      showMessage(
-        'Please fill all fields',
+    final selected = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(1900),
+      lastDate: now,
+      helpText: 'Select your birthday',
+    );
+
+    if (selected == null || !mounted) return;
+
+    final month = selected.month.toString().padLeft(2, '0');
+    final day = selected.day.toString().padLeft(2, '0');
+
+    setState(() {
+      birthday = '${selected.year}-$month-$day';
+    });
+  }
+
+  Future<void> pickProfileImage(ImageSource source) async {
+    try {
+      final image = await _picker.pickImage(
+        source: source,
+        imageQuality: 80,
+        maxWidth: 800,
+        maxHeight: 800,
       );
+
+      if (image == null || !mounted) return;
+
+      setState(() {
+        selectedImage = image;
+      });
+    } catch (e) {
+      showMessage('Image select failed: $e');
+    }
+  }
+
+  void showImageOptions() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Choose from Gallery'),
+                onTap: () {
+                  Navigator.pop(context);
+                  pickProfileImage(ImageSource.gallery);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('Take Photo'),
+                onTap: () {
+                  Navigator.pop(context);
+                  pickProfileImage(ImageSource.camera);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> register() async {
+    final name = nameController.text.trim();
+    final email = emailController.text.trim();
+    final password = passwordController.text;
+
+    if (name.isEmpty || email.isEmpty || password.isEmpty) {
+      showMessage('Please fill all fields');
+      return;
+    }
+
+    if (birthday.isEmpty) {
+      showMessage('Please choose your birthday');
+      return;
+    }
+
+    if (country.isEmpty) {
+      showMessage('Please choose your country');
+      return;
+    }
+
+    if (gender.isEmpty) {
+      showMessage('Please choose your gender');
       return;
     }
 
     if (password.length < 6) {
-      showMessage(
-        'Password must be at least 6 characters',
-      );
+      showMessage('Password must be at least 6 characters');
       return;
     }
 
@@ -1004,50 +1113,62 @@ class _RegisterScreenState
     });
 
     try {
-      final data =
-          await api.register(
+      final data = await api.register(
         name,
         email,
         password,
       );
 
-      final token =
-          data['token']?.toString();
+      final token = data['token']?.toString();
 
-      if (token == null ||
-          token.isEmpty) {
+      if (token == null || token.isEmpty) {
         throw Exception(
           'Registration successful but token missing',
         );
       }
 
-      final prefs =
-          await SharedPreferences
-              .getInstance();
-
-      await prefs.setString(
-        'token',
+      // Save the registration profile details after the account
+      // is created because the auth endpoint creates the account first.
+      await api.saveProfileDetails(
         token,
+        name,
+        '',
+        birthday,
+        country: country,
+        gender: gender,
       );
+
+      if (selectedImage != null) {
+        final avatarUrl =
+            await uploadProfilePhotoToCloudinary(
+          selectedImage!.path,
+        );
+
+        if (avatarUrl == null) {
+          throw Exception('Profile photo upload failed');
+        }
+
+        await api.saveProfilePhoto(
+          token,
+          avatarUrl,
+        );
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('token', token);
 
       if (!mounted) return;
 
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(
-          builder: (_) =>
-              HomeScreen(
-            token: token,
-          ),
+          builder: (_) => HomeScreen(token: token),
         ),
         (route) => false,
       );
     } catch (e) {
       showMessage(
-        e.toString().replaceFirst(
-              'Exception: ',
-              '',
-            ),
+        e.toString().replaceFirst('Exception: ', ''),
       );
     } finally {
       if (mounted) {
@@ -1058,125 +1179,177 @@ class _RegisterScreenState
     }
   }
 
-  void showMessage(
-    String message,
-  ) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(
-      SnackBar(
-        content: Text(message),
-      ),
+  void showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
     );
   }
 
   @override
-  Widget build(
-    BuildContext context,
-  ) {
+  Widget build(BuildContext context) {
+    ImageProvider<Object>? avatarImage;
+
+    if (selectedImage != null) {
+      avatarImage = FileImage(
+        File(selectedImage!.path),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Create Account',
-        ),
+        title: const Text('Create Account'),
       ),
       body: SafeArea(
-        child:
-            SingleChildScrollView(
-          padding:
-              const EdgeInsets.all(24),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 30),
           child: Column(
             children: [
-              const SizedBox(
-                height: 20,
+              GestureDetector(
+                onTap: loading ? null : showImageOptions,
+                child: Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 58,
+                      backgroundColor: const Color(0xFFEDE3F8),
+                      backgroundImage: avatarImage,
+                      child: avatarImage == null
+                          ? const Icon(
+                              Icons.person,
+                              size: 58,
+                              color: Colors.deepPurple,
+                            )
+                          : null,
+                    ),
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(9),
+                        decoration: const BoxDecoration(
+                          color: Colors.deepPurple,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.camera_alt,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              const Icon(
-                Icons.person_add,
-                size: 70,
-                color:
-                    Colors.deepPurple,
+              const SizedBox(height: 8),
+              const Text(
+                'Add Profile Photo',
+                style: TextStyle(color: Colors.grey),
               ),
-              const SizedBox(
-                height: 25,
-              ),
+              const SizedBox(height: 24),
               TextField(
-                controller:
-                    nameController,
-                decoration:
-                    const InputDecoration(
+                controller: nameController,
+                textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(
                   labelText: 'Name',
-                  prefixIcon:
-                      Icon(
-                    Icons
-                        .person_outline,
-                  ),
-                  border:
-                      OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.person_outline),
+                  border: OutlineInputBorder(),
                 ),
               ),
-              const SizedBox(
-                height: 16,
-              ),
+              const SizedBox(height: 16),
               TextField(
-                controller:
-                    emailController,
-                keyboardType:
-                    TextInputType
-                        .emailAddress,
-                decoration:
-                    const InputDecoration(
+                controller: emailController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(
                   labelText: 'Email',
-                  prefixIcon:
-                      Icon(
-                    Icons
-                        .email_outlined,
-                  ),
-                  border:
-                      OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.email_outlined),
+                  border: OutlineInputBorder(),
                 ),
               ),
-              const SizedBox(
-                height: 16,
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: countries.contains(country) ? country : null,
+                decoration: const InputDecoration(
+                  labelText: 'Country',
+                  prefixIcon: Icon(Icons.public),
+                  border: OutlineInputBorder(),
+                ),
+                items: countries.map((value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value),
+                  );
+                }).toList(),
+                onChanged: loading
+                    ? null
+                    : (value) {
+                        setState(() {
+                          country = value ?? '';
+                        });
+                      },
               ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: genders.contains(gender) ? gender : null,
+                decoration: const InputDecoration(
+                  labelText: 'Gender',
+                  prefixIcon: Icon(Icons.wc),
+                  border: OutlineInputBorder(),
+                ),
+                items: genders.map((value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value),
+                  );
+                }).toList(),
+                onChanged: loading
+                    ? null
+                    : (value) {
+                        setState(() {
+                          gender = value ?? '';
+                        });
+                      },
+              ),
+              const SizedBox(height: 16),
+              InkWell(
+                onTap: loading ? null : pickBirthday,
+                borderRadius: BorderRadius.circular(4),
+                child: InputDecorator(
+                  decoration: const InputDecoration(
+                    labelText: 'Birthday',
+                    prefixIcon: Icon(Icons.cake_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                  child: Text(
+                    birthday.isEmpty ? 'Select your birthday' : birthday,
+                    style: TextStyle(
+                      color: birthday.isEmpty
+                          ? Colors.grey.shade600
+                          : Colors.black87,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
               TextField(
-                controller:
-                    passwordController,
+                controller: passwordController,
                 obscureText: true,
-                decoration:
-                    const InputDecoration(
-                  labelText:
-                      'Password',
-                  prefixIcon:
-                      Icon(
-                    Icons
-                        .lock_outline,
-                  ),
-                  border:
-                      OutlineInputBorder(),
+                decoration: const InputDecoration(
+                  labelText: 'Password',
+                  prefixIcon: Icon(Icons.lock_outline),
+                  border: OutlineInputBorder(),
                 ),
               ),
-              const SizedBox(
-                height: 25,
-              ),
+              const SizedBox(height: 25),
               SizedBox(
-                width:
-                    double.infinity,
+                width: double.infinity,
                 height: 52,
-                child:
-                    ElevatedButton(
-                  onPressed:
-                      loading
-                          ? null
-                          : register,
+                child: ElevatedButton(
+                  onPressed: loading ? null : register,
                   child: loading
                       ? const CircularProgressIndicator()
                       : const Text(
                           'CREATE ACCOUNT',
-                          style:
-                              TextStyle(
-                            fontWeight:
-                                FontWeight
-                                    .bold,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                 ),
@@ -2063,13 +2236,52 @@ class _ProfileScreenState
           const SizedBox(height: 4),
 
           Center(
-            child: Text(
-              uid.isEmpty ? '------' : uid,
-              style: const TextStyle(
-                color: Colors.deepPurple,
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-              ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'UID: ',
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  uid.isEmpty ? '------' : uid,
+                  style: const TextStyle(
+                    color: Colors.deepPurple,
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                if (uid.isNotEmpty) ...[
+                  const SizedBox(width: 4),
+                  InkWell(
+                    borderRadius: BorderRadius.circular(18),
+                    onTap: () async {
+                      await Clipboard.setData(
+                        ClipboardData(text: uid),
+                      );
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('UID copied'),
+                          duration: Duration(seconds: 1),
+                        ),
+                      );
+                    },
+                    child: const Padding(
+                      padding: EdgeInsets.all(4),
+                      child: Icon(
+                        Icons.copy_outlined,
+                        size: 18,
+                        color: Colors.deepPurple,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
 
