@@ -4286,6 +4286,57 @@ actions: [
                     });
                   },
                 ),
+                  _roomButton(
+  icon: Icons.settings_outlined,
+  label: 'Room Setting',
+  onTap: () {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF171225),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(24),
+        ),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Room Setting',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 15),
+                ListTile(
+                  leading: const Icon(
+                    Icons.event_seat_outlined,
+                    color: Colors.white,
+                  ),
+                  title: const Text(
+                    'Seat Setting',
+                    style: TextStyle(
+                      color: Colors.white,
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  },
+),
                 _roomButton(
                   icon: Icons
                       .card_giftcard,
