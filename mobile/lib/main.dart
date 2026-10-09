@@ -4373,7 +4373,7 @@ actions: [
                       },
                     );
                   },
-                ) 
+                ),
                   
                 _roomButton(
                   icon: Icons.event_seat_outlined,
