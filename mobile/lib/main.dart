@@ -1592,47 +1592,84 @@ class _RoomsScreenState
     final controller =
         TextEditingController();
 
-    final name =
-        await showDialog<String>(
+      XFile? selectedCover;
+      
+    final name = await showDialog<String>(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text(
-            'Create Voice Room',
-          ),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            decoration:
-                const InputDecoration(
-              labelText:
-                  'Room name',
-              hintText:
-                  'Example: Friends Chat',
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(
-                  context,
-                );
-              },
-              child:
-                  const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(
-                  context,
-                  controller.text
-                      .trim(),
-                );
-              },
-              child:
-                  const Text('Create'),
-            ),
-          ],
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Create Voice Room'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircleAvatar(
+                    radius: 38,
+                    backgroundColor: Colors.deepPurple,
+                    child: selectedCover == null
+                        ? const Icon(
+                            Icons.mic,
+                            color: Colors.white,
+                            size: 38,
+                          )
+                        : ClipOval(
+                            child: Image.file(
+                              File(selectedCover!.path),
+                              width: 76,
+                              height: 76,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      final image =
+                          await ImagePicker().pickImage(
+                        source: ImageSource.gallery,
+                        imageQuality: 80,
+                      );
+
+                      if (image != null) {
+                        setDialogState(() {
+                          selectedCover = image;
+                        });
+                      }
+                    },
+                    icon: const Icon(
+                      Icons.photo_library_outlined,
+                    ),
+                    label: const Text('Choose Room Cover'),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: controller,
+                    autofocus: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Room name',
+                      hintText: 'Example: Friends Chat',
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(
+                      context,
+                      controller.text.trim(),
+                    );
+                  },
+                  child: const Text('Create'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
