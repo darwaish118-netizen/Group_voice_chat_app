@@ -4436,6 +4436,88 @@ actions: [
                     );
                   },
                 ),
+                  
+   _roomButton(
+    icon: Icons.emoji_emotions_outlined,
+    label: 'Emoji',
+    onTap: () {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF171225),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(24),
+        ),
+      ),
+      builder: (sheetContext) {
+        final emojis = [
+          '😀', '😍', '😂', '🥰',
+          '😎', '😭', '😘', '🤗',
+          '👏', '❤️', '🔥', '👍',
+          '🎉', '🥳', '😜', '💖',
+        ];
+
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Choose Emoji',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: emojis.length,
+                  gridDelegate:
+                      const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 4,
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 12,
+                  ),
+                  itemBuilder: (context, index) {
+                    return InkWell(
+                      onTap: () {
+                        final selectedEmoji = emojis[index];
+                        Navigator.pop(sheetContext);
+
+                        ScaffoldMessenger.of(this.context)
+                            .showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Selected $selectedEmoji',
+                            ),
+                            duration:
+                                const Duration(seconds: 1),
+                          ),
+                        );
+                      },
+                      child: Center(
+                        child: Text(
+                          emojis[index],
+                          style: const TextStyle(
+                            fontSize: 30,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  },
+),
                 _roomButton(
                   icon: Icons
                       .chat_bubble_outline,
