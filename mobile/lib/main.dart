@@ -4373,6 +4373,68 @@ actions: [
                       },
                     );
                   },
+                ) 
+                  
+                _roomButton(
+                  icon: Icons.event_seat_outlined,
+                  label: 'Seat',
+                  onTap: () {
+                    showModalBottomSheet(
+                      context: context,
+                      backgroundColor: const Color(0xFF171225),
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(24),
+                        ),
+                      ),
+                      builder: (sheetContext) {
+                        return SafeArea(
+                          child: Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text(
+                                  'Choose Seat Count',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                ...[5, 10, 15, 20, 25].map(
+                                  (count) => ListTile(
+                                    leading: const Icon(
+                                      Icons.event_seat,
+                                      color: Colors.white,
+                                    ),
+                                    title: Text(
+                                      '$count Seats',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    onTap: () {
+                                      Navigator.pop(sheetContext);
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            '$count seats selected',
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
                 ),
                 _roomButton(
                   icon: Icons
