@@ -23,3 +23,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  assets:
+    - "ChatGPT Image Oct 8, 2026, 11_35_07 PM.png"
