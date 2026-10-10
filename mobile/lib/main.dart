@@ -4215,15 +4215,6 @@ actions: [
           const SizedBox(
             height: 20,
           ),
-          const Text(
-            'VOICE ROOM',
-            style: TextStyle(
-              color: Colors.white70,
-              letterSpacing: 2,
-              fontWeight:
-                  FontWeight.bold,
-            ),
-          ),
           const SizedBox(
             height: 25,
           ),
