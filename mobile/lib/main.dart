@@ -4365,74 +4365,75 @@ actions: [
     );
   },
 ),
-                  
-_roomButton(
-  icon: Icons.sports_esports,
-  label: '',
-  onTap: () {
-    showDialog(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFF171225),
-          title: const Text(
-            'Games',
-            style: TextStyle(color: Colors.white),
-          ),
-          content: const Text(
-            'Game feature will be connected here.',
-            style: TextStyle(color: Colors.white70),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-              },
-              child: const Text('OK'),
+                
+Column(
+  mainAxisSize: MainAxisSize.min,
+  children: [
+    // Game icon — Gift ke bilkul upar
+    GestureDetector(
+      onTap: () {
+        showDialog(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            backgroundColor: const Color(0xFF171225),
+            title: const Text(
+              'Games',
+              style: TextStyle(color: Colors.white),
             ),
-          ],
+            content: const Text(
+              'Game feature will be connected here.',
+              style: TextStyle(color: Colors.white70),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
         );
       },
-    );
-  },
+      child: const Icon(
+        Icons.sports_esports,
+        color: Colors.white,
+        size: 32,
+      ),
+    ),
+
+    const SizedBox(height: 8),
+
+    // Gift icon — neeche
+    GestureDetector(
+      onTap: () {
+        showDialog(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            backgroundColor: const Color(0xFF171225),
+            title: const Text(
+              'Send Gift',
+              style: TextStyle(color: Colors.white),
+            ),
+            content: const Text(
+              'Gift system will be connected here.',
+              style: TextStyle(color: Colors.white70),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      },
+      child: const Icon(
+        Icons.card_giftcard,
+        color: Colors.white,
+        size: 32,
+      ),
+    ),
+  ],
 ),
-                _roomButton(
-                  icon: Icons
-                      .card_giftcard,
-                  label: 'Gift',
-                  onTap: () {
-                    showDialog(
-                      context:
-                          context,
-                      builder: (_) {
-                        return AlertDialog(
-                          title:
-                              const Text(
-                            'Send Gift',
-                          ),
-                          content:
-                              const Text(
-                            'Gift system will be connected here.',
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed:
-                                  () {
-                                Navigator.pop(
-                                  context,
-                                );
-                              },
-                              child:
-                                  const Text(
-                                'OK',
-                              ),
-                            ),
-                          ],
-                        );
-                      },
-                    );
-                  },
-                ),
                   
                 _roomButton(
                   icon: Icons.event_seat_outlined,
@@ -4591,44 +4592,24 @@ _roomButton(
     );
   }
 
-  Widget _roomButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-    bool active = false,
-    bool danger = false,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        children: [
-          CircleAvatar(
-            radius: 27,
-            backgroundColor:
-                danger
-                    ? Colors.red
-                    : active
-                        ? Colors.green
-                        : Colors.white12,
-            child: Icon(
-              icon,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(
-            height: 5,
-          ),
-          Text(
-            label,
-            style:
-                const TextStyle(
-              color:
-                  Colors.white70,
-              fontSize: 11,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+
+Widget _roomButton({
+  required IconData icon,
+  required String label,
+  required VoidCallback onTap,
+  bool active = false,
+  bool danger = false,
+}) {
+  return GestureDetector(
+    onTap: onTap,
+    child: Icon(
+      icon,
+      color: danger
+          ? Colors.red
+          : active
+              ? Colors.green
+              : Colors.white,
+      size: 28,
+    ),
+  );
 }
