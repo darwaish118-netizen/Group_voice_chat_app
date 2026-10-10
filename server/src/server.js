@@ -729,6 +729,22 @@ app.post("/api/rooms", authMiddleware, async (req, res) => {
   }
 
   try {
+    const existingRoom = await pool.query(
+      `
+      SELECT id, name
+      FROM rooms
+      WHERE owner_id = $1
+      LIMIT 1
+      `,
+      [req.user.id]
+    );
+
+    if (existingRoom.rows.length > 0) {
+      return res.status(409).json({
+        message: "You have already created a room. One account can create only one room.",
+        room: existingRoom.rows[0],
+      });
+    }
     const { name, password, seat_count } = req.body;
 
 const allowedSeats = [5, 10, 15, 20, 25];
