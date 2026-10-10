@@ -4365,6 +4365,37 @@ actions: [
     );
   },
 ),
+                  
+_roomButton(
+  icon: Icons.sports_esports,
+  label: '',
+  onTap: () {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF171225),
+          title: const Text(
+            'Games',
+            style: TextStyle(color: Colors.white),
+          ),
+          content: const Text(
+            'Game feature will be connected here.',
+            style: TextStyle(color: Colors.white70),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  },
+),
                 _roomButton(
                   icon: Icons
                       .card_giftcard,
