@@ -4300,207 +4300,33 @@ actions: [
                   MainAxisAlignment
                       .spaceEvenly,
               children: [
-                _roomButton(
-                  icon: microphoneOn
-                      ? Icons.mic
-                      : Icons.mic_off,
-                  label: 'Mic',
-                  active:
-                      microphoneOn,
-                  onTap: () {
-                    setState(() {
-                      microphoneOn =
-                          !microphoneOn;
-                    });
-                  },
-                ),
-                  _roomButton(
-  icon: Icons.settings_outlined,
-  label: 'Room Setting',
+_roomButton(
+  icon: Icons.chat_bubble_outline,
+  label: '',
+  onTap: () {},
+),
+
+_roomButton(
+  icon: Icons.volume_up_outlined,
+  label: '',
+  onTap: () {},
+),
+
+_roomButton(
+  icon: microphoneOn ? Icons.mic : Icons.mic_off,
+  label: '',
+  active: microphoneOn,
   onTap: () {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF171225),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(24),
-        ),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'Room Setting',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 15),
-                ListTile(
-                  leading: const Icon(
-                    Icons.event_seat_outlined,
-                    color: Colors.white,
-                  ),
-                  title: const Text(
-                    'Seat Setting',
-                    style: TextStyle(
-                      color: Colors.white,
-                    ),
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                  },
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
+    setState(() {
+      microphoneOn = !microphoneOn;
+    });
   },
 ),
-                
-Column(
-  mainAxisSize: MainAxisSize.min,
-  children: [
-    // Game icon — Gift ke bilkul upar
-    GestureDetector(
-      onTap: () {
-        showDialog(
-          context: context,
-          builder: (dialogContext) => AlertDialog(
-            backgroundColor: const Color(0xFF171225),
-            title: const Text(
-              'Games',
-              style: TextStyle(color: Colors.white),
-            ),
-            content: const Text(
-              'Game feature will be connected here.',
-              style: TextStyle(color: Colors.white70),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-        );
-      },
-      child: const Icon(
-        Icons.sports_esports,
-        color: Colors.white,
-        size: 32,
-      ),
-    ),
 
-    const SizedBox(height: 8),
-
-    // Gift icon — neeche
-    GestureDetector(
-      onTap: () {
-        showDialog(
-          context: context,
-          builder: (dialogContext) => AlertDialog(
-            backgroundColor: const Color(0xFF171225),
-            title: const Text(
-              'Send Gift',
-              style: TextStyle(color: Colors.white),
-            ),
-            content: const Text(
-              'Gift system will be connected here.',
-              style: TextStyle(color: Colors.white70),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-        );
-      },
-      child: const Icon(
-        Icons.card_giftcard,
-        color: Colors.white,
-        size: 32,
-      ),
-    ),
-  ],
-),
-                  
-                _roomButton(
-                  icon: Icons.event_seat_outlined,
-                  label: 'Seat',
-                  onTap: () {
-                    showModalBottomSheet(
-                      context: context,
-                      backgroundColor: const Color(0xFF171225),
-                      shape: const RoundedRectangleBorder(
-                        borderRadius: BorderRadius.vertical(
-                          top: Radius.circular(24),
-                        ),
-                      ),
-                      builder: (sheetContext) {
-                        return SafeArea(
-                          child: Padding(
-                            padding: const EdgeInsets.all(20),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Text(
-                                  'Choose Seat Count',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 16),
-                                ...[5, 10, 15, 20, 25].map(
-                                  (count) => ListTile(
-                                    leading: const Icon(
-                                      Icons.event_seat,
-                                      color: Colors.white,
-                                    ),
-                                    title: Text(
-                                      '$count Seats',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    onTap: () {
-                                      Navigator.pop(sheetContext);
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            '$count seats selected',
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
-                  
-   _roomButton(
-    icon: Icons.emoji_emotions_outlined,
-    label: 'Emoji',
-    onTap: () {
+_roomButton(
+  icon: Icons.emoji_emotions_outlined,
+  label: '',
+  onTap: () {
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF171225),
@@ -4538,7 +4364,7 @@ Column(
                   itemCount: emojis.length,
                   gridDelegate:
                       const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 4,
+                    crossAxisCount: 5,
                     mainAxisSpacing: 12,
                     crossAxisSpacing: 12,
                   ),
@@ -4547,24 +4373,17 @@ Column(
                       onTap: () {
                         final selectedEmoji = emojis[index];
                         Navigator.pop(sheetContext);
-
-                        ScaffoldMessenger.of(this.context)
-                            .showSnackBar(
+                        ScaffoldMessenger.of(this.context).showSnackBar(
                           SnackBar(
-                            content: Text(
-                              'Selected $selectedEmoji',
-                            ),
-                            duration:
-                                const Duration(seconds: 1),
+                            content: Text('Selected $selectedEmoji'),
+                            duration: const Duration(seconds: 1),
                           ),
                         );
                       },
                       child: Center(
                         child: Text(
                           emojis[index],
-                          style: const TextStyle(
-                            fontSize: 30,
-                          ),
+                          style: const TextStyle(fontSize: 30),
                         ),
                       ),
                     );
@@ -4578,19 +4397,92 @@ Column(
     );
   },
 ),
-                _roomButton(
-                  icon: Icons
-                      .chat_bubble_outline,
-                  label: 'Chat',
-                  onTap: () {},
+
+_roomButton(
+  icon: Icons.event_seat_outlined,
+  label: '',
+  onTap: () {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF171225),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [5, 10, 15, 20, 25].map((count) {
+              return ListTile(
+                title: Text(
+                  '$count Seats',
+                  style: const TextStyle(color: Colors.white),
                 ),
-              ],
-            ),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  ScaffoldMessenger.of(this.context).showSnackBar(
+                    SnackBar(content: Text('$count seats selected')),
+                  );
+                },
+              );
+            }).toList(),
+          ),
+        );
+      },
+    );
+  },
+),
+
+_roomButton(
+  icon: Icons.sports_esports,
+  label: '',
+  onTap: () {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: const Color(0xFF171225),
+        title: const Text(
+          'Games',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: const Text(
+          'Game feature will be connected here.',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('OK'),
           ),
         ],
       ),
     );
-  }
+  },
+),
+
+_roomButton(
+  icon: Icons.card_giftcard,
+  label: '',
+  onTap: () {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: const Color(0xFF171225),
+        title: const Text(
+          'Send Gift',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: const Text(
+          'Gift system will be connected here.',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  },
+),
 
 
 Widget _roomButton({
