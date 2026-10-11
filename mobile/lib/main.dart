@@ -4486,7 +4486,11 @@ _roomButton(
 ],
 ),
 ),
-
+],
+),
+);
+}
+    
 Widget _roomButton({
   required IconData icon,
   required String label,
