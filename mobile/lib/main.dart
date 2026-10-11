@@ -4800,32 +4800,32 @@ _roomButton(
   },
 ),
 
+
 _roomButton(
   icon: Icons.event_seat_outlined,
   label: '',
   onTap: () {
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      backgroundColor: const Color(0xFF171225),
-      builder: (sheetContext) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [5, 10, 15, 20, 25].map((count) {
-              return ListTile(
-                title: Text(
-                  '$count Seats',
-                  style: const TextStyle(color: Colors.white),
-                ),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  ScaffoldMessenger.of(this.context).showSnackBar(
-                    SnackBar(content: Text('$count seats selected')),
-                  );
-                },
-              );
-            }).toList(),
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF171225),
+          title: const Text(
+            'Seat Apply Requests',
+            style: TextStyle(color: Colors.white),
           ),
+          content: const Text(
+            'Seat requests will appear here when users apply.',
+            style: TextStyle(color: Colors.white70),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+              },
+              child: const Text('Close'),
+            ),
+          ],
         );
       },
     );
@@ -4882,6 +4882,68 @@ _roomButton(
           ),
         ],
       ),
+    );
+  },
+),
+                  
+_roomButton(
+  icon: Icons.settings,
+  label: '',
+  onTap: () {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF171225),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(
+                  Icons.settings,
+                  color: Colors.pinkAccent,
+                ),
+                title: const Text(
+                  'Room Settings',
+                  style: TextStyle(color: Colors.white),
+                ),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (pageContext) => RoomSettingsScreen(
+                        roomName: widget.roomName,
+                        seatCount: widget.seatCount,
+                        greeting: '',
+                        roomPassword: '',
+                      ),
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(
+                  Icons.music_note,
+                  color: Colors.white,
+                ),
+                title: const Text(
+                  'Music Player',
+                  style: TextStyle(color: Colors.white),
+                ),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Music Player will be connected later.'),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
   },
 ),
