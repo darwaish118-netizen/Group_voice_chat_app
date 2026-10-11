@@ -4003,6 +4003,383 @@ class _EditProfileScreenState
   }
 }
 
+class RoomSettingsScreen extends StatefulWidget {
+  final String roomName;
+  final int seatCount;
+  final String greeting;
+  final String roomPassword;
+
+  const RoomSettingsScreen({
+    super.key,
+    required this.roomName,
+    required this.seatCount,
+    required this.greeting,
+    required this.roomPassword,
+  });
+
+  @override
+  State<RoomSettingsScreen> createState() =>
+      _RoomSettingsScreenState();
+}
+
+class _RoomSettingsScreenState
+    extends State<RoomSettingsScreen> {
+  late TextEditingController nameController;
+  late TextEditingController greetingController;
+  late TextEditingController passwordController;
+
+  late int selectedSeats;
+  bool passwordEnabled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    nameController =
+        TextEditingController(text: widget.roomName);
+    greetingController =
+        TextEditingController(text: widget.greeting);
+    passwordController =
+        TextEditingController(text: widget.roomPassword);
+    selectedSeats = widget.seatCount;
+    passwordEnabled = widget.roomPassword.isNotEmpty;
+  }
+
+  @override
+  void dispose() {
+    nameController.dispose();
+    greetingController.dispose();
+    passwordController.dispose();
+    super.dispose();
+  }
+
+  void editText({
+    required String title,
+    required TextEditingController controller,
+    int maxLength = 100,
+  }) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: const Color(0xFF382D30),
+        title: Text(
+          title,
+          style: const TextStyle(color: Colors.white),
+        ),
+        content: TextField(
+          controller: controller,
+          maxLength: maxLength,
+          style: const TextStyle(color: Colors.white),
+          decoration: const InputDecoration(
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: Colors.pink),
+            ),
+            focusedBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: Colors.pink),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              setState(() {});
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget settingRow({
+    required IconData icon,
+    required String title,
+    required String value,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      leading: Icon(icon, color: Colors.pinkAccent),
+      title: Text(
+        title,
+        style: const TextStyle(color: Colors.white),
+      ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(
+            child: Text(
+              value,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Colors.white70),
+            ),
+          ),
+          const SizedBox(width: 8),
+          const Icon(Icons.arrow_forward_ios,
+              color: Colors.white70, size: 16),
+        ],
+      ),
+      onTap: onTap,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back_ios,
+            color: Colors.pinkAccent,
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          'Room Settings',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFF382D30),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              children: [
+                settingRow(
+                  icon: Icons.image_outlined,
+                  title: 'Room Picture',
+                  value: 'Change',
+                  onTap: () {
+                    showModalBottomSheet(
+                      context: context,
+                      backgroundColor:
+                          const Color(0xFF382D30),
+                      builder: (sheetContext) =>
+                          SafeArea(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ListTile(
+                              leading: const Icon(
+                                Icons.camera_alt,
+                                color: Colors.white,
+                              ),
+                              title: const Text(
+                                'Camera',
+                                style: TextStyle(
+                                    color: Colors.white),
+                              ),
+                              onTap: () {
+                                Navigator.pop(sheetContext);
+                                ScaffoldMessenger.of(context)
+                                    .showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Camera picker needs to be connected.',
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                            ListTile(
+                              leading: const Icon(
+                                Icons.photo_library,
+                                color: Colors.white,
+                              ),
+                              title: const Text(
+                                'Gallery',
+                                style: TextStyle(
+                                    color: Colors.white),
+                              ),
+                              onTap: () {
+                                Navigator.pop(sheetContext);
+                                ScaffoldMessenger.of(context)
+                                    .showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Gallery picker needs to be connected.',
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                const Divider(color: Colors.white12, height: 1),
+                settingRow(
+                  icon: Icons.edit,
+                  title: 'Room Name',
+                  value: nameController.text,
+                  onTap: () => editText(
+                    title: 'Room Name',
+                    controller: nameController,
+                    maxLength: 30,
+                  ),
+                ),
+                const Divider(color: Colors.white12, height: 1),
+                settingRow(
+                  icon: Icons.lock_outline,
+                  title: 'Room Password',
+                  value: passwordEnabled ? 'Locked' : 'Unlocked',
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (dialogContext) =>
+                          StatefulBuilder(
+                        builder: (context, updateDialog) =>
+                            AlertDialog(
+                          backgroundColor:
+                              const Color(0xFF382D30),
+                          title: const Text(
+                            'Room Password',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                          content: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SwitchListTile(
+                                contentPadding: EdgeInsets.zero,
+                                title: const Text(
+                                  'Enable room lock',
+                                  style: TextStyle(
+                                      color: Colors.white),
+                                ),
+                                value: passwordEnabled,
+                                activeThumbColor:
+                                    Colors.pinkAccent,
+                                onChanged: (value) {
+                                  updateDialog(() {
+                                    passwordEnabled = value;
+                                  });
+                                  setState(() {});
+                                },
+                              ),
+                              if (passwordEnabled)
+                                TextField(
+                                  controller: passwordController,
+                                  obscureText: true,
+                                  style: const TextStyle(
+                                      color: Colors.white),
+                                  decoration: const InputDecoration(
+                                    hintText: 'Enter password',
+                                    hintStyle: TextStyle(
+                                        color: Colors.white54),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () =>
+                                  Navigator.pop(dialogContext),
+                              child: const Text('Save'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                const Divider(color: Colors.white12, height: 1),
+                settingRow(
+                  icon: Icons.event_seat_outlined,
+                  title: 'Seat Layout',
+                  value: '$selectedSeats Seats',
+                  onTap: () {
+                    showModalBottomSheet(
+                      context: context,
+                      backgroundColor:
+                          const Color(0xFF382D30),
+                      builder: (sheetContext) => SafeArea(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [5, 10, 15, 20, 25, 30]
+                              .map((count) => ListTile(
+                                    title: Text(
+                                      '$count Seats',
+                                      style: const TextStyle(
+                                          color: Colors.white),
+                                    ),
+                                    trailing:
+                                        selectedSeats == count
+                                            ? const Icon(
+                                                Icons.check,
+                                                color: Colors.pinkAccent,
+                                              )
+                                            : null,
+                                    onTap: () {
+                                      setState(() {
+                                        selectedSeats = count;
+                                      });
+                                      Navigator.pop(sheetContext);
+                                    },
+                                  ))
+                              .toList(),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                const Divider(color: Colors.white12, height: 1),
+                settingRow(
+                  icon: Icons.waving_hand_outlined,
+                  title: 'Greetings',
+                  value: greetingController.text.isEmpty
+                      ? 'Add message'
+                      : 'Edit message',
+                  onTap: () => editText(
+                    title: 'Greetings Message',
+                    controller: greetingController,
+                    maxLength: 100,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.pinkAccent,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 15),
+            ),
+            onPressed: () {
+              Navigator.pop(context, {
+                'roomName': nameController.text.trim(),
+                'seatCount': selectedSeats,
+                'greeting': greetingController.text.trim(),
+                'roomPassword': passwordEnabled
+                    ? passwordController.text
+                    : '',
+              });
+            },
+            child: const Text(
+              'Save Settings',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // ============================================================
 // VOICE ROOM UI
 // ============================================================
@@ -4103,6 +4480,31 @@ actions: [
 
                   const SizedBox(height: 15),
 
+ListTile(
+  leading: const Icon(
+    Icons.settings,
+    color: Colors.pinkAccent,
+  ),
+  title: const Text(
+    'Room Settings',
+    style: TextStyle(color: Colors.white),
+  ),
+  onTap: () {
+    Navigator.pop(context);
+
+    Navigator.push(
+      this.context,
+      MaterialPageRoute(
+        builder: (pageContext) => RoomSettingsScreen(
+          roomName: widget.roomName,
+          seatCount: widget.seatCount,
+          greeting: '',
+          roomPassword: '',
+        ),
+      ),
+    );
+  },
+),
                   ListTile(
                     leading: const Icon(
                       Icons.keyboard_arrow_down_rounded,
