@@ -4657,7 +4657,7 @@ actions: [
 
 Container(
   padding: const EdgeInsets.symmetric(
-    horizontal: 10,
+    horizontal: 6,
     vertical: 0,
   ),
 
