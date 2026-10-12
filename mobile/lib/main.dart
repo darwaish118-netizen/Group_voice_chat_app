@@ -4658,7 +4658,7 @@ actions: [
 Container(
   padding: const EdgeInsets.symmetric(
     horizontal: 8,
-    vertical: 12,
+    vertical: 4,
   ),
   decoration: const BoxDecoration(
     color: Color(0xFF171225),
@@ -4774,7 +4774,7 @@ Container(
               },
             ),
             _roomButton(
-              icon: Icons.event_seat_outlined,
+              icon: Icons.event.weekend_outlined,
               label: '',
               onTap: () {
                 showDialog(
@@ -4902,7 +4902,7 @@ Container(
               child: Icon(
                 Icons.sports_esports,
                 color: Color(0xFFFFD54F),
-                size: 38,
+                size: 44,
               ),
             ),
           ),
@@ -4971,7 +4971,7 @@ Widget _roomButton({
       color: danger
           ? Colors.red
           : active
-              ? Colors.green
+              ? Colors.red
               : Colors.white,
       size: 28,
     ),
