@@ -4480,31 +4480,7 @@ actions: [
 
                   const SizedBox(height: 15),
 
-ListTile(
-  leading: const Icon(
-    Icons.settings,
-    color: Colors.pinkAccent,
-  ),
-  title: const Text(
-    'Room Settings',
-    style: TextStyle(color: Colors.white),
-  ),
-  onTap: () {
-    Navigator.pop(context);
 
-    Navigator.push(
-      this.context,
-      MaterialPageRoute(
-        builder: (pageContext) => RoomSettingsScreen(
-          roomName: widget.roomName,
-          seatCount: widget.seatCount,
-          greeting: '',
-          roomPassword: '',
-        ),
-      ),
-    );
-  },
-),
                   ListTile(
                     leading: const Icon(
                       Icons.keyboard_arrow_down_rounded,
@@ -4801,33 +4777,30 @@ _roomButton(
 ),
 
 
+
 _roomButton(
   icon: Icons.event_seat_outlined,
   label: '',
   onTap: () {
     showDialog(
       context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFF171225),
-          title: const Text(
-            'Seat Apply Requests',
-            style: TextStyle(color: Colors.white),
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: const Color(0xFF171225),
+        title: const Text(
+          'Seat Apply Requests',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: const Text(
+          'No seat requests yet.',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Close'),
           ),
-          content: const Text(
-            'Seat requests will appear here when users apply.',
-            style: TextStyle(color: Colors.white70),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-              },
-              child: const Text('Close'),
-            ),
-          ],
-        );
-      },
+        ],
+      ),
     );
   },
 ),
