@@ -799,7 +799,6 @@ res.status(201).json({
         owner_public_uid: ownerResult.rows[0]?.public_uid ?? null,
     },
 });
-    });
   } catch (error) {
     console.error(error);
 
