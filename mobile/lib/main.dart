@@ -4658,7 +4658,7 @@ actions: [
 Container(
   padding: const EdgeInsets.symmetric(
     horizontal: 8,
-    vertical: 4,
+    vertical: 0,
   ),
   decoration: const BoxDecoration(
     color: Color(0xFF171225),
@@ -4902,7 +4902,7 @@ Container(
               child: Icon(
                 Icons.sports_esports,
                 color: Color(0xFFFFD54F),
-                size: 44,
+                size: 50,
               ),
             ),
           ),
