@@ -4423,9 +4423,42 @@ class _VoiceRoomScreenState
             const Color(0xFF211A35),
         foregroundColor:
             Colors.white,
-        title: Text(
+
+title: Row(
+  children: [
+    CircleAvatar(
+      radius: 24,
+      backgroundColor: Colors.white24,
+      child: Icon(
+        Icons.home_work,
+        color: Colors.white,
+        size: 26,
+      ),
+    ),
+    const SizedBox(width: 10),
+    Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
           widget.roomName,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
         ),
+        const SizedBox(height: 2),
+        Text(
+          'ID: ${widget.roomId}',
+          style: const TextStyle(
+            fontSize: 12,
+            color: Colors.white70,
+          ),
+        ),
+      ],
+    ),
+  ],
+),
 actions: [
   // Share
   IconButton(
