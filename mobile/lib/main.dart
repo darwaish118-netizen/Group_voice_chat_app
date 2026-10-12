@@ -4658,14 +4658,9 @@ actions: [
 Container(
   padding: const EdgeInsets.symmetric(
     horizontal: 10,
-    vertical: 8,
+    vertical: 0,
   ),
-  decoration: const BoxDecoration(
-    color: Color(0xFF171225),
-    borderRadius: BorderRadius.vertical(
-      top: Radius.circular(25),
-    ),
-  ),
+
   child: Row(
     crossAxisAlignment: CrossAxisAlignment.end,
     children: [
