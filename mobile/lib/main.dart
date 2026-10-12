@@ -4654,274 +4654,303 @@ actions: [
               },
             ),
           ),
-          Container(
-            padding:
-                const EdgeInsets
-                    .symmetric(
-              horizontal: 20,
-              vertical: 15,
+
+Container(
+  padding: const EdgeInsets.symmetric(
+    horizontal: 8,
+    vertical: 12,
+  ),
+  decoration: const BoxDecoration(
+    color: Color(0xFF171225),
+    borderRadius: BorderRadius.vertical(
+      top: Radius.circular(25),
+    ),
+  ),
+  child: Row(
+    crossAxisAlignment: CrossAxisAlignment.end,
+    children: [
+      Expanded(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            _roomButton(
+              icon: Icons.chat_bubble_outline,
+              label: '',
+              onTap: () {},
             ),
-            decoration:
-                const BoxDecoration(
-              color:
-                  Color(0xFF171225),
-              borderRadius:
-                  BorderRadius.vertical(
-                top:
-                    Radius.circular(
-                  25,
-                ),
-              ),
+            _roomButton(
+              icon: Icons.volume_up_outlined,
+              label: '',
+              onTap: () {},
             ),
-            child: Row(
-              mainAxisAlignment:
-                  MainAxisAlignment
-                      .spaceEvenly,
-              children: [
-_roomButton(
-  icon: Icons.chat_bubble_outline,
-  label: '',
-  onTap: () {},
-),
-
-_roomButton(
-  icon: Icons.volume_up_outlined,
-  label: '',
-  onTap: () {},
-),
-
-_roomButton(
-  icon: microphoneOn ? Icons.mic : Icons.mic_off,
-  label: '',
-  active: microphoneOn,
-  onTap: () {
-    setState(() {
-      microphoneOn = !microphoneOn;
-    });
-  },
-),
-
-_roomButton(
-  icon: Icons.emoji_emotions_outlined,
-  label: '',
-  onTap: () {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF171225),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(24),
-        ),
-      ),
-      builder: (sheetContext) {
-        final emojis = [
-          '😀', '😍', '😂', '🥰',
-          '😎', '😭', '😘', '🤗',
-          '👏', '❤️', '🔥', '👍',
-          '🎉', '🥳', '😜', '💖',
-        ];
-
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'Choose Emoji',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+            _roomButton(
+              icon: microphoneOn ? Icons.mic : Icons.mic_off,
+              label: '',
+              onTap: () {
+                setState(() {
+                  microphoneOn = !microphoneOn;
+                });
+              },
+            ),
+            _roomButton(
+              icon: Icons.emoji_emotions_outlined,
+              label: '',
+              onTap: () {
+                showModalBottomSheet(
+                  context: context,
+                  backgroundColor: const Color(0xFF171225),
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(24),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 18),
-                GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: emojis.length,
-                  gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 5,
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                  ),
-                  itemBuilder: (context, index) {
-                    return InkWell(
-                      onTap: () {
-                        final selectedEmoji = emojis[index];
-                        Navigator.pop(sheetContext);
-                        ScaffoldMessenger.of(this.context).showSnackBar(
-                          SnackBar(
-                            content: Text('Selected $selectedEmoji'),
-                            duration: const Duration(seconds: 1),
-                          ),
-                        );
-                      },
-                      child: Center(
-                        child: Text(
-                          emojis[index],
-                          style: const TextStyle(fontSize: 30),
+                  builder: (sheetContext) {
+                    final emojis = [
+                      '😀', '😍', '😂', '🥰',
+                      '😎', '😭', '😘', '🤗',
+                      '👏', '❤️', '🔥', '👍',
+                      '🎉', '🥳', '😜', '💖',
+                    ];
+
+                    return SafeArea(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text(
+                              'Choose Emoji',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 18),
+                            GridView.builder(
+                              shrinkWrap: true,
+                              physics:
+                                  const NeverScrollableScrollPhysics(),
+                              itemCount: emojis.length,
+                              gridDelegate:
+                                  const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 4,
+                                mainAxisSpacing: 12,
+                                crossAxisSpacing: 12,
+                              ),
+                              itemBuilder: (context, index) {
+                                return InkWell(
+                                  onTap: () {
+                                    final selected = emojis[index];
+                                    Navigator.pop(sheetContext);
+                                    ScaffoldMessenger.of(this.context)
+                                        .showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'Selected $selected',
+                                        ),
+                                        duration:
+                                            const Duration(seconds: 1),
+                                      ),
+                                    );
+                                  },
+                                  child: Center(
+                                    child: Text(
+                                      emojis[index],
+                                      style: const TextStyle(
+                                        fontSize: 30,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
                         ),
                       ),
                     );
                   },
+                );
+              },
+            ),
+            _roomButton(
+              icon: Icons.event_seat_outlined,
+              label: '',
+              onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (dialogContext) => AlertDialog(
+                    backgroundColor: const Color(0xFF171225),
+                    title: const Text(
+                      'Seat Apply Requests',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    content: const Text(
+                      'No seat requests yet.',
+                      style: TextStyle(color: Colors.white70),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () =>
+                            Navigator.pop(dialogContext),
+                        child: const Text('Close'),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+            _roomButton(
+              icon: Icons.settings,
+              label: '',
+              onTap: () {
+                showModalBottomSheet(
+                  context: context,
+                  backgroundColor: const Color(0xFF171225),
+                  builder: (sheetContext) {
+                    return SafeArea(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ListTile(
+                            leading: const Icon(
+                              Icons.settings,
+                              color: Colors.white,
+                            ),
+                            title: const Text(
+                              'Room Settings',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                            onTap: () {
+                              Navigator.pop(sheetContext);
+                              Navigator.push(
+                                this.context,
+                                MaterialPageRoute(
+                                  builder: (pageContext) =>
+                                      RoomSettingsScreen(
+                                    roomName: widget.roomName,
+                                    seatCount: widget.seatCount,
+                                    greeting: '',
+                                    roomPassword: '',
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                          ListTile(
+                            leading: const Icon(
+                              Icons.music_note,
+                              color: Colors.white,
+                            ),
+                            title: const Text(
+                              'Music Player',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                            onTap: () {
+                              Navigator.pop(sheetContext);
+                              ScaffoldMessenger.of(this.context)
+                                  .showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Music Player will be connected later.',
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(width: 6),
+      Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          GestureDetector(
+            onTap: () {
+              showDialog(
+                context: context,
+                builder: (dialogContext) => AlertDialog(
+                  backgroundColor: const Color(0xFF171225),
+                  title: const Text(
+                    'Games',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  content: const Text(
+                    'Game feature will be connected here.',
+                    style: TextStyle(color: Colors.white70),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () =>
+                          Navigator.pop(dialogContext),
+                      child: const Text('OK'),
+                    ),
+                  ],
                 ),
-              ],
+              );
+            },
+            child: const SizedBox(
+              width: 54,
+              height: 54,
+              child: Icon(
+                Icons.sports_esports,
+                color: Color(0xFFFFD54F),
+                size: 38,
+              ),
             ),
           ),
-        );
-      },
-    );
-  },
-),
-
-
-
-_roomButton(
-  icon: Icons.event_seat_outlined,
-  label: '',
-  onTap: () {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: const Color(0xFF171225),
-        title: const Text(
-          'Seat Apply Requests',
-          style: TextStyle(color: Colors.white),
-        ),
-        content: const Text(
-          'No seat requests yet.',
-          style: TextStyle(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
-  },
-),
-
-_roomButton(
-  icon: Icons.sports_esports,
-  label: '',
-  onTap: () {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: const Color(0xFF171225),
-        title: const Text(
-          'Games',
-          style: TextStyle(color: Colors.white),
-        ),
-        content: const Text(
-          'Game feature will be connected here.',
-          style: TextStyle(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  },
-),
-
-_roomButton(
-  icon: Icons.card_giftcard,
-  label: '',
-  onTap: () {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: const Color(0xFF171225),
-        title: const Text(
-          'Send Gift',
-          style: TextStyle(color: Colors.white),
-        ),
-        content: const Text(
-          'Gift system will be connected here.',
-          style: TextStyle(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  },
-),
-                  
-_roomButton(
-  icon: Icons.settings,
-  label: '',
-  onTap: () {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF171225),
-      builder: (sheetContext) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(
-                  Icons.settings,
-                  color: Colors.pinkAccent,
-                ),
-                title: const Text(
-                  'Room Settings',
-                  style: TextStyle(color: Colors.white),
-                ),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (pageContext) => RoomSettingsScreen(
-                        roomName: widget.roomName,
-                        seatCount: widget.seatCount,
-                        greeting: '',
-                        roomPassword: '',
-                      ),
+          const SizedBox(height: 10),
+          GestureDetector(
+            onTap: () {
+              showDialog(
+                context: context,
+                builder: (dialogContext) => AlertDialog(
+                  backgroundColor: const Color(0xFF171225),
+                  title: const Text(
+                    'Send Gift',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  content: const Text(
+                    'Gift system will be connected here.',
+                    style: TextStyle(color: Colors.white70),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () =>
+                          Navigator.pop(dialogContext),
+                      child: const Text('OK'),
                     ),
-                  );
-                },
-              ),
-              ListTile(
-                leading: const Icon(
-                  Icons.music_note,
-                  color: Colors.white,
+                  ],
                 ),
-                title: const Text(
-                  'Music Player',
-                  style: TextStyle(color: Colors.white),
-                ),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Music Player will be connected later.'),
-                    ),
-                  );
-                },
+              );
+            },
+            child: Container(
+              width: 58,
+              height: 58,
+              decoration: const BoxDecoration(
+                color: Color(0xFF58C900),
+                shape: BoxShape.circle,
               ),
-            ],
+              child: const Center(
+                child: Icon(
+                  Icons.card_giftcard,
+                  color: Color(0xFFFFE082),
+                  size: 36,
+                ),
+              ),
+            ),
           ),
-        );
-      },
-    );
-  },
-),
-],
-),
+        ],
+      ),
+    ],
+  ),
 ),
 ],
 ),
