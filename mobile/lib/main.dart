@@ -4774,7 +4774,7 @@ Container(
               },
             ),
             _roomButton(
-              icon: Icons.weekend
+              icon: Icons.weekend,
               label: '',
               onTap: () {
                 showDialog(
