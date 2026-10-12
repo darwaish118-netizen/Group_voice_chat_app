@@ -697,16 +697,17 @@ app.get("/api/rooms", async (req, res) => {
 
   try {
     const result = await pool.query(`
-      SELECT
-        rooms.id,
-        rooms.name,
-        rooms.owner_id,
-        rooms.seat_count,
-        rooms.created_at,
-        users.username AS owner_username
-      FROM rooms
-      JOIN users ON users.id = rooms.owner_id
-      ORDER BY rooms.created_at DESC
+  SELECT
+    rooms.id,
+    rooms.name,
+    rooms.owner_id,
+    rooms.seat_count,
+    rooms.created_at,
+    users.username AS owner_username,
+    users.public_uid AS owner_public_uid
+FROM rooms
+JOIN users ON users.id = rooms.owner_id
+ORDER BY rooms.created_at DESC
     `);
 
     res.json({
@@ -786,8 +787,18 @@ if (!allowedSeats.includes(seatCount)) {
       ]
     );
 
-    res.status(201).json({
-      room: result.rows[0],
+
+const ownerResult = await pool.query(
+    "SELECT public_uid FROM users WHERE id = $1",
+    [req.user.id]
+);
+
+res.status(201).json({
+    room: {
+        ...result.rows[0],
+        owner_public_uid: ownerResult.rows[0]?.public_uid ?? null,
+    },
+});
     });
   } catch (error) {
     console.error(error);
