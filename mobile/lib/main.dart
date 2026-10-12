@@ -4657,8 +4657,8 @@ actions: [
 
 Container(
   padding: const EdgeInsets.symmetric(
-    horizontal: 8,
-    vertical: 6,
+    horizontal: 10,
+    vertical: 8,
   ),
   decoration: const BoxDecoration(
     color: Color(0xFF171225),
