@@ -1777,7 +1777,10 @@ class _RoomsScreenState
                       final room =
                           rooms[index];
 
+                            final ownerUid =
+    room['owner_public_uid']?.toString() ?? '';
                       final id =
+                          
                           room['id']
                                   ?.toString() ??
                               '';
@@ -1842,6 +1845,7 @@ class _RoomsScreenState
                                         VoiceRoomScreen(
                                   roomId:
                                       id,
+                                            ownerPublicUid: ownerUid,
                                   roomName:
                                       name,
 seatCount:
@@ -4389,12 +4393,14 @@ class VoiceRoomScreen
   final String roomId;
   final String roomName;
   final int seatCount;
+    final String ownerPublicUid;
 
   const VoiceRoomScreen({
     super.key,
     required this.roomId,
     required this.roomName,
     required this.seatCount,
+    required this.ownerPublicUid,
   });
 
   @override
@@ -4449,7 +4455,7 @@ title: Row(
         ),
         const SizedBox(height: 2),
         Text(
-          'ID: ${widget.roomId}',
+            'ID: ${widget.ownerPublicUid}',
           style: const TextStyle(
             fontSize: 12,
             color: Colors.white70,
