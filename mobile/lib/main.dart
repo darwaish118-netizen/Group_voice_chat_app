@@ -4425,6 +4425,7 @@ class _VoiceRoomScreenState
       backgroundColor:
           const Color(0xFF211A35),
       appBar: AppBar(
+          automaticallyImplyLeading: false,
         backgroundColor:
             const Color(0xFF211A35),
         foregroundColor:
@@ -4433,12 +4434,12 @@ class _VoiceRoomScreenState
 title: Row(
   children: [
     CircleAvatar(
-      radius: 24,
+      radius: 32,
       backgroundColor: Colors.white24,
       child: Icon(
         Icons.home_work,
         color: Colors.white,
-        size: 26,
+        size: 32,
       ),
     ),
     const SizedBox(width: 10),
