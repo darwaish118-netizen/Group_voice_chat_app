@@ -2938,16 +2938,14 @@ class PublicProfileScreen extends StatelessWidget {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Flexible(
-                    child: Text(
-                      name,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 25,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
+
+Flexible(
+  child: AnimatedRainbowText(
+    text: name,
+    fontSize: 25,
+    fontWeight: FontWeight.bold,
+  ),
+),
                   if (country.isNotEmpty) ...[
                     const SizedBox(width: 6),
                     const Text(
@@ -4435,34 +4433,47 @@ title: Row(
   children: [
     CircleAvatar(
       radius: 32,
-      backgroundColor: Colors.white24,
-      child: Icon(
+      backgroundColor: Colors.transparent,
+      backgroundImage: null,
+      child: const Icon(
         Icons.home_work,
         color: Colors.white,
         size: 32,
       ),
     ),
     const SizedBox(width: 10),
-    Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          widget.roomName,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
+    Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 8,
+        ),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8F1DF),
+          borderRadius: BorderRadius.circular(32),
+          border: Border.all(
+            color: const Color(0xFFD6A64F),
+            width: 2,
           ),
         ),
-        const SizedBox(height: 2),
-        Text(
-            'ID: ${widget.ownerPublicUid}',
-          style: const TextStyle(
-            fontSize: 12,
-            color: Colors.white70,
-          ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedRainbowText(
+              text: widget.roomName,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+            const SizedBox(height: 2),
+            AnimatedRainbowText(
+              text: 'ID: ${widget.ownerPublicUid}',
+              fontSize: 12,
+              fontWeight: FontWeight.normal,
+            ),
+          ],
         ),
-      ],
+      ),
     ),
   ],
 ),
@@ -5013,4 +5024,76 @@ Widget _roomButton({
     ),
   );
 }
+}
+
+class AnimatedRainbowText extends StatefulWidget {
+  final String text;
+  final double fontSize;
+  final FontWeight fontWeight;
+
+  const AnimatedRainbowText({
+    super.key,
+    required this.text,
+    required this.fontSize,
+    required this.fontWeight,
+  });
+
+  @override
+  State<AnimatedRainbowText> createState() =>
+      _AnimatedRainbowTextState();
+}
+
+class _AnimatedRainbowTextState
+    extends State<AnimatedRainbowText>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 4),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final color = HSVColor.fromAHSV(
+          1,
+          (_controller.value * 360) % 360,
+          1,
+          1,
+        ).toColor();
+
+        return Text(
+          widget.text,
+          style: TextStyle(
+            fontSize: widget.fontSize,
+            fontWeight: widget.fontWeight,
+            color: color,
+            shadows: [
+              Shadow(
+                color: color.withValues(alpha: 0.8),
+                blurRadius: 10,
+              ),
+              Shadow(
+                color: color.withValues(alpha: 0.5),
+                blurRadius: 18,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 }
