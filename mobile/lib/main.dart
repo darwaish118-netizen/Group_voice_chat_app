@@ -354,6 +354,42 @@ Future<String?> uploadProfilePhotoToCloudinary(
   }
 }
 
+// ROOM COVER IMAGE UPLOAD
+Future<String?> uploadRoomCoverToCloudinary(
+  String imagePath,
+) async {
+  try {
+    final request = http.MultipartRequest(
+      'POST',
+      Uri.parse(
+        'https://api.cloudinary.com/v1_1/tfeew7qa/image/upload',
+      ),
+    );
+
+    request.fields['upload_preset'] = 'mindo_room_covers';
+
+    request.files.add(
+      await http.MultipartFile.fromPath(
+        'file',
+        imagePath,
+      ),
+    );
+
+    final response = await request.send();
+    final responseBody = await response.stream.bytesToString();
+
+    if (response.statusCode >= 200 &&
+        response.statusCode < 300) {
+      final data = jsonDecode(responseBody);
+      return data['secure_url']?.toString();
+    }
+
+    return null;
+  } catch (e) {
+    return null;
+  }
+}
+
 // ============================================================
 // AUTH GATE
 // ============================================================
