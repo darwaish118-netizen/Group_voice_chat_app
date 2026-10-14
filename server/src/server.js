@@ -113,6 +113,10 @@ async function initDatabase() {
     ADD COLUMN IF NOT EXISTS seat_count INTEGER NOT NULL DEFAULT 10
   `);
 
+  await pool.query(`
+    ALTER TABLE rooms
+    ADD COLUMN IF NOT EXISTS cover_image_url TEXT
+  `);
   console.log("Database initialized.");
 }
 
