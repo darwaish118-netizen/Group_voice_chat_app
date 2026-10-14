@@ -750,14 +750,14 @@ app.post("/api/rooms", authMiddleware, async (req, res) => {
         room: existingRoom.rows[0],
       });
     }
-    const { name, password, seat_count } = req.body;
+    const { name, password, seat_count, cover_image_url } = req.body;
 
-const allowedSeats = [5, 10, 15, 20, 25];
+    const allowedSeats = [5, 10, 15, 20, 25, 30];
 const seatCount = Number(seat_count) || 10;
 
 if (!allowedSeats.includes(seatCount)) {
   return res.status(400).json({
-    message: "Seat count must be 5, 10, 15, 20, or 25"
+    message: "Seat count must be 5, 10, 15, 20, 25 or 30"
   });
 }
 
@@ -777,19 +777,23 @@ if (!allowedSeats.includes(seatCount)) {
 
     const result = await pool.query(
       `
-      INSERT INTO rooms
-      (id, name, owner_id, password_hash, seat_count)
-      VALUES ($1, $2, $3, $4, $5)
-      RETURNING id, name, owner_id, seat_count, created_at
-      `,
-      [
-        roomId,
-        name.trim(),
-        req.user.id,
-        passwordHash,
-        seatCount,
-      ]
-    );
+
+const result = await pool.query(
+  `
+    INSERT INTO rooms
+      (id, name, owner_id, password_hash, seat_count, cover_image_url)
+    VALUES ($1, $2, $3, $4, $5, $6)
+    RETURNING id, name, owner_id, seat_count, cover_image_url, created_at
+  `,
+  [
+    roomId,
+    name.trim(),
+    req.user.id,
+    passwordHash,
+    seatCount,
+    cover_image_url || null,
+  ]
+);
 
 
 const ownerResult = await pool.query(
