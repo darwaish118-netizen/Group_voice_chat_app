@@ -96,26 +96,26 @@ class ApiService {
     return data['rooms'] ?? [];
   }
 
-  Future<Map<String, dynamic>> createRoom(
-    String token,
-    String name,
-  ) async {
-    final response = await http.post(
-      Uri.parse(
-        '$apiBaseUrl/api/rooms',
-      ),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode({
-        'name': name,
-      }),
-    );
+Future<Map<String, dynamic>> createRoom(
+  String token,
+  String name, {
+  String? coverImageUrl,
+}) async {
+  final response = await http.post(
+    Uri.parse('$apiBaseUrl/api/rooms'),
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    },
+    body: jsonEncode({
+      'name': name,
+      'cover_image_url': coverImageUrl,
+    }),
+  );
 
-    return _handleResponse(response);
-  }
-
+  return _handleResponse(response);
+}
+    
   Future<Map<String, dynamic>> me(
     String token,
   ) async {
