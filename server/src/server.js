@@ -775,9 +775,6 @@ if (!allowedSeats.includes(seatCount)) {
       passwordHash = await bcrypt.hash(password, 10);
     }
 
-    const result = await pool.query(
-      `
-
 const result = await pool.query(
   `
     INSERT INTO rooms
