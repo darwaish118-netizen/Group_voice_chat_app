@@ -706,6 +706,7 @@ app.get("/api/rooms", async (req, res) => {
     rooms.name,
     rooms.owner_id,
     rooms.seat_count,
+    rooms.cover_image_url,
     rooms.created_at,
     users.username AS owner_username,
     users.public_uid AS owner_public_uid
@@ -766,7 +767,14 @@ if (!allowedSeats.includes(seatCount)) {
         message: "Room name is required",
       });
     }
-
+    if (
+      cover_image_url &&
+      !cover_image_url.startsWith("https://res.cloudinary.com/")
+    ) {
+      return res.status(400).json({
+        message: "Invalid room cover URL",
+      });
+    }
     const roomId = uuidv4();
 
     let passwordHash = null;
