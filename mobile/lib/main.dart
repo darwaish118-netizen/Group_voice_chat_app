@@ -1849,19 +1849,23 @@ try {
                             14,
                           ),
                           leading:
-                              CircleAvatar(
-                            radius: 28,
-                            backgroundColor:
-                                Colors
-                                    .deepPurple
-                                    .shade100,
-                            child:
-                                const Icon(
-                              Icons.mic,
-                              color: Colors
-                                  .deepPurple,
-                            ),
-                          ),
+CircleAvatar(
+  radius: 28,
+  backgroundColor: Colors.deepPurple.shade100,
+  backgroundImage:
+      (room['cover_image_url'] != null &&
+              room['cover_image_url'].toString().isNotEmpty)
+          ? NetworkImage(room['cover_image_url'].toString())
+          : null,
+  child:
+      (room['cover_image_url'] == null ||
+              room['cover_image_url'].toString().isEmpty)
+          ? const Icon(
+              Icons.mic,
+              color: Colors.deepPurple,
+            )
+          : null,
+),
                           title: Text(
                             name,
                             style:
