@@ -4496,61 +4496,69 @@ class _VoiceRoomScreenState
         foregroundColor:
             Colors.white,
 
-title: Row(
-  children: [
-
-CircleAvatar(
-  radius: 32,
-  backgroundColor: Colors.deepPurple,
-  backgroundImage:
-      widget.coverImageUrl != null &&
-              widget.coverImageUrl!.isNotEmpty
-          ? NetworkImage(widget.coverImageUrl!)
-          : null,
-  child: widget.coverImageUrl == null ||
-          widget.coverImageUrl!.isEmpty
-      ? const Icon(
-          Icons.home_work,
-          color: Colors.white,
-          size: 32,
-        )
-      : null,
-),
-    const SizedBox(width: 10),
-    Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: 8,
-        ),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF8F1DF),
-          borderRadius: BorderRadius.circular(32),
-          border: Border.all(
-            color: const Color(0xFFD6A64F),
-            width: 2,
+title: SizedBox(
+  height: 76,
+  child: Stack(
+    children: [
+      Positioned.fill(
+        child: Container(
+          margin: const EdgeInsets.only(left: 0),
+          padding: const EdgeInsets.only(
+            left: 68,
+            right: 14,
+            top: 8,
+            bottom: 8,
+          ),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8F1DF),
+            borderRadius: BorderRadius.circular(38),
+            border: Border.all(
+              color: const Color(0xFFD6A64F),
+              width: 2,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              AnimatedRainbowText(
+                text: widget.roomName,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+              const SizedBox(height: 2),
+              AnimatedRainbowText(
+                text: 'ID: ${widget.ownerPublicUid}',
+                fontSize: 12,
+                fontWeight: FontWeight.normal,
+              ),
+            ],
           ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AnimatedRainbowText(
-              text: widget.roomName,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-            const SizedBox(height: 2),
-            AnimatedRainbowText(
-              text: 'ID: ${widget.ownerPublicUid}',
-              fontSize: 12,
-              fontWeight: FontWeight.normal,
-            ),
-          ],
+      ),
+      Positioned(
+        left: 5,
+        top: 10,
+        child: CircleAvatar(
+          radius: 28,
+          backgroundColor: Colors.deepPurple,
+          backgroundImage:
+              widget.coverImageUrl != null &&
+                      widget.coverImageUrl!.isNotEmpty
+                  ? NetworkImage(widget.coverImageUrl!)
+                  : null,
+          child: widget.coverImageUrl == null ||
+                  widget.coverImageUrl!.isEmpty
+              ? const Icon(
+                  Icons.home_work,
+                  color: Colors.white,
+                  size: 28,
+                )
+              : null,
         ),
       ),
-    ),
-  ],
+    ],
+  ),
 ),
 actions: [
   // Share
