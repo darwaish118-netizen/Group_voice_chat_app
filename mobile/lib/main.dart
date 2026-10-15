@@ -1710,18 +1710,27 @@ class _RoomsScreenState
       },
     );
 
-    if (name == null ||
-        name.isEmpty) {
-      return;
+
+try {
+  String? coverImageUrl;
+
+  if (selectedCover != null) {
+    coverImageUrl = await uploadRoomCoverToCloudinary(
+      selectedCover!.path,
+    );
+
+    if (coverImageUrl == null) {
+      throw Exception('Room cover upload failed');
     }
+  }
 
-    try {
-      await api.createRoom(
-        widget.token,
-        name,
-      );
+  await api.createRoom(
+    widget.token,
+    name,
+    coverImageUrl: coverImageUrl,
+  );
 
-      await loadRooms();
+  await loadRooms();
 
       if (mounted) {
         showMessage(
