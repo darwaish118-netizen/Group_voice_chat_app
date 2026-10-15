@@ -1897,7 +1897,8 @@ CircleAvatar(
                                             ownerPublicUid: ownerUid,
                                   roomName:
                                       name,
-seatCount:
+coverImageUrl: room['cover_image_url']?.toString(),
+                                            seatCount:
     int.tryParse(
           room['seat_count']?.toString() ?? '',
         ) ??
@@ -4456,6 +4457,7 @@ class VoiceRoomScreen
   final String roomName;
   final int seatCount;
     final String ownerPublicUid;
+    final String? coverImageUrl;
 
   const VoiceRoomScreen({
     super.key,
@@ -4463,6 +4465,7 @@ class VoiceRoomScreen
     required this.roomName,
     required this.seatCount,
     required this.ownerPublicUid,
+      this.coverImageUrl,
   });
 
   @override
@@ -4705,6 +4708,23 @@ actions: [
       ),
       body: Column(
         children: [
+            if (widget.coverImageUrl != null &&
+    widget.coverImageUrl!.isNotEmpty)
+  Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 20),
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: Image.network(
+        widget.coverImageUrl!,
+        width: double.infinity,
+        height: 160,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return const SizedBox.shrink();
+        },
+      ),
+    ),
+  ),
           const SizedBox(
             height: 20,
           ),
