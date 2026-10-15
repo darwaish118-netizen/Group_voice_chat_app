@@ -4498,16 +4498,24 @@ class _VoiceRoomScreenState
 
 title: Row(
   children: [
-    CircleAvatar(
-      radius: 32,
-      backgroundColor: Colors.transparent,
-      backgroundImage: null,
-      child: const Icon(
-        Icons.home_work,
-        color: Colors.white,
-        size: 32,
-      ),
-    ),
+
+CircleAvatar(
+  radius: 32,
+  backgroundColor: Colors.deepPurple,
+  backgroundImage:
+      widget.coverImageUrl != null &&
+              widget.coverImageUrl!.isNotEmpty
+          ? NetworkImage(widget.coverImageUrl!)
+          : null,
+  child: widget.coverImageUrl == null ||
+          widget.coverImageUrl!.isEmpty
+      ? const Icon(
+          Icons.home_work,
+          color: Colors.white,
+          size: 32,
+        )
+      : null,
+),
     const SizedBox(width: 10),
     Expanded(
       child: Container(
@@ -4708,23 +4716,7 @@ actions: [
       ),
       body: Column(
         children: [
-            if (widget.coverImageUrl != null &&
-    widget.coverImageUrl!.isNotEmpty)
-  Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 20),
-    child: ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: Image.network(
-        widget.coverImageUrl!,
-        width: double.infinity,
-        height: 160,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          return const SizedBox.shrink();
-        },
-      ),
-    ),
-  ),
+
           const SizedBox(
             height: 20,
           ),
