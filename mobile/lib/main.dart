@@ -4068,6 +4068,9 @@ class _RoomSettingsScreenState
 
   late int selectedSeats;
   bool passwordEnabled = false;
+   
+    final ImagePicker _roomImagePicker = ImagePicker();
+XFile? _selectedRoomImage;
 
   @override
   void initState() {
@@ -4219,17 +4222,23 @@ class _RoomSettingsScreenState
                                 style: TextStyle(
                                     color: Colors.white),
                               ),
-                              onTap: () {
-                                Navigator.pop(sheetContext);
-                                ScaffoldMessenger.of(context)
-                                    .showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Camera picker needs to be connected.',
-                                    ),
-                                  ),
-                                );
-                              },
+                                
+onTap: () async {
+  Navigator.pop(sheetContext);
+
+  final XFile? image = await _roomImagePicker.pickImage(
+    source: ImageSource.camera,
+    imageQuality: 80,
+    maxWidth: 800,
+    maxHeight: 800,
+  );
+
+  if (image != null && mounted) {
+    setState(() {
+      _selectedRoomImage = image;
+    });
+  }
+},
                             ),
                             ListTile(
                               leading: const Icon(
@@ -4241,17 +4250,23 @@ class _RoomSettingsScreenState
                                 style: TextStyle(
                                     color: Colors.white),
                               ),
-                              onTap: () {
-                                Navigator.pop(sheetContext);
-                                ScaffoldMessenger.of(context)
-                                    .showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Gallery picker needs to be connected.',
-                                    ),
-                                  ),
-                                );
-                              },
+onTap: () async {
+Navigator.pop(sheetContext);
+
+final XFile? image = await _roomImagePicker.pickImage(
+source: ImageSource.gallery,
+imageQuality: 80,
+maxWidth: 800,
+maxHeight: 800,
+);
+
+if (image != null && mounted) {
+setState(() {
+_selectedRoomImage = image;
+});
+}
+},
+
                             ),
                           ],
                         ),
