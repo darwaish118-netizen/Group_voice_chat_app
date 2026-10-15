@@ -1726,7 +1726,7 @@ try {
 
   await api.createRoom(
     widget.token,
-    name,
+    name!,
     coverImageUrl: coverImageUrl,
   );
 
