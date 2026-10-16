@@ -2378,14 +2378,12 @@ class _ProfileScreenState
               mainAxisSize: MainAxisSize.min,
               children: [
                 Flexible(
-                  child: Text(
-                    name,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+
+child: AnimatedRainbowText(
+  text: name,
+  fontSize: 24,
+  fontWeight: FontWeight.bold,
+),
                 ),
                 if (flag.isNotEmpty) ...[
                   const SizedBox(width: 6),
@@ -2412,14 +2410,11 @@ class _ProfileScreenState
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                Text(
-                  uid.isEmpty ? '------' : uid,
-                  style: const TextStyle(
-                    color: Colors.deepPurple,
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+AnimatedRainbowText(
+  text: uid.isEmpty ? '-------' : uid,
+  fontSize: 15,
+  fontWeight: FontWeight.bold,
+),
                 if (uid.isNotEmpty) ...[
                   const SizedBox(width: 4),
                   InkWell(
@@ -4500,15 +4495,12 @@ title: SizedBox(
   height: 76,
   child: Stack(
     children: [
-      Positioned.fill(
-        child: Container(
-          margin: const EdgeInsets.only(left: 0),
-          padding: const EdgeInsets.only(
-            left: 68,
-            right: 14,
-            top: 8,
-            bottom: 8,
-          ),
+Positioned(
+  left: 0,
+  right: 130,
+  top: 0,
+  bottom: 0,
+  child: Container(
           decoration: BoxDecoration(
             color: const Color(0xFFF8F1DF),
             borderRadius: BorderRadius.circular(38),
@@ -4771,19 +4763,11 @@ actions: [
                     const SizedBox(
                       height: 7,
                     ),
-                    Text(
-                      speaker,
-                      maxLines: 1,
-                      overflow:
-                          TextOverflow
-                              .ellipsis,
-                      style:
-                          const TextStyle(
-                        color:
-                            Colors.white,
-                        fontSize: 11,
-                      ),
-                    ),
+AnimatedRainbowText(
+  text: speaker,
+  fontSize: 11,
+  fontWeight: FontWeight.normal,
+),
                   ],
                 );
               },
