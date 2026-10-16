@@ -5147,54 +5147,35 @@ class _AnimatedRainbowTextState
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        final color = HSVColor.fromAHSV(
-          1,
-          (_controller.value * 360) % 360,
-          1,
-          1,
-        ).toColor();
-
-        return Text(
+@override
+Widget build(BuildContext context) {
+  return AnimatedBuilder(
+    animation: _controller,
+    builder: (context, child) {
+      return ShaderMask(
+        blendMode: BlendMode.srcIn,
+        shaderCallback: (bounds) {
+          final progress = _controller.value;
+          return LinearGradient(
+            begin: Alignment(-1 + 2 * progress, 0),
+            end: Alignment(1 + 2 * progress, 0),
+            colors: const [
+              Color(0xFFFFD700),
+              Color(0xFFFF69B4),
+              Color(0xFF00E5FF),
+              Color(0xFFFFD700),
+            ],
+          ).createShader(bounds);
+        },
+        child: Text(
           widget.text,
           style: TextStyle(
             fontSize: widget.fontSize,
-return ShaderMask(
-  blendMode: BlendMode.srcIn,
-  shaderCallback: (bounds) {
-    final progress = _controller.value;
-    return LinearGradient(
-      begin: Alignment(-1 + 2 * progress, 0),
-      end: Alignment(1 + 2 * progress, 0),
-      colors: const [
-        Color(0xFFFFD700),
-        Color(0xFFFF69B4),
-        Color(0xFF00E5FF),
-        Color(0xFFFFD700),
-      ],
-    ).createShader(bounds);
-  },
-  child: Text(
-    widget.text,
-    style: TextStyle(
-      fontSize: widget.fontSize,
-      fontWeight: widget.fontWeight,
-      color: Colors.white,
-    ),
-  ),
-);
-              Shadow(
-                color: color.withValues(alpha: 0.5),
-                blurRadius: 18,
-              ),
-            ],
+            fontWeight: widget.fontWeight,
+            color: Colors.white,
           ),
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
 }
