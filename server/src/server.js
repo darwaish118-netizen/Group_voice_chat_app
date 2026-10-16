@@ -591,7 +591,7 @@ const {
         });
       }
     }
-      `
+    
 const result = await pool.query(
   `
     UPDATE users
