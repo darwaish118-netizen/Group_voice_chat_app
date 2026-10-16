@@ -70,7 +70,15 @@ async function initDatabase() {
     ALTER TABLE users
     ADD COLUMN IF NOT EXISTS birthday DATE
   `);
+await pool.query(`
+  ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS gender VARCHAR(20)
+`);
 
+await pool.query(`
+  ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS country VARCHAR(100)
+`);
   const usersWithoutUid = await pool.query(
     `SELECT id FROM users WHERE public_uid IS NULL`
   );
