@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'dart:convert';
@@ -2304,7 +2305,9 @@ class _ProfileScreenState
         country.isNotEmpty
             ? countryFlag(country)
             : '';
-
+final gender =
+    user?['gender']?.toString().trim() ?? '';
+      
     return RefreshIndicator(
       onRefresh: loadProfile,
       child: ListView(
@@ -2379,20 +2382,24 @@ class _ProfileScreenState
               children: [
                 Flexible(
 
-child: AnimatedRainbowText(
-  text: name,
-  fontSize: 24,
-  fontWeight: FontWeight.bold,
+
+child: Row(
+  mainAxisSize: MainAxisSize.min,
+  children: [
+    AnimatedRainbowText(
+      text: name,
+      fontSize: 24,
+      fontWeight: FontWeight.bold,
+    ),
+    if (gender.isNotEmpty) ...[
+      const SizedBox(width: 5),
+      Text(
+          gender.toLowerCase() == 'male' ? '🚹' : '🚺',
+        style: const TextStyle(fontSize: 21),
+      ),
+    ],
+  ],
 ),
-                ),
-                if (flag.isNotEmpty) ...[
-                  const SizedBox(width: 6),
-                  Text(
-                    flag,
-                    style: const TextStyle(fontSize: 21),
-                  ),
-                ],
-              ],
             ),
           ),
 
@@ -2402,6 +2409,13 @@ child: AnimatedRainbowText(
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+if (flag.isNotEmpty) ...[
+  Text(
+    flag,
+    style: const TextStyle(fontSize: 20),
+  ),
+  const SizedBox(width: 6),
+],
                 const Text(
                   'UID: ',
                   style: TextStyle(
@@ -4513,11 +4527,14 @@ Positioned(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              AnimatedRainbowText(
-                text: widget.roomName,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+SizedBox(
+  width: 155,
+  child: ScrollingRainbowRoomName(
+    text: widget.roomName,
+    fontSize: 18,
+    fontWeight: FontWeight.bold,
+  ),
+),
               const SizedBox(height: 2),
               AnimatedRainbowText(
                 text: 'ID: ${widget.ownerPublicUid}',
@@ -5092,6 +5109,101 @@ Widget _roomButton({
     ),
   );
 }
+}
+
+class ScrollingRainbowRoomName extends StatefulWidget {
+  final String text;
+  final double fontSize;
+  final FontWeight fontWeight;
+
+  const ScrollingRainbowRoomName({
+    super.key,
+    required this.text,
+    required this.fontSize,
+    required this.fontWeight,
+  });
+
+  @override
+  State<ScrollingRainbowRoomName> createState() =>
+      _ScrollingRainbowRoomNameState();
+}
+
+class _ScrollingRainbowRoomNameState
+    extends State<ScrollingRainbowRoomName> {
+  final ScrollController _scrollController = ScrollController();
+  Timer? _scrollTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _startScrolling();
+  }
+
+  void _startScrolling() {
+    _scrollTimer?.cancel();
+
+    _scrollTimer = Timer.periodic(
+      const Duration(milliseconds: 40),
+      (timer) async {
+        if (!_scrollController.hasClients) return;
+
+        final position = _scrollController.position;
+
+        if (position.maxScrollExtent <= 0) return;
+
+        double nextOffset = _scrollController.offset + 1.0;
+
+        if (nextOffset >= position.maxScrollExtent) {
+          nextOffset = 0;
+        }
+
+        await _scrollController.animateTo(
+          nextOffset,
+          duration: const Duration(milliseconds: 40),
+          curve: Curves.linear,
+        );
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _scrollTimer?.cancel();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ShaderMask(
+      blendMode: BlendMode.srcIn,
+      shaderCallback: (bounds) {
+        return const LinearGradient(
+          colors: [
+            Color(0xFFFFD700),
+            Color(0xFFFF69B4),
+            Color(0xFF00E5FF),
+            Color(0xFFFFD700),
+          ],
+        ).createShader(bounds);
+      },
+      child: SingleChildScrollView(
+        controller: _scrollController,
+        scrollDirection: Axis.horizontal,
+        physics: const NeverScrollableScrollPhysics(),
+        child: Text(
+          widget.text,
+          maxLines: 1,
+          softWrap: false,
+          style: TextStyle(
+            fontSize: widget.fontSize,
+            fontWeight: widget.fontWeight,
+            color: Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class AnimatedRainbowText extends StatefulWidget {
