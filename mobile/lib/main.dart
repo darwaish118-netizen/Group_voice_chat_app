@@ -2376,34 +2376,34 @@ final gender =
             height: 12,
           ),
 
-          Center(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Flexible(
-
-
-child: Row(
-  mainAxisSize: MainAxisSize.min,
-  children: [
-    AnimatedRainbowText(
-      text: name,
-      fontSize: 24,
-      fontWeight: FontWeight.bold,
-    ),
-    if (gender.isNotEmpty) ...[
-      const SizedBox(width: 5),
-      Text(
-          gender.toLowerCase() == 'male' ? '🚹' : '🚺',
-        style: const TextStyle(fontSize: 21),
+Center(
+  child: Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Flexible(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedRainbowText(
+              text: name,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
+            if (gender.isNotEmpty) ...[
+              const SizedBox(width: 5),
+              Text(
+                gender.toLowerCase() == 'male' ? '👨' : '👩',
+                style: const TextStyle(fontSize: 21),
+              ),
+            ],
+          ],
+        ),
       ),
     ],
-  ],
+  ),
 ),
-            ),
-          ),
 
-          const SizedBox(height: 4),
+const SizedBox(height: 4),
 
           Center(
             child: Row(
