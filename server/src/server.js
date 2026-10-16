@@ -380,6 +380,8 @@ app.get("/api/me", authMiddleware, async (req, res) => {
         display_name,
         signature,
         birthday,
+        country,
+        gender,
         coins,
         level,
         created_at
@@ -549,11 +551,13 @@ app.put("/api/me/profile", authMiddleware, async (req, res) => {
   }
 
   try {
-    const {
-      display_name,
-      signature,
-      birthday,
-    } = req.body;
+const {
+  display_name,
+  signature,
+  birthday,
+  country,
+  gender,
+} = req.body;
 
     const cleanName =
       display_name?.toString().trim() || null;
@@ -587,34 +591,40 @@ app.put("/api/me/profile", authMiddleware, async (req, res) => {
         });
       }
     }
-
-    const result = await pool.query(
       `
-      UPDATE users
-      SET
-        display_name = $1,
-        signature = $2,
-        birthday = $3
-      WHERE id = $4
-      RETURNING
-        id,
-        username,
-        public_uid,
-        avatar_url,
-        display_name,
-        signature,
-        birthday,
-        coins,
-        level,
-        created_at
-      `,
-      [
-        cleanName,
-        cleanSignature,
-        cleanBirthday,
-        req.user.id,
-      ]
-    );
+const result = await pool.query(
+  `
+    UPDATE users
+    SET
+      display_name = $1,
+      signature = $2,
+      birthday = $3,
+      country = $4,
+      gender = $5
+    WHERE id = $6
+    RETURNING
+      id,
+      username,
+      public_uid,
+      avatar_url,
+      display_name,
+      signature,
+      birthday,
+      country,
+      gender,
+      coins,
+      level,
+      created_at
+  `,
+  [
+    cleanName,
+    cleanSignature,
+    cleanBirthday,
+    country?.toString().trim() || null,
+    gender?.toString().trim() || null,
+    req.user.id,
+  ]
+);
 
     if (result.rows.length === 0) {
       return res.status(404).json({
