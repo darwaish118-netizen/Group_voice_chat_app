@@ -47,10 +47,6 @@ jobs:
 
 
 
-      - name: Check SharedPreferences versions
-        working-directory: mobile
-        run: |
-          flutter pub deps | grep shared_preferences
 
       - name: Build APK
         working-directory: mobile
