@@ -3935,7 +3935,7 @@ class _EditProfileScreenState
                     ? gender
                     : null,
                 decoration:
-                    const InputDecoration(
+                    InputDecoration(
                   labelText: 'Gender',
 prefixIcon: Container(
   margin: const EdgeInsets.all(10),
