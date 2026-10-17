@@ -414,13 +414,11 @@ class _AuthGateState
     checkLogin();
   }
 
-  Future<void> checkLogin() async {
-    final prefs =
-        await SharedPreferences
-            .getInstance();
 
-    final savedToken =
-        prefs.getString('token');
+Future<void> checkLogin() async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final savedToken = prefs.getString('token');
 
     if (!mounted) return;
 
@@ -428,7 +426,18 @@ class _AuthGateState
       token = savedToken;
       loading = false;
     });
+  } catch (e) {
+    debugPrint('AuthGate checkLogin error: $e');
+
+    if (!mounted) return;
+
+    setState(() {
+      token = null;
+      loading = false;
+    });
   }
+}
+
 
   String countryFlag(String country) {
     const flags = {
