@@ -3937,8 +3937,24 @@ class _EditProfileScreenState
                 decoration:
                     const InputDecoration(
                   labelText: 'Gender',
-                  prefixIcon:
-                      Icon(Icons.person),
+prefixIcon: Container(
+  margin: const EdgeInsets.all(10),
+  width: 28,
+  height: 28,
+  decoration: BoxDecoration(
+    color: gender == 'Male'
+        ? Colors.blue
+        : Colors.pink,
+    borderRadius: BorderRadius.circular(5),
+  ),
+  child: Icon(
+    gender == 'Male'
+        ? Icons.male
+        : Icons.female,
+    color: Colors.white,
+    size: 20,
+  ),
+),
                   border:
                       OutlineInputBorder(),
                 ),
