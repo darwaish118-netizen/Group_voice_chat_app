@@ -4564,10 +4564,12 @@ Positioned(
               width: 2,
             ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
+child: Padding(
+  padding: const EdgeInsets.only(left: 65),
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
 SizedBox(
   width: 300,
   child: ScrollingRainbowRoomName(
@@ -4578,7 +4580,7 @@ SizedBox(
 ),
               const SizedBox(height: 2),
               AnimatedRainbowText(
-                text: 'ID: ${widget.ownerPublicUid}',
+                text: 'ID: ${widget.roomId}',
                 fontSize: 12,
                 fontWeight: FontWeight.normal,
               ),
