@@ -4569,7 +4569,7 @@ Positioned(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
 SizedBox(
-  width: 155,
+  width: 210,
   child: ScrollingRainbowRoomName(
     text: widget.roomName,
     fontSize: 18,
