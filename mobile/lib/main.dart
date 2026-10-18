@@ -2401,23 +2401,24 @@ Center(
 
 if (gender.isNotEmpty) ...[
   const SizedBox(width: 5),
-  Container(
-    width: 26,
-    height: 26,
-    decoration: BoxDecoration(
-      color: gender.toLowerCase() == 'male'
-          ? Colors.blue
-          : Colors.pink,
-      borderRadius: BorderRadius.circular(5),
-    ),
-    child: Icon(
-      gender.toLowerCase() == 'male'
-          ? Icons.male
-          : Icons.female,
-      color: Colors.white,
-      size: 19,
+Container(
+  width: 26,
+  height: 26,
+  decoration: BoxDecoration(
+    color: gender.toLowerCase() == 'male'
+        ? Colors.blue
+        : Colors.pink,
+    borderRadius: BorderRadius.circular(5),
+  ),
+  alignment: Alignment.center,
+  child: Text(
+    gender.toLowerCase() == 'male' ? '🚹' : '🚺',
+    style: const TextStyle(
+      fontSize: 19,
     ),
   ),
+),
+
 ],
 
           ],
@@ -4551,7 +4552,7 @@ title: SizedBox(
     children: [
 Positioned(
   left: 0,
-  right: 130,
+  right: 90,
   top: 0,
   bottom: 0,
   child: Container(
