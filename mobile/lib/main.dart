@@ -4552,7 +4552,7 @@ title: SizedBox(
     children: [
 Positioned(
   left: 0,
-  right: 90,
+  right: 40,
   top: 0,
   bottom: 0,
   child: Container(
