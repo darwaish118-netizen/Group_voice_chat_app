@@ -2398,13 +2398,28 @@ Center(
               fontSize: 24,
               fontWeight: FontWeight.bold,
             ),
-            if (gender.isNotEmpty) ...[
-              const SizedBox(width: 5),
-              Text(
-                gender.toLowerCase() == 'male' ? '👨' : '👩',
-                style: const TextStyle(fontSize: 21),
-              ),
-            ],
+
+if (gender.isNotEmpty) ...[
+  const SizedBox(width: 5),
+  Container(
+    width: 26,
+    height: 26,
+    decoration: BoxDecoration(
+      color: gender.toLowerCase() == 'male'
+          ? Colors.blue
+          : Colors.pink,
+      borderRadius: BorderRadius.circular(5),
+    ),
+    child: Icon(
+      gender.toLowerCase() == 'male'
+          ? Icons.male
+          : Icons.female,
+      color: Colors.white,
+      size: 19,
+    ),
+  ),
+],
+
           ],
         ),
       ),
