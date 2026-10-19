@@ -4565,7 +4565,7 @@ title: SizedBox(
             ),
           ),
           child: Padding(
-            padding: const EdgeInsets.only(left: 85),
+            padding: const EdgeInsets.only(left: 70),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
