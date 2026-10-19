@@ -5195,11 +5195,12 @@ class _ScrollingRainbowRoomNameState
 
         if (position.maxScrollExtent <= 0) return;
 
-        double nextOffset = _scrollController.offset + 1.0;
+double nextOffset = _scrollController.offset + 1.0;
 
-        if (nextOffset >= position.maxScrollExtent) {
-          nextOffset = 0;
-        }
+if (nextOffset >= position.maxScrollExtent) {
+  _scrollController.jumpTo(0);
+  return;
+}
 
         await _scrollController.animateTo(
           nextOffset,
