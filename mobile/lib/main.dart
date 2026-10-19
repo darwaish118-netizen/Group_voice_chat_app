@@ -4555,37 +4555,40 @@ Positioned(
   right: 40,
   top: 0,
   bottom: 0,
-  child: Container(
-          decoration: BoxDecoration(
-            color: const Color(0xFFF8F1DF),
-            borderRadius: BorderRadius.circular(38),
-            border: Border.all(
-              color: const Color(0xFFD6A64F),
-              width: 2,
-            ),
+child: Container(
+  decoration: BoxDecoration(
+    color: const Color(0xFFF8F1DF),
+    borderRadius: BorderRadius.circular(38),
+    border: Border.all(
+      color: const Color(0xFFD6A64F),
+      width: 2,
+    ),
+  ),
+  child: Padding(
+    padding: const EdgeInsets.only(left: 65),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        SizedBox(
+          width: 300,
+          child: ScrollingRainbowRoomName(
+            text: widget.roomName,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
           ),
-child: Padding(
-  padding: const EdgeInsets.only(left: 65),
-  child: Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    mainAxisAlignment: MainAxisAlignment.center,
-    children: [
-SizedBox(
-  width: 300,
-  child: ScrollingRainbowRoomName(
-    text: widget.roomName,
-    fontSize: 18,
-    fontWeight: FontWeight.bold,
+        ),
+        const SizedBox(height: 2),
+        AnimatedRainbowText(
+          text: 'ID: ${widget.roomId}',
+          fontSize: 12,
+          fontWeight: FontWeight.normal,
+        ),
+      ],
+    ),
   ),
 ),
-              const SizedBox(height: 2),
-              AnimatedRainbowText(
-                text: 'ID: ${widget.roomId}',
-                fontSize: 12,
-                fontWeight: FontWeight.normal,
-              ),
-            ],
-          ),
+
         ),
       ),
       Positioned(
