@@ -4589,8 +4589,6 @@ child: Container(
   ),
 ),
 
-        ),
-      ),
       Positioned(
         left: 5,
         top: 10,
