@@ -7,6 +7,20 @@ const jwt = require("jsonwebtoken");
 const { Pool } = require("pg");
 const { v4: uuidv4 } = require("uuid");
 
+function containsRestrictedMindoName(value) {
+  if (typeof value !== "string") return false;
+
+  const normalized = value
+    .normalize("NFKD")
+    .toUpperCase()
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[1!|]/g, "I")
+    .replace(/0/g, "O")
+    .replace(/[^A-Z]/g, "");
+
+  return normalized.includes("MINDO");
+}
+
 const app = express();
 
 app.use(cors());
@@ -214,6 +228,12 @@ app.post("/api/auth/register", async (req, res) => {
 
   try {
     const { username, password } = req.body;
+
+if (containsRestrictedMindoName(username)) {
+  return res.status(400).json({
+    message: "This username is not allowed. Please choose another name.",
+  });
+}
 
     if (!username || !password) {
       return res.status(400).json({
@@ -771,6 +791,12 @@ app.post("/api/rooms", authMiddleware, async (req, res) => {
     }
     const { name, password, seat_count, cover_image_url } = req.body;
 
+if (containsRestrictedMindoName(name)) {
+  return res.status(400).json({
+    message: "This room name is not allowed. Please choose another name.",
+  });
+}
+    
     const allowedSeats = [5, 10, 15, 20, 25, 30];
 const seatCount = Number(seat_count) || 10;
 
