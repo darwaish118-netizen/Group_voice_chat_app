@@ -697,11 +697,14 @@ class _LoginScreenState
                       ),
                     ],
                   ),
-                  child: const Icon(
-                    Icons.mic_rounded,
-                    size: 54,
-                    color: Color(0xFF6D35B8),
-                  ),
+child: ClipOval(
+  child: Image.asset(
+    'ChatGPT Image Oct 8, 2026, 11_35_07 PM.png',
+    width: 92,
+    height: 92,
+    fit: BoxFit.cover,
+  ),
+),
                 ),
 
                 const SizedBox(height: 18),
