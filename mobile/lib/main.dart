@@ -4580,7 +4580,7 @@ title: SizedBox(
                 ),
                 const SizedBox(height: 2),
                 AnimatedRainbowText(
-                  text: 'ID: ${widget.roomId}',
+                  text: 'ID: ${widget.ownerPublicUid}',
                   fontSize: 12,
                   fontWeight: FontWeight.normal,
                 ),
