@@ -4507,6 +4507,7 @@ _selectedRoomImage = image;
 class VoiceRoomScreen
     extends StatefulWidget {
   final String roomId;
+    final String token;
   final String roomName;
   final int seatCount;
     final String ownerPublicUid;
@@ -4515,6 +4516,7 @@ class VoiceRoomScreen
   const VoiceRoomScreen({
     super.key,
     required this.roomId,
+      required this.token,
     required this.roomName,
     required this.seatCount,
     required this.ownerPublicUid,
@@ -4534,7 +4536,42 @@ class _VoiceRoomScreenState
     10,
     (index) => 'Seat ${index + 1}',
   );
+final Map<int, Map<String, dynamic>> seatMembers = {};
 
+Future<void> loadRoomMembers() async {
+  try {
+    final result = await api.getRoomMembers(
+      widget.token,
+      widget.roomId,
+    );
+
+    final List<dynamic> seats = result['seats'] ?? [];
+    final Map<int, Map<String, dynamic>> updated = {};
+
+    for (final seat in seats) {
+      final user = seat['user'];
+      if (user != null) {
+        updated[int.parse(seat['seatNumber'].toString())] =
+            Map<String, dynamic>.from(user);
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        seatMembers
+          ..clear()
+          ..addAll(updated);
+      });
+    }
+  } catch (e) {
+    debugPrint('Load room members error: $e');
+  }
+}
+    @override
+void initState() {
+  super.initState();
+  loadRoomMembers();
+}
   @override
   Widget build(
     BuildContext context,
@@ -4808,7 +4845,7 @@ actions: [
                 final speaker =
                     speakers[index];
 
-
+final member = seatMembers[index + 1];
 return InkWell(
   onTap: () async {
     try {
@@ -4849,29 +4886,62 @@ return InkWell(
       );
     }
   },
-  child: Column(
-    children: [
-      CircleAvatar(
-        radius: 32,
-        backgroundColor: Colors.deepPurple.shade300,
-        child: const Icon(
-          Icons.person,
-          color: Colors.white,
-          size: 32,
-        ),
+child: Column(
+  children: [
+    Builder(
+      builder: (context) {
+        final member = seatMembers[index + 1];
+        final avatarUrl = member?['avatar_url']?.toString() ?? '';
+        final displayName =
+            member?['display_name']?.toString().trim();
+        final username = member?['username']?.toString().trim();
+
+        final name = (displayName != null && displayName.isNotEmpty)
+            ? displayName
+            : (username != null && username.isNotEmpty)
+                ? username
+                : speaker;
+
+        return CircleAvatar(
+          radius: 32,
+          backgroundColor: Colors.deepPurple.shade300,
+          backgroundImage: avatarUrl.isNotEmpty
+              ? NetworkImage(avatarUrl)
+              : null,
+          child: avatarUrl.isEmpty
+              ? const Icon(
+                  Icons.person,
+                  color: Colors.white,
+                  size: 32,
+                )
+              : null,
+        );
+      },
+    ),
+    const SizedBox(height: 7),
+    Text(
+      (() {
+        final member = seatMembers[index + 1];
+        final displayName = member?['display_name']?.toString().trim();
+        final username = member?['username']?.toString().trim();
+
+        if (displayName != null && displayName.isNotEmpty) {
+          return displayName;
+        }
+        if (username != null && username.isNotEmpty) {
+          return username;
+        }
+        return speaker;
+      })(),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 11,
       ),
-      const SizedBox(height: 7),
-      Text(
-        speaker,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 11,
-        ),
-      ),
-    ],
-  ),
+    ),
+  ],
+),
 );
                       
               },
