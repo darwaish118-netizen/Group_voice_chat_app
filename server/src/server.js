@@ -139,6 +139,18 @@ await pool.query(`
     ALTER TABLE rooms
     ADD COLUMN IF NOT EXISTS cover_image_url TEXT
   `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS room_seats (
+      id UUID PRIMARY KEY,
+      room_id UUID NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+      seat_number INTEGER NOT NULL,
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      UNIQUE (room_id, seat_number),
+      UNIQUE (user_id)
+    )
+  `);
   console.log("Database initialized.");
 }
 
