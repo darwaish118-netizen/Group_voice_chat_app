@@ -4808,32 +4808,72 @@ actions: [
                 final speaker =
                     speakers[index];
 
-                return Column(
-                  children: [
-                    CircleAvatar(
-                      radius: 32,
-                      backgroundColor:
-                          Colors
-                              .deepPurple
-                              .shade300,
-                      child:
-                          const Icon(
-                        Icons.person,
-                        color:
-                            Colors.white,
-                        size: 32,
-                      ),
-                    ),
-                    const SizedBox(
-                      height: 7,
-                    ),
-AnimatedRainbowText(
-  text: speaker,
-  fontSize: 11,
-  fontWeight: FontWeight.normal,
-),
-                  ],
-                );
+
+return InkWell(
+  onTap: () async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      if (token == null || token.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please log in again')),
+        );
+        return;
+      }
+
+      final result = await api.joinRoomSeat(
+        token,
+        widget.roomId,
+        index + 1,
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result['message']?.toString() ?? 'Seat request completed',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e.toString().replaceFirst('Exception: ', ''),
+          ),
+        ),
+      );
+    }
+  },
+  child: Column(
+    children: [
+      CircleAvatar(
+        radius: 32,
+        backgroundColor: Colors.deepPurple.shade300,
+        child: const Icon(
+          Icons.person,
+          color: Colors.white,
+          size: 32,
+        ),
+      ),
+      const SizedBox(height: 7),
+      Text(
+        speaker,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 11,
+        ),
+      ),
+    ],
+  ),
+);
+                      
               },
             ),
           ),
