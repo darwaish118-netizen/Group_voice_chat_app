@@ -1905,6 +1905,7 @@ CircleAvatar(
                                 builder:
                                     (_) =>
                                         VoiceRoomScreen(
+                                            token: token,
                                   roomId:
                                       id,
                                             ownerPublicUid: ownerUid,
