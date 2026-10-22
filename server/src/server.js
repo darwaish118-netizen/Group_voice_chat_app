@@ -1055,50 +1055,44 @@ app.post(
         [req.user.id]
       );
 
-      if (currentSeat.rows.length > 0) {
-        const current = currentSeat.rows[0];
 
-        if (
-          current.room_id === req.params.roomId &&
-          Number(current.seat_number) === seatNumber
-        ) {
-          const userResult = await client.query(
-            `
-            SELECT
-              id,
-              public_uid,
-              username,
-              display_name,
-              avatar_url,
-              signature,
-              level
-            FROM users
-            WHERE id = $1
-            `,
-            [req.user.id]
-          );
+if (currentSeat.rows.length > 0) {
+  const current = currentSeat.rows[0];
 
-          await client.query("COMMIT");
+  if (
+    current.room_id === req.params.roomId &&
+    Number(current.seat_number) === seatNumber
+  ) {
+    const userResult = await client.query(
+      `
+      SELECT
+        id,
+        public_uid,
+        username,
+        display_name,
+        avatar_url,
+        signature,
+        level
+      FROM users
+      WHERE id = $1
+      `,
+      [req.user.id]
+    );
 
-          return res.json({
-            message: "Already sitting on this seat",
-            seat: {
-              seatNumber,
-              user: userResult.rows[0],
-            },
-          });
-        }
+    await client.query("COMMIT");
 
-        await client.query("ROLLBACK");
+    return res.json({
+      message: "Already sitting on this seat",
+      seat: {
+        seatNumber,
+        user: userResult.rows[0],
+      },
+    });
+  }
 
-        return res.status(409).json({
-          message:
-            "You are already sitting in a voice room. Leave that seat first.",
-          room_id: current.room_id,
-          seat_number: Number(current.seat_number),
-          room_name: current.room_name,
-        });
-      }
+  // User is changing seats or moving to another room.
+  // Keep the old seat until the new seat is confirmed available.
+}
 
       const occupied = await client.query(
         `
@@ -1128,8 +1122,14 @@ app.post(
         });
       }
 
-      await client.query(
-        `
+        await client.query(
+  `
+  DELETE FROM room_seats
+  WHERE user_id = $1
+  `,
+  [req.user.id]
+);
+        
         INSERT INTO room_seats
           (id, room_id, seat_number, user_id)
         VALUES
