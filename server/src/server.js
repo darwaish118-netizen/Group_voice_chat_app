@@ -1122,14 +1122,16 @@ if (currentSeat.rows.length > 0) {
         });
       }
 
-        await client.query(
-  `
-  DELETE FROM room_seats
-  WHERE user_id = $1
-  `,
-  [req.user.id]
-);
-        
+      await client.query(
+        `
+        DELETE FROM room_seats
+        WHERE user_id = $1
+        `,
+        [req.user.id]
+      );
+
+      await client.query(
+        `
         INSERT INTO room_seats
           (id, room_id, seat_number, user_id)
         VALUES
