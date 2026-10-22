@@ -151,6 +151,29 @@ await pool.query(`
       UNIQUE (user_id)
     )
   `);
+  await pool.query(`
+  CREATE TABLE IF NOT EXISTS room_moderators (
+    id UUID PRIMARY KEY,
+    room_id UUID NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    assigned_by UUID NOT NULL REFERENCES users(id),
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    UNIQUE (room_id, user_id)
+  )
+`);
+
+await pool.query(`
+  CREATE TABLE IF NOT EXISTS room_user_blocks (
+    id UUID PRIMARY KEY,
+    room_id UUID NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    blocked_by UUID NOT NULL REFERENCES users(id),
+    blocked_until TIMESTAMP,
+    permanent BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    UNIQUE (room_id, user_id)
+  )
+`);
   console.log("Database initialized.");
 }
 
