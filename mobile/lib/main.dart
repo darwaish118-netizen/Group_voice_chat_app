@@ -2737,50 +2737,245 @@ Card(
           // PROFILE FEATURES
           // ======================================================
 
-          profileAction(
+
+LayoutBuilder(
+  builder: (context, constraints) {
+    final wheelWidth = constraints.maxWidth;
+    final buttonSize = (wheelWidth * 0.255).clamp(88.0, 112.0);
+    final centerSize = (wheelWidth * 0.34).clamp(124.0, 150.0);
+
+    Widget wheelButton(
+      IconData icon,
+      String title,
+      double left,
+      double top,
+    ) {
+      return Positioned(
+        left: left,
+        top: top,
+        width: buttonSize,
+        height: buttonSize,
+        child: GestureDetector(
+          onTap: () => openComingSoon(title),
+          child: Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: const RadialGradient(
+                colors: [
+                  Color(0xFF45106D),
+                  Color(0xFF18052D),
+                  Color(0xFF090414),
+                ],
+              ),
+              border: Border.all(
+                color: const Color(0xFFFFC857),
+                width: 2.5,
+              ),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x99FF8A00),
+                  blurRadius: 15,
+                  spreadRadius: 2,
+                ),
+                BoxShadow(
+                  color: Color(0xAA9D00FF),
+                  blurRadius: 20,
+                  spreadRadius: 1,
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  color: const Color(0xFFFFD66B),
+                  size: buttonSize * 0.39,
+                ),
+                const SizedBox(height: 4),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    final side = (wheelWidth - buttonSize) / 2;
+    final leftSide = wheelWidth * 0.035;
+    final rightSide = wheelWidth - buttonSize - leftSide;
+    final middleSide = side;
+
+    return SizedBox(
+      height: 445,
+      width: double.infinity,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned.fill(
+            child: Center(
+              child: Container(
+                width: wheelWidth * 0.94,
+                height: wheelWidth * 0.94,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: const Color(0xFFFFB52E),
+                    width: 2,
+                  ),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x669900FF),
+                      blurRadius: 24,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // Top: Wallet
+          wheelButton(
             Icons.account_balance_wallet,
             'Wallet',
+            middleSide,
+            4,
           ),
 
-          profileAction(
+          // Upper right: Mall
+          wheelButton(
             Icons.shopping_bag,
             'Mall',
+            rightSide,
+            70,
           ),
 
-          profileAction(
+          // Right middle: Wealth Level
+          wheelButton(
             Icons.star,
             'Wealth Level',
+            rightSide,
+            185,
           ),
 
-          profileAction(
-            Icons.workspace_premium,
-            'VIP',
-          ),
-
-          profileAction(
+          // Lower right: Honor
+          wheelButton(
             Icons.military_tech,
             'HONOR',
+            rightSide - 8,
+            305,
           ),
 
-          profileAction(
+          // Bottom: My Agency
+          wheelButton(
             Icons.business,
             'My Agency',
+            middleSide,
+            330,
           ),
 
-          profileAction(
+          // Lower left: My Income
+          wheelButton(
             Icons.attach_money,
             'My Income',
+            leftSide + 8,
+            305,
           ),
 
-          profileAction(
-            Icons.feedback_outlined,
+          // Left middle: Feedback
+          wheelButton(
+            Icons.feedback,
             'Feedback',
+            leftSide,
+            185,
           ),
 
-          profileAction(
+          // Upper left: Settings
+          wheelButton(
             Icons.settings,
             'Settings',
+            leftSide + 8,
+            70,
           ),
+
+          // Center VIP button
+          Positioned.fill(
+            child: Align(
+              alignment: const Alignment(0, 0.05),
+              child: GestureDetector(
+                onTap: () => openComingSoon('VIP'),
+                child: Container(
+                  width: centerSize,
+                  height: centerSize,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: const RadialGradient(
+                      colors: [
+                        Color(0xFF6D12A8),
+                        Color(0xFF210637),
+                        Color(0xFF0B0314),
+                      ],
+                    ),
+                    border: Border.all(
+                      color: const Color(0xFFFFD36A),
+                      width: 4,
+                    ),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0xFFFF8A00),
+                        blurRadius: 22,
+                        spreadRadius: 3,
+                      ),
+                      BoxShadow(
+                        color: Color(0xFFB000FF),
+                        blurRadius: 28,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                  child: const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.workspace_premium,
+                        color: Color(0xFFFFD36A),
+                        size: 48,
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'VIP',
+                        style: TextStyle(
+                          color: Color(0xFFFFD36A),
+                          fontSize: 24,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  },
+),
+const SizedBox(height: 12),
 
           const SizedBox(
             height: 8,
