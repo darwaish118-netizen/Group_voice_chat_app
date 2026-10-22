@@ -4870,6 +4870,8 @@ return InkWell(
 
       if (!mounted) return;
 
+        await loadRoomMembers();
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
