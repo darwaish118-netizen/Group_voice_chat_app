@@ -1898,7 +1898,9 @@ CircleAvatar(
                                 .arrow_forward_ios,
                             size: 18,
                           ),
-                          onTap: () {
+                          onTap: () async {
+                              final prefs = await SharedPreferences.getInstance();
+final token = prefs.getString('token') ?? '';
                             Navigator.push(
                               context,
                               MaterialPageRoute(
