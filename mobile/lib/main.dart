@@ -1545,32 +1545,28 @@ final pages = [
                 index;
           });
         },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(
-              Icons.groups_outlined,
-            ),
-            selectedIcon:
-                Icon(Icons.groups),
-            label: 'Rooms',
-          ),
-          NavigationDestination(
-            icon: Icon(
-              Icons.people_outline,
-            ),
-            selectedIcon:
-                Icon(Icons.people),
-            label: 'Friends',
-          ),
-          NavigationDestination(
-            icon: Icon(
-              Icons.person_outline,
-            ),
-            selectedIcon:
-                Icon(Icons.person),
-            label: 'Profile',
-          ),
-        ],
+destinations: const [
+  NavigationDestination(
+    icon: Icon(Icons.groups_outlined),
+    selectedIcon: Icon(Icons.groups),
+    label: 'Rooms',
+  ),
+  NavigationDestination(
+    icon: Icon(Icons.event_outlined),
+    selectedIcon: Icon(Icons.event),
+    label: 'Events',
+  ),
+  NavigationDestination(
+    icon: Icon(Icons.message_outlined),
+    selectedIcon: Icon(Icons.message),
+    label: 'Messages',
+  ),
+  NavigationDestination(
+    icon: Icon(Icons.person_outline),
+    selectedIcon: Icon(Icons.person),
+    label: 'Profile',
+  ),
+],
       ),
     );
   }
