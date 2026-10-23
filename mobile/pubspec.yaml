@@ -26,6 +26,7 @@ flutter:
 
   assets:
     - "ChatGPT Image Oct 8, 2026, 11_35_07 PM.png"
+        - assets/auth_background.png
 
 dependency_overrides:
   shared_preferences_android: 2.4.28
