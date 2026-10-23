@@ -1504,25 +1504,27 @@ class _HomeScreenState
     extends State<HomeScreen> {
   int selectedIndex = 0;
 
-  final titles = const [
-    'Voice Rooms',
-    'Friends',
-    'Profile',
-  ];
+final titles = const [
+  'Voice Rooms',
+  'Events',
+  'Messages',
+  'Profile',
+];
 
   @override
   Widget build(
     BuildContext context,
   ) {
-    final pages = [
-      RoomsScreen(
-        token: widget.token,
-      ),
-      const FriendsScreen(),
-      ProfileScreen(
-        token: widget.token,
-      ),
-    ];
+final pages = [
+  RoomsScreen(
+    token: widget.token,
+  ),
+  const EventsScreen(),
+  const MessagesScreen(),
+  ProfileScreen(
+    token: widget.token,
+  ),
+];
 
     return Scaffold(
       appBar: AppBar(
@@ -1577,6 +1579,59 @@ class _HomeScreenState
 // ============================================================
 // ROOMS
 // ============================================================
+
+
+class EventsScreen extends StatelessWidget {
+  const EventsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color(0xFF180526),
+            Color(0xFF39085A),
+            Color(0xFF10051D),
+          ],
+        ),
+      ),
+      child: const Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.event,
+              size: 70,
+              color: Color(0xFFFFD45C),
+            ),
+            SizedBox(height: 16),
+            Text(
+              'MINDO EVENTS',
+              style: TextStyle(
+                color: Color(0xFFFFD45C),
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Events coming soon',
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 15,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ROOMS
 
 class RoomsScreen
     extends StatefulWidget {
