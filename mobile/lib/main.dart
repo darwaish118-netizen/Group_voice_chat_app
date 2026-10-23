@@ -1520,7 +1520,7 @@ final pages = [
     token: widget.token,
   ),
   const EventsScreen(),
-  const MessagesScreen(),
+  MessagesScreen(),
   ProfileScreen(
     token: widget.token,
   ),
