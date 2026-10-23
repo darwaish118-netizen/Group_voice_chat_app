@@ -241,402 +241,429 @@ class _LoginScreenState
 Widget build(BuildContext context) {
   const midnight = Color(0xFF10051F);
   const deepPurple = Color(0xFF28103D);
-  const royalPurple = Color(0xFF7026A8);
   const gold = Color(0xFFFFD76A);
-  const magenta = Color(0xFFE83EAD);
+  const magenta = Color(0xFFFF35D3);
+  const royalPurple = Color(0xFF7900FF);
 
   final fieldBorder = OutlineInputBorder(
-    borderRadius: BorderRadius.circular(18),
-    borderSide: BorderSide(
-      color: gold.withOpacity(0.38),
-      width: 1,
-    ),
+    borderRadius: BorderRadius.circular(22),
+    borderSide: const BorderSide(color: gold, width: 1.4),
   );
 
   return Scaffold(
     backgroundColor: midnight,
     body: Stack(
       children: [
-        const Positioned.fill(child: CustomPaint(painter: MindoAuthBackdropPainter())),
-        Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xE610051F),
-            Color(0xD932104D),
-            Color(0xE6160721),
-          ],
+        const Positioned.fill(
+          child: CustomPaint(
+            painter: MindoAuthBackdropPainter(),
+          ),
         ),
-      ),
-      child: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(24, 26, 24, 30),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 460),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 112,
-                    height: 112,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: gold,
-                        width: 2,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: magenta.withOpacity(0.40),
-                          blurRadius: 28,
-                          spreadRadius: 2,
-                        ),
-                      ],
-                    ),
-                    child: ClipOval(
-                      child: Image.asset(
-                        'ChatGPT Image Oct 8, 2026, 11_35_07 PM.png',
-                        width: 112,
-                        height: 112,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  const Text(
-                    'MINDO',
-                    style: TextStyle(
-                      color: gold,
-                      fontSize: 38,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 3,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  const Text(
-                    'VOICE CHAT',
-                    style: TextStyle(
-                      color: Color(0xFFE7B9FF),
-                      fontSize: 17,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 4,
-                    ),
-                  ),
-                  const SizedBox(height: 9),
-                  Text(
-                    'Talk  •  Meet  •  Connect',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.70),
-                      fontSize: 14,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                  const SizedBox(height: 34),
-
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: loading
-                              ? null
-                              : () => socialLogin('Google'),
-                          icon: const Icon(
-                            Icons.g_mobiledata_rounded,
-                            size: 30,
-                          ),
-                          label: const Text('Google'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            backgroundColor: deepPurple,
-                            side: BorderSide(
-                              color: gold.withOpacity(0.55),
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 16,
-                              horizontal: 8,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: loading
-                              ? null
-                              : () => socialLogin('Facebook'),
-                          icon: const Icon(
-                            Icons.facebook_rounded,
-                            size: 25,
-                          ),
-                          label: const Text('Facebook'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            backgroundColor: deepPurple,
-                            side: BorderSide(
-                              color: gold.withOpacity(0.55),
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 16,
-                              horizontal: 8,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 25),
-
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Divider(
-                          color: Colors.white.withOpacity(0.28),
-                        ),
-                      ),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 14),
-                        child: Text(
-                          'OR',
-                          style: TextStyle(
-                            color: gold,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: Divider(
-                          color: Colors.white.withOpacity(0.28),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 28),
-
-                  const Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'Welcome Back',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 27,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 7),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'Login to your MINDO account',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.66),
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 22),
-
-                  TextField(
-                    controller: emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    style: const TextStyle(color: Colors.white),
-                    cursorColor: gold,
-                    decoration: InputDecoration(
-                      hintText: 'Email or Phone',
-                      hintStyle: const TextStyle(
-                        color: Colors.white60,
-                      ),
-                      prefixIcon: const Icon(
-                        Icons.person_outline_rounded,
-                        color: gold,
-                      ),
-                      filled: true,
-                      fillColor: deepPurple.withOpacity(0.85),
-                      contentPadding: const EdgeInsets.symmetric(
-                        vertical: 19,
-                        horizontal: 18,
-                      ),
-                      border: fieldBorder,
-                      enabledBorder: fieldBorder,
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(18),
-                        borderSide: const BorderSide(
-                          color: gold,
-                          width: 1.8,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  TextField(
-                    controller: passwordController,
-                    obscureText: obscure,
-                    style: const TextStyle(color: Colors.white),
-                    cursorColor: gold,
-                    decoration: InputDecoration(
-                      hintText: 'Password',
-                      hintStyle: const TextStyle(
-                        color: Colors.white60,
-                      ),
-                      prefixIcon: const Icon(
-                        Icons.lock_outline_rounded,
-                        color: gold,
-                      ),
-                      suffixIcon: IconButton(
-                        onPressed: () {
-                          setState(() {
-                            obscure = !obscure;
-                          });
-                        },
-                        icon: Icon(
-                          obscure
-                              ? Icons.visibility_off_rounded
-                              : Icons.visibility_rounded,
-                          color: gold,
-                        ),
-                      ),
-                      filled: true,
-                      fillColor: deepPurple.withOpacity(0.85),
-                      contentPadding: const EdgeInsets.symmetric(
-                        vertical: 19,
-                        horizontal: 18,
-                      ),
-                      border: fieldBorder,
-                      enabledBorder: fieldBorder,
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(18),
-                        borderSide: const BorderSide(
-                          color: gold,
-                          width: 1.8,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 8),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () {
-                        showMessage(
-                          'Password reset will be connected next.',
-                        );
-                      },
-                      child: const Text(
-                        'Forgot Password?',
-                        style: TextStyle(
-                          color: gold,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  Container(
-                    width: double.infinity,
-                    height: 58,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [
-                          Color(0xFFE83EAD),
-                          Color(0xFF9229D0),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                        color: gold.withOpacity(0.80),
-                        width: 1,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: magenta.withOpacity(0.30),
-                          blurRadius: 18,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
-                    ),
-                    child: ElevatedButton(
-                      onPressed: loading ? null : login,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        disabledBackgroundColor: Colors.transparent,
-                        shadowColor: Colors.transparent,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                      ),
-                      child: loading
-                          ? const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2.5,
-                              ),
-                            )
-                          : const Text(
-                              'LOGIN',
-                              style: TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 2,
-                              ),
-                            ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 27),
-                  Wrap(
-                    alignment: WrapAlignment.center,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      Text(
-                        "Don't have an account? ",
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.72),
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const RegisterScreen(),
-                            ),
-                          );
-                        },
-                        child: const Text(
-                          'Register Now',
-                          style: TextStyle(
-                            color: gold,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+        Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  midnight.withOpacity(0.25),
+                  const Color(0xFF160025).withOpacity(0.75),
+                  midnight,
                 ],
               ),
             ),
           ),
         ),
-      ),
+        SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 460),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 8),
+
+                    // MINDO logo
+                    Container(
+                      width: 132,
+                      height: 132,
+                      padding: const EdgeInsets.all(3),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: gold, width: 2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: magenta.withOpacity(0.7),
+                            blurRadius: 24,
+                            spreadRadius: 3,
+                          ),
+                        ],
+                      ),
+                      child: ClipOval(
+                        child: Image.asset(
+                          'ChatGPT Image Oct 8, 2026, 11_35_07 PM.png',
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Center(
+                              child: Icon(
+                                Icons.music_note,
+                                color: gold,
+                                size: 64,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 10),
+                    const Text(
+                      'MINDO',
+                      style: TextStyle(
+                        color: gold,
+                        fontSize: 42,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 3,
+                        shadows: [
+                          Shadow(color: magenta, blurRadius: 18),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    const Text(
+                      'VOICE CHAT',
+                      style: TextStyle(
+                        color: Color(0xFFFF79BF),
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 4,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Talk  •  Meet  •  Connect',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 26),
+
+                    // Google and Facebook buttons
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _socialButton(
+                            label: 'Google',
+                            icon: Icons.g_mobiledata,
+                            onTap: () => socialLogin('Google'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _socialButton(
+                            label: 'Facebook',
+                            icon: Icons.facebook,
+                            onTap: () => socialLogin('Facebook'),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Divider(
+                            color: gold.withOpacity(0.65),
+                          ),
+                        ),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 14),
+                          child: Text(
+                            'OR',
+                            style: TextStyle(
+                              color: gold,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 17,
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Divider(
+                            color: gold.withOpacity(0.65),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 24),
+                    const Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Welcome Back',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 32,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Login to your MINDO account',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    TextField(
+                      controller: emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      style: const TextStyle(color: Colors.white),
+                      cursorColor: gold,
+                      decoration: InputDecoration(
+                        hintText: 'Email or Phone',
+                        hintStyle: const TextStyle(color: Colors.white60),
+                        prefixIcon: const Icon(
+                          Icons.person_outline_rounded,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                        filled: true,
+                        fillColor: deepPurple.withOpacity(0.88),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 22,
+                          horizontal: 18,
+                        ),
+                        border: fieldBorder,
+                        enabledBorder: fieldBorder,
+                        focusedBorder: fieldBorder.copyWith(
+                          borderSide: const BorderSide(
+                            color: magenta,
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: passwordController,
+                      obscureText: obscure,
+                      style: const TextStyle(color: Colors.white),
+                      cursorColor: gold,
+                      decoration: InputDecoration(
+                        hintText: 'Password',
+                        hintStyle: const TextStyle(color: Colors.white60),
+                        prefixIcon: const Icon(
+                          Icons.lock_outline_rounded,
+                          color: Colors.white,
+                          size: 27,
+                        ),
+                        suffixIcon: IconButton(
+                          onPressed: () {
+                            setState(() => obscure = !obscure);
+                          },
+                          icon: Icon(
+                            obscure
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                            color: Colors.white,
+                          ),
+                        ),
+                        filled: true,
+                        fillColor: deepPurple.withOpacity(0.88),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 22,
+                          horizontal: 18,
+                        ),
+                        border: fieldBorder,
+                        enabledBorder: fieldBorder,
+                        focusedBorder: fieldBorder.copyWith(
+                          borderSide: const BorderSide(
+                            color: magenta,
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 6),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () {
+                          showMessage(
+                            'Password reset will be connected next.',
+                          );
+                        },
+                        child: const Text(
+                          'Forgot Password?',
+                          style: TextStyle(
+                            color: gold,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 8),
+                    Container(
+                      width: double.infinity,
+                      height: 66,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [
+                            Color(0xFFFF83AD),
+                            Color(0xFFFF009D),
+                            Color(0xFF9900FF),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(40),
+                        border: Border.all(color: gold, width: 1.5),
+                        boxShadow: [
+                          BoxShadow(
+                            color: magenta.withOpacity(0.55),
+                            blurRadius: 22,
+                            spreadRadius: 1,
+                          ),
+                        ],
+                      ),
+                      child: ElevatedButton(
+                        onPressed: loading ? null : login,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          disabledBackgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(40),
+                          ),
+                        ),
+                        child: loading
+                            ? const CircularProgressIndicator(
+                                color: Colors.white,
+                              )
+                            : const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    'LOGIN',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 21,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 1,
+                                    ),
+                                  ),
+                                  SizedBox(width: 24),
+                                  Icon(
+                                    Icons.arrow_forward_rounded,
+                                    color: Colors.white,
+                                    size: 28,
+                                  ),
+                                ],
+                              ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 22),
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        const Text(
+                          "Don't have an account? ",
+                          style: TextStyle(color: Colors.white70),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const RegisterScreen(),
+                              ),
+                            );
+                          },
+                          child: const Text(
+                            'Register Now',
+                            style: TextStyle(
+                              color: gold,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ),
       ],
     ),
   );
+}
+
+Widget _socialButton({
+  required String label,
+  required IconData icon,
+  required VoidCallback onTap,
+}) {
+  return Container(
+    height: 60,
+    decoration: BoxDecoration(
+      gradient: const LinearGradient(
+        colors: [
+          Color(0xFF35104D),
+          Color(0xFF16051F),
+        ],
+      ),
+      borderRadius: BorderRadius.circular(22),
+      border: Border.all(
+        color: const Color(0xFFFFD76A),
+        width: 1.4,
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: const Color(0xFFFF35D3).withOpacity(0.3),
+          blurRadius: 12,
+        ),
+      ],
+    ),
+    child: InkWell(
+      borderRadius: BorderRadius.circular(22),
+      onTap: onTap,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: Colors.white, size: 29),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
 }
 }
 
