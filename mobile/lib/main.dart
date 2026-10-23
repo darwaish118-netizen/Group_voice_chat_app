@@ -1284,7 +1284,138 @@ class _RegisterScreenState
       SnackBar(content: Text(message)),
     );
   }
+    
+Widget _registerField({
+  required TextEditingController controller,
+  required String label,
+  required String hint,
+  required IconData icon,
+  TextInputType keyboardType = TextInputType.text,
+  bool obscureText = false,
+}) {
+  const gold = Color(0xFFFFD76A);
 
+  return TextField(
+    controller: controller,
+    keyboardType: keyboardType,
+    obscureText: obscureText,
+    style: const TextStyle(color: Colors.white),
+    cursorColor: gold,
+    decoration: InputDecoration(
+      labelText: label,
+      hintText: hint,
+      labelStyle: const TextStyle(color: gold),
+      hintStyle: const TextStyle(color: Colors.white60),
+      prefixIcon: Icon(icon, color: gold),
+      filled: true,
+      fillColor: const Color(0xFF38205A),
+      contentPadding: const EdgeInsets.symmetric(
+        vertical: 18,
+        horizontal: 18,
+      ),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(18),
+        borderSide: BorderSide(
+          color: gold.withOpacity(0.35),
+        ),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(18),
+        borderSide: BorderSide(
+          color: gold.withOpacity(0.35),
+        ),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(18),
+        borderSide: const BorderSide(
+          color: gold,
+          width: 1.8,
+        ),
+      ),
+    ),
+  );
+}
+
+Widget _registerDropdown({
+  required String label,
+  required IconData icon,
+  required String value,
+  required List<String> items,
+  required ValueChanged<String?> onChanged,
+}) {
+  const gold = Color(0xFFFFD76A);
+
+  return DropdownButtonFormField<String>(
+    value: items.contains(value) ? value : null,
+    dropdownColor: const Color(0xFF38205A),
+    style: const TextStyle(color: Colors.white),
+    decoration: InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(color: gold),
+      prefixIcon: Icon(icon, color: gold),
+      filled: true,
+      fillColor: const Color(0xFF38205A),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(18),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(18),
+        borderSide: BorderSide(
+          color: gold.withOpacity(0.35),
+        ),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(18),
+        borderSide: const BorderSide(
+          color: gold,
+          width: 1.8,
+        ),
+      ),
+    ),
+    items: items.map((item) {
+      return DropdownMenuItem<String>(
+        value: item,
+        child: Text(item),
+      );
+    }).toList(),
+    onChanged: onChanged,
+  );
+}
+
+Widget _registerDisplayField({
+  required String label,
+  required String value,
+  required IconData icon,
+}) {
+  const gold = Color(0xFFFFD76A);
+
+  return InputDecorator(
+    decoration: InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(color: gold),
+      prefixIcon: Icon(icon, color: gold),
+      filled: true,
+      fillColor: const Color(0xFF38205A),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(18),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(18),
+        borderSide: BorderSide(
+          color: gold.withOpacity(0.35),
+        ),
+      ),
+    ),
+    child: Text(
+      value,
+      style: TextStyle(
+        color: value == 'Select your birthday'
+            ? Colors.white60
+            : Colors.white,
+      ),
+    ),
+  );
+}
 
 Widget build(BuildContext context) {
   ImageProvider<Object>? avatarImage;
