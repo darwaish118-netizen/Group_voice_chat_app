@@ -259,21 +259,23 @@ Widget build(BuildContext context) {
             painter: MindoAuthBackdropPainter(),
           ),
         ),
-        Positioned.fill(
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  midnight.withOpacity(0.25),
-                  const Color(0xFF160025).withOpacity(0.75),
-                  midnight,
-                ],
-              ),
-            ),
-          ),
-        ),
+
+Positioned.fill(
+  child: Image.asset(
+    'assets/auth_background.png',
+    fit: BoxFit.cover,
+    errorBuilder: (context, error, stackTrace) {
+      return const ColoredBox(
+        color: Color(0xFF10051F),
+      );
+    },
+  ),
+),
+Positioned.fill(
+  child: ColoredBox(
+    color: Color(0x660D0318),
+  ),
+),
         SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
