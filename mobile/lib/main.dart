@@ -1633,6 +1633,53 @@ class EventsScreen extends StatelessWidget {
 
 // ROOMS
 
+class MessagesScreen extends StatelessWidget {
+  const MessagesScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color(0xFF18052D),
+            Color(0xFF390A55),
+            Color(0xFF10021F),
+          ],
+        ),
+      ),
+      child: const Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.forum_rounded,
+              color: Color(0xFFFFD45C),
+              size: 72,
+            ),
+            SizedBox(height: 16),
+            Text(
+              'MINDO MESSAGES',
+              style: TextStyle(
+                color: Color(0xFFFFD45C),
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Your conversations will appear here',
+              style: TextStyle(color: Colors.white70),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class RoomsScreen
     extends StatefulWidget {
   final String token;
