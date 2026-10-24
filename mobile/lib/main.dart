@@ -664,13 +664,16 @@ Widget build(BuildContext context) {
     ),
   );
 
-decoration: const BoxDecoration(
-  image: DecorationImage(
-    image: AssetImage('assets/auth_background_new.png'),
-    fit: BoxFit.cover,
-  ),
-),
-      child: SafeArea(
+return Scaffold(
+  backgroundColor: midnight,
+  body: Container(
+    decoration: BoxDecoration(
+      image: DecorationImage(
+        image: AssetImage('assets/auth_background_new.png'),
+        fit: BoxFit.cover,
+      ),
+    ),
+    child: SafeArea(
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(24, 26, 24, 30),
