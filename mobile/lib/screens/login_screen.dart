@@ -259,7 +259,7 @@ Widget build(BuildContext context) {
 
 Positioned.fill(
   child: Image.asset(
-    'assets/auth_background.png',
+    'assets/auth_background_new.png',
     fit: BoxFit.cover,
     errorBuilder: (context, error, stackTrace) {
       return const ColoredBox(
