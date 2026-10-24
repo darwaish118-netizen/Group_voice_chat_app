@@ -664,20 +664,12 @@ Widget build(BuildContext context) {
     ),
   );
 
-  return Scaffold(
-    backgroundColor: midnight,
-    body: Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF10051F),
-            Color(0xFF32104D),
-            Color(0xFF160721),
-          ],
-        ),
-      ),
+decoration: const BoxDecoration(
+  image: DecorationImage(
+    image: AssetImage('assets/auth_background_new.png'),
+    fit: BoxFit.cover,
+  ),
+),
       child: SafeArea(
         child: Center(
           child: SingleChildScrollView(
