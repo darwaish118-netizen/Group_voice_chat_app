@@ -254,9 +254,6 @@ Widget build(BuildContext context) {
     backgroundColor: midnight,
     body: Stack(
       children: [
-        const Positioned.fill(
-          child: CustomPaint(
-            painter: MindoAuthBackdropPainter(),
           ),
         ),
 
@@ -273,7 +270,7 @@ Positioned.fill(
 ),
 Positioned.fill(
   child: ColoredBox(
-    color: Color(0x660D0318),
+    color: Color(0x220D0318),
   ),
 ),
         SafeArea(
