@@ -250,38 +250,36 @@ Widget build(BuildContext context) {
     borderSide: const BorderSide(color: gold, width: 1.4),
   );
 
-  return Scaffold(
-    backgroundColor: midnight,
-    body: Stack(
-      children: [
-          ),
-        ),
 
-Positioned.fill(
-  child: Image.asset(
-    'assets/auth_background_new.png',
-    fit: BoxFit.cover,
-    errorBuilder: (context, error, stackTrace) {
-      return const ColoredBox(
-        color: Color(0xFF10051F),
-      );
-    },
-  ),
-),
-Positioned.fill(
-  child: ColoredBox(
-    color: Color(0x220D0318),
-  ),
-),
-        SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 460),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 8),
+return Scaffold(
+  backgroundColor: midnight,
+  body: Stack(
+    children: [
+      Positioned.fill(
+        child: Image.asset(
+          'assets/auth_background_new.png',
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return const ColoredBox(
+              color: Color(0xFF10051F),
+            );
+          },
+        ),
+      ),
+      Positioned.fill(
+        child: ColoredBox(
+          color: Color(0x220D0318),
+        ),
+      ),
+      SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 460),
+              child: Column(
+                children: [
+                  const SizedBox(height: 8),
 
                     // MINDO logo
                     Container(
