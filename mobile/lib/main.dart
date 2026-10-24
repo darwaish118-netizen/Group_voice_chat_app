@@ -8,8 +8,6 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-part 'screens/login_screen.dart';
-part 'screens/register_screen.dart';
 const String apiBaseUrl =
     'https://voice-chat-app-gsb9.onrender.com';
 
