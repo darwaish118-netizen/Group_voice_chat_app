@@ -1433,18 +1433,14 @@ Widget build(BuildContext context) {
         ),
       ),
     ),
-    body: Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFF18072F),
-            Color(0xFF09051B),
-            Color(0xFF26053D),
-          ],
-        ),
-      ),
+
+body: Container(
+  decoration: const BoxDecoration(
+    image: DecorationImage(
+      image: AssetImage('assets/auth_background_new.png'),
+      fit: BoxFit.cover,
+    ),
+  ),
       child: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(24, 18, 24, 30),
