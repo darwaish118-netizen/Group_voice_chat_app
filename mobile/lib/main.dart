@@ -1684,8 +1684,11 @@ final pages = [
         centerTitle: true,
       ),
       body: pages[selectedIndex],
-      bottomNavigationBar:
-          NavigationBar(
+bottomNavigationBar: NavigationBar(
+  backgroundColor: Colors.transparent,
+  surfaceTintColor: Colors.transparent,
+  indicatorColor: const Color(0xFF8E24AA).withOpacity(0.35),
+  elevation: 0,
         selectedIndex:
             selectedIndex,
         onDestinationSelected:
