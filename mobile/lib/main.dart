@@ -1689,8 +1689,7 @@ bottomNavigationBar: NavigationBar(
   surfaceTintColor: Colors.transparent,
   indicatorColor: const Color(0xFF8E24AA).withOpacity(0.35),
   elevation: 0,
-        selectedIndex:
-            selectedIndex,
+  selectedIndex: selectedIndex,
         onDestinationSelected:
             (index) {
           setState(() {
@@ -2999,11 +2998,16 @@ Card(
           // ======================================================
 
 
+
 LayoutBuilder(
   builder: (context, constraints) {
     final wheelWidth = constraints.maxWidth;
-    final buttonSize = (wheelWidth * 0.255).clamp(88.0, 112.0);
-    final centerSize = (wheelWidth * 0.34).clamp(124.0, 150.0);
+    final buttonSize = (wheelWidth * 0.205).clamp(62.0, 82.0);
+    final centerSize = (wheelWidth * 0.27).clamp(84.0, 108.0);
+
+    final leftSide = 0.0;
+    final rightSide = wheelWidth - buttonSize;
+    final middleSide = (wheelWidth - buttonSize) / 2;
 
     Widget wheelButton(
       IconData icon,
@@ -3030,17 +3034,17 @@ LayoutBuilder(
               ),
               border: Border.all(
                 color: const Color(0xFFFFC857),
-                width: 2.5,
+                width: 2,
               ),
               boxShadow: const [
                 BoxShadow(
                   color: Color(0x99FF8A00),
-                  blurRadius: 15,
-                  spreadRadius: 2,
+                  blurRadius: 9,
+                  spreadRadius: 1,
                 ),
                 BoxShadow(
                   color: Color(0xAA9D00FF),
-                  blurRadius: 20,
+                  blurRadius: 10,
                   spreadRadius: 1,
                 ),
               ],
@@ -3051,19 +3055,20 @@ LayoutBuilder(
                 Icon(
                   icon,
                   color: const Color(0xFFFFD66B),
-                  size: buttonSize * 0.39,
+                  size: buttonSize * 0.34,
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 2),
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
                       title,
+                      maxLines: 1,
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
-                        fontSize: 12,
+                        fontSize: 10,
                       ),
                     ),
                   ),
@@ -3075,13 +3080,8 @@ LayoutBuilder(
       );
     }
 
-    final side = (wheelWidth - buttonSize) / 2;
-    final leftSide = wheelWidth * 0.035;
-    final rightSide = wheelWidth - buttonSize - leftSide;
-    final middleSide = side;
-
     return SizedBox(
-      height: 445,
+      height: 310,
       width: double.infinity,
       child: Stack(
         clipBehavior: Clip.none,
@@ -3089,19 +3089,19 @@ LayoutBuilder(
           Positioned.fill(
             child: Center(
               child: Container(
-                width: wheelWidth * 0.94,
-                height: wheelWidth * 0.94,
+                width: wheelWidth * 0.82,
+                height: wheelWidth * 0.82,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: const Color(0xFFFFB52E),
-                    width: 2,
+                    color: const Color(0xFFFFB52E).withOpacity(0.65),
+                    width: 1.5,
                   ),
                   boxShadow: const [
                     BoxShadow(
-                      color: Color(0x669900FF),
-                      blurRadius: 24,
-                      spreadRadius: 2,
+                      color: Color(0x556690FF),
+                      blurRadius: 16,
+                      spreadRadius: 1,
                     ),
                   ],
                 ),
@@ -3109,71 +3109,15 @@ LayoutBuilder(
             ),
           ),
 
-          // Top: Wallet
-          wheelButton(
-            Icons.account_balance_wallet,
-            'Wallet',
-            middleSide,
-            4,
-          ),
+          wheelButton(Icons.account_balance_wallet, 'Wallet', middleSide, 0),
+          wheelButton(Icons.shopping_bag, 'Mall', rightSide, 45),
+          wheelButton(Icons.star, 'Wealth Level', rightSide, 115),
+          wheelButton(Icons.military_tech, 'HONOR', rightSide, 185),
+          wheelButton(Icons.business, 'My Agency', middleSide, 230),
+          wheelButton(Icons.attach_money, 'My Income', leftSide, 185),
+          wheelButton(Icons.feedback, 'Feedback', leftSide, 115),
+          wheelButton(Icons.settings, 'Settings', leftSide, 45),
 
-          // Upper right: Mall
-          wheelButton(
-            Icons.shopping_bag,
-            'Mall',
-            rightSide,
-            70,
-          ),
-
-          // Right middle: Wealth Level
-          wheelButton(
-            Icons.star,
-            'Wealth Level',
-            rightSide,
-            185,
-          ),
-
-          // Lower right: Honor
-          wheelButton(
-            Icons.military_tech,
-            'HONOR',
-            rightSide - 8,
-            305,
-          ),
-
-          // Bottom: My Agency
-          wheelButton(
-            Icons.business,
-            'My Agency',
-            middleSide,
-            330,
-          ),
-
-          // Lower left: My Income
-          wheelButton(
-            Icons.attach_money,
-            'My Income',
-            leftSide + 8,
-            305,
-          ),
-
-          // Left middle: Feedback
-          wheelButton(
-            Icons.feedback,
-            'Feedback',
-            leftSide,
-            185,
-          ),
-
-          // Upper left: Settings
-          wheelButton(
-            Icons.settings,
-            'Settings',
-            leftSide + 8,
-            70,
-          ),
-
-          // Center VIP button
           Positioned.fill(
             child: Align(
               alignment: const Alignment(0, 0.05),
@@ -3186,42 +3130,42 @@ LayoutBuilder(
                     shape: BoxShape.circle,
                     gradient: const RadialGradient(
                       colors: [
-                        Color(0xFF6D12A8),
-                        Color(0xFF210637),
+                        Color(0xFFFFD12A),
+                        Color(0xFFFF2106),
                         Color(0xFF0B0314),
                       ],
                     ),
                     border: Border.all(
                       color: const Color(0xFFFFD36A),
-                      width: 4,
+                      width: 3,
                     ),
                     boxShadow: const [
                       BoxShadow(
                         color: Color(0xFFFF8A00),
-                        blurRadius: 22,
-                        spreadRadius: 3,
+                        blurRadius: 14,
+                        spreadRadius: 2,
                       ),
                       BoxShadow(
                         color: Color(0xFFB000FF),
-                        blurRadius: 28,
-                        spreadRadius: 2,
+                        blurRadius: 16,
+                        spreadRadius: 1,
                       ),
                     ],
                   ),
-                  child: const Column(
+                  child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
                         Icons.workspace_premium,
-                        color: Color(0xFFFFD36A),
-                        size: 48,
+                        color: const Color(0xFFFFD36A),
+                        size: centerSize * 0.34,
                       ),
-                      SizedBox(height: 4),
+                      const SizedBox(height: 2),
                       Text(
                         'VIP',
                         style: TextStyle(
-                          color: Color(0xFFFFD36A),
-                          fontSize: 24,
+                          color: const Color(0xFFFFD36A),
+                          fontSize: centerSize * 0.17,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
@@ -3236,6 +3180,7 @@ LayoutBuilder(
     );
   },
 ),
+
 const SizedBox(height: 12),
 
           const SizedBox(
