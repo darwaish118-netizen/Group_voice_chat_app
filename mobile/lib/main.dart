@@ -2571,19 +2571,29 @@ class _ProfileScreenState
 final gender =
     user?['gender']?.toString().trim() ?? '';
       
-    return RefreshIndicator(
-      onRefresh: loadProfile,
-      child: ListView(
-        physics:
-            const AlwaysScrollableScrollPhysics(),
-        padding:
-            const EdgeInsets.fromLTRB(
-          16,
-          20,
-          16,
-          30,
+
+return RefreshIndicator(
+  onRefresh: loadProfile,
+  child: Container(
+    decoration: const BoxDecoration(
+      image: DecorationImage(
+        image: AssetImage(
+          'assets/profile_background.png',
         ),
-        children: [
+        fit: BoxFit.cover,
+        alignment: Alignment.topCenter,
+      ),
+    ),
+    child: ListView(
+      physics:
+          const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(
+        16,
+        20,
+        16,
+        30,
+      ),
+      children: [
           // ======================================================
           // TOP PROFILE
           // ======================================================
@@ -3245,12 +3255,12 @@ const SizedBox(height: 12),
               ),
             ),
           ),
-        ],
+                  ],
       ),
-    );
-  }
+    ),
+  );
 }
-
+}
 
 // ============================================================
 // PUBLIC PROFILE SCREEN
