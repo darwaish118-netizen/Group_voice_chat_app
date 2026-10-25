@@ -701,7 +701,7 @@ return Scaffold(
                     ),
                     child: ClipOval(
                       child: Image.asset(
-                        'ChatGPT Image Oct 8, 2026, 11_35_07 PM.png',
+                        'assets/ChatGPT Image Oct 8, 2026, 11_35_07 PM.png',
                         width: 112,
                         height: 112,
                         fit: BoxFit.cover,
