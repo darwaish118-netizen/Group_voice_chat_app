@@ -3081,7 +3081,7 @@ final centerSize = (wheelWidth * 0.18).clamp(58.0, 70.0);
     }
 
     return SizedBox(
-      height: 220,
+      height: 250,
       width: double.infinity,
       child: Stack(
         clipBehavior: Clip.none,
@@ -3109,14 +3109,14 @@ final centerSize = (wheelWidth * 0.18).clamp(58.0, 70.0);
             ),
           ),
 
-          wheelButton(Icons.account_balance_wallet, 'Wallet', middleSide, 0),
-          wheelButton(Icons.shopping_bag, 'Mall', rightSide, 45),
-          wheelButton(Icons.star, 'Wealth Level', rightSide, 115),
-          wheelButton(Icons.military_tech, 'HONOR', rightSide, 185),
-          wheelButton(Icons.business, 'My Agency', middleSide, 230),
-          wheelButton(Icons.attach_money, 'My Income', leftSide, 185),
-          wheelButton(Icons.feedback, 'Feedback', leftSide, 115),
-          wheelButton(Icons.settings, 'Settings', leftSide, 45),
+wheelButton(Icons.account_balance_wallet, 'Wallet', middleSide, 0),
+wheelButton(Icons.shopping_bag, 'Mall', rightSide, 35),
+wheelButton(Icons.star, 'Wealth Level', rightSide, 95),
+wheelButton(Icons.military_tech, 'HONOR', rightSide, 155),
+wheelButton(Icons.business, 'My Agency', middleSide, 195),
+wheelButton(Icons.attach_money, 'My Income', leftSide, 155),
+wheelButton(Icons.feedback, 'Feedback', leftSide, 95),
+wheelButton(Icons.settings, 'Settings', leftSide, 35),
 
           Positioned.fill(
             child: Align(
