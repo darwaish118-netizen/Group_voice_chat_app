@@ -2588,7 +2588,7 @@ return RefreshIndicator(
     ),
     child: ListView(
       physics:
-          const AlwaysScrollableScrollPhysics(),
+          const NeverScrollableScrollPhysics(),
 padding: const EdgeInsets.fromLTRB(
   10,
   6,
@@ -3081,7 +3081,7 @@ final centerSize = (wheelWidth * 0.22).clamp(66.0, 86.0);
     }
 
     return SizedBox(
-      height: 270,
+      height: 220,
       width: double.infinity,
       child: Stack(
         clipBehavior: Clip.none,
