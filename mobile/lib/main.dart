@@ -3002,9 +3002,8 @@ Card(
 LayoutBuilder(
   builder: (context, constraints) {
     final wheelWidth = constraints.maxWidth;
-final buttonSize = (wheelWidth * 0.14).clamp(44.0, 56.0);
-final centerSize = (wheelWidth * 0.18).clamp(58.0, 70.0);
-
+final buttonSize = (wheelWidth * 0.12).clamp(40.0, 48.0);
+final centerSize = (wheelWidth * 0.16).clamp(54.0, 64.0);
     final leftSide = 0.0;
     final rightSide = wheelWidth - buttonSize;
     final middleSide = (wheelWidth - buttonSize) / 2;
@@ -3081,7 +3080,7 @@ final centerSize = (wheelWidth * 0.18).clamp(58.0, 70.0);
     }
 
     return SizedBox(
-      height: 250,
+      height: 220,
       width: double.infinity,
       child: Stack(
         clipBehavior: Clip.none,
