@@ -2774,41 +2774,34 @@ AnimatedRainbowText(
           // WEALTH / CHARM / VIP
           // ======================================================
 
-          Card(
-            child: Padding(
-              padding:
-                  const EdgeInsets.symmetric(
-                vertical: 16,
-                horizontal: 8,
-              ),
-              child: Row(
-                children: [
-                  statItem(
-                    'Lv.${user?['level'] ?? 1}',
-                    'Wealth Level',
-                  ),
-                  Container(
-                    width: 1,
-                    height: 35,
-                    color: Colors.grey.shade300,
-                  ),
-                  statItem(
-                    'Lv.1',
-                    'Charm Level',
-                  ),
-                  Container(
-                    width: 1,
-                    height: 35,
-                    color: Colors.grey.shade300,
-                  ),
-                  statItem(
-                    'VIP 0',
-                    'VIP',
-                  ),
-                ],
-              ),
-            ),
-          ),
+Card(
+  color: Colors.transparent,
+  elevation: 0,
+  surfaceTintColor: Colors.transparent,
+  child: Padding(
+    padding: const EdgeInsets.symmetric(
+      vertical: 16,
+      horizontal: 8,
+    ),
+    child: Row(
+      children: [
+        statItem('Lv.${user?['level'] ?? 1}', 'Wealth Level'),
+        Container(
+          width: 1,
+          height: 35,
+          color: Colors.white24,
+        ),
+        statItem('Lv.1', 'Charm Level'),
+        Container(
+          width: 1,
+          height: 35,
+          color: Colors.white24,
+        ),
+        statItem('VIP 0', 'VIP'),
+      ],
+    ),
+  ),
+),
 
           const SizedBox(
             height: 10,
@@ -2819,6 +2812,9 @@ AnimatedRainbowText(
 // ======================================================
 
 Card(
+  color: Colors.transparent,
+  elevation: 0,
+  surfaceTintColor: Colors.transparent,
   child: Padding(
     padding: const EdgeInsets.symmetric(
       vertical: 16,
@@ -3002,8 +2998,8 @@ Card(
 LayoutBuilder(
   builder: (context, constraints) {
     final wheelWidth = constraints.maxWidth;
-final buttonSize = (wheelWidth * 0.12).clamp(40.0, 48.0);
-final centerSize = (wheelWidth * 0.16).clamp(54.0, 64.0);
+final buttonSize = (wheelWidth * 0.13).clamp(40.0, 48.0);
+final centerSize = (wheelWidth * 0.16).clamp(52.0, 60.0);
     final leftSide = 0.0;
     final rightSide = wheelWidth - buttonSize;
     final middleSide = (wheelWidth - buttonSize) / 2;
