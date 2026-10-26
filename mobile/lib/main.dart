@@ -2589,12 +2589,12 @@ return RefreshIndicator(
     child: ListView(
       physics:
           const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(
-        16,
-        20,
-        16,
-        30,
-      ),
+padding: const EdgeInsets.fromLTRB(
+  10,
+  6,
+  10,
+  4,
+),
       children: [
           // ======================================================
           // TOP PROFILE
@@ -3002,8 +3002,8 @@ Card(
 LayoutBuilder(
   builder: (context, constraints) {
     final wheelWidth = constraints.maxWidth;
-    final buttonSize = (wheelWidth * 0.205).clamp(62.0, 82.0);
-    final centerSize = (wheelWidth * 0.27).clamp(84.0, 108.0);
+final buttonSize = (wheelWidth * 0.17).clamp(50.0, 66.0);
+final centerSize = (wheelWidth * 0.22).clamp(66.0, 86.0);
 
     final leftSide = 0.0;
     final rightSide = wheelWidth - buttonSize;
@@ -3081,7 +3081,7 @@ LayoutBuilder(
     }
 
     return SizedBox(
-      height: 310,
+      height: 270,
       width: double.infinity,
       child: Stack(
         clipBehavior: Clip.none,
