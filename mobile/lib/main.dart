@@ -2579,7 +2579,7 @@ return RefreshIndicator(
   child: Container(
       decoration: const BoxDecoration(
         image: DecorationImage(
-          image: AssetImage('assets/profile_blue_gold.png'),
+          image: AssetImage('- assets/Royal Blue and Gold Fantasy Stage.png'),
           fit: BoxFit.cover,
           alignment: Alignment.topCenter,
         ),
