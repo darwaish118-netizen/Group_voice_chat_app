@@ -2580,7 +2580,7 @@ return RefreshIndicator(
     decoration: const BoxDecoration(
       image: DecorationImage(
         image: AssetImage(
-          'assets/profile_background.png',
+          'assets/profile_blue_gold.png')
         ),
         fit: BoxFit.cover,
         alignment: Alignment.topCenter,
