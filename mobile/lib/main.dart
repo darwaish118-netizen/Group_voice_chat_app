@@ -2577,15 +2577,13 @@ final gender =
 return RefreshIndicator(
   onRefresh: loadProfile,
   child: Container(
-    decoration: const BoxDecoration(
-      image: DecorationImage(
-        image: AssetImage(
-          'assets/profile_blue_gold.png')
+      decoration: const BoxDecoration(
+        image: DecorationImage(
+          image: AssetImage('assets/profile_blue_gold.png'),
+          fit: BoxFit.cover,
+          alignment: Alignment.topCenter,
         ),
-        fit: BoxFit.cover,
-        alignment: Alignment.topCenter,
       ),
-    ),
     child: ListView(
       physics:
           const NeverScrollableScrollPhysics(),
