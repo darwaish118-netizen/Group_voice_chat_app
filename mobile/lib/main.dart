@@ -3016,32 +3016,35 @@ final middleSide = (wheelWidth - buttonSize) / 2;
         child: GestureDetector(
           onTap: () => openComingSoon(title),
           child: Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: const RadialGradient(
-                colors: [
-                  Color(0xFF45106D),
-                  Color(0xFF18052D),
-                  Color(0xFF090414),
-                ],
-              ),
-              border: Border.all(
-                color: const Color(0xFFFFC857),
-                width: 2,
-              ),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x99FF8A00),
-                  blurRadius: 9,
-                  spreadRadius: 1,
-                ),
-                BoxShadow(
-                  color: Color(0xAA9D00FF),
-                  blurRadius: 10,
-                  spreadRadius: 1,
-                ),
-              ],
-            ),
+decoration: BoxDecoration(
+  shape: BoxShape.circle,
+  gradient: const LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFF1D4E89),
+      Color(0xFF102A56),
+      Color(0xFF08152E),
+    ],
+  ),
+  border: Border.all(
+    color: const Color(0xFFFFD36A),
+    width: 1.5,
+  ),
+  boxShadow: const [
+    BoxShadow(
+      color: Color(0x66FFD36A),
+      blurRadius: 10,
+      spreadRadius: 1,
+    ),
+    BoxShadow(
+      color: Color(0x660080FF),
+      blurRadius: 12,
+      spreadRadius: 1,
+    ),
+  ],
+),
+
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
