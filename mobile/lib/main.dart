@@ -2573,22 +2573,27 @@ class _ProfileScreenState
 final gender =
     user?['gender']?.toString().trim() ?? '';
       
-
 return RefreshIndicator(
   onRefresh: loadProfile,
-child: Container(
-  width: double.infinity,
-  constraints: const BoxConstraints(
-    minHeight: 800,
-  ),
-  decoration: const BoxDecoration(
-    image: DecorationImage(
-      image: AssetImage('assets/Royal Blue and Gold Fantasy Stage.png'),
-      fit: BoxFit.cover,
-      alignment: Alignment.topCenter,
+  child: Container(
+    decoration: const BoxDecoration(
+      image: DecorationImage(
+        image: AssetImage(
+          'assets/Royal Blue and Gold Fantasy Stage.png',
+        ),
+        fit: BoxFit.cover,
+        alignment: Alignment.topCenter,
+      ),
     ),
-  ),
-  child: ListView(
+    child: ListView(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(
+        10,
+        6,
+        10,
+        4,
+      ),
+      children: [
           // ======================================================
           // TOP PROFILE
           // ======================================================
