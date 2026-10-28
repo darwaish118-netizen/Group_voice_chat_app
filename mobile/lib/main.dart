@@ -2605,7 +2605,7 @@ return RefreshIndicator(
       physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(
         10,
-        24,
+        62,
         10,
         2,
       ),
@@ -2912,7 +2912,7 @@ Card(
                     'Fans',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: Colors.grey,
+                      color: Colors.white,
                       fontSize: 11,
                     ),
                   ),
@@ -3008,7 +3008,7 @@ Card(
                     'Visits',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: Colors.grey,
+                      color: Colors.white,
                       fontSize: 11,
                     ),
                   ),
