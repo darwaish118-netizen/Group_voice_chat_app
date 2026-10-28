@@ -3076,7 +3076,6 @@ decoration: BoxDecoration(
         ),
       );
     }
-  }
 
     return SizedBox(
       height: 220,
@@ -3108,13 +3107,13 @@ decoration: BoxDecoration(
           ),
 
 wheelButton(Icons.account_balance_wallet, 'Wallet', middleSide, 0),
-wheelButton(Icons.shopping_bag, 'Mall', rightSide, 30),
-wheelButton(Icons.star, 'Wealth Level', rightSide, 85),
-wheelButton(Icons.military_tech, 'HONOR', rightSide, 140),
-wheelButton(Icons.business, 'My Agency', middleSide, 175),
-wheelButton(Icons.attach_money, 'My Income', leftSide, 140),
-wheelButton(Icons.feedback, 'Feedback', leftSide, 85),
-wheelButton(Icons.settings, 'Settings', leftSide, 30),
+wheelButton(Icons.shopping_bag, 'Mall', rightSide, 25),
+wheelButton(Icons.star, 'Wealth Level', rightSide, 75),
+wheelButton(Icons.military_tech, 'HONOR', rightSide, 125),
+wheelButton(Icons.business, 'My Agency', middleSide, 150),
+wheelButton(Icons.attach_money, 'My Income', leftSide, 125),
+wheelButton(Icons.feedback, 'Feedback', leftSide, 75),
+wheelButton(Icons.settings, 'Settings', leftSide, 25),
 
           Positioned.fill(
             child: Align(
