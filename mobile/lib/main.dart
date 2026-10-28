@@ -1680,6 +1680,7 @@ final pages = [
     return Scaffold(
       extendBodyBehindAppBar: selectedIndex == 3,
       appBar: AppBar(
+        toolbarHeight: selectedIndex == 3 ? 48 : null,
         backgroundColor: selectedIndex == 3
             ? Colors.transparent
             : null,
@@ -1688,10 +1689,16 @@ final pages = [
             : null,
         elevation: selectedIndex == 3 ? 0 : null,
         foregroundColor: selectedIndex == 3
-            ? Colors.white
+            ? const Color(0xFFFFD54F)
             : null,
         title: Text(
           titles[selectedIndex],
+          style: selectedIndex == 3
+              ? const TextStyle(
+                  color: Color(0xFFFFD54F),
+                  fontWeight: FontWeight.bold,
+                )
+              : null,
         ),
         centerTitle: true,
       ),
@@ -3462,7 +3469,17 @@ class PublicProfileScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profile'),
+        toolbarHeight: 48,
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        title: const Text(
+          'Profile',
+          style: TextStyle(
+            color: Color(0xFFFFD54F),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         centerTitle: true,
         actions: [
           IconButton(
