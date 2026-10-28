@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -2295,6 +2296,9 @@ class _ProfileScreenState
     extends State<ProfileScreen> {
   Map<String, dynamic>? user;
   bool loading = true;
+    
+    double _cosWheel(double radians) => math.cos(radians);
+double _sinWheel(double radians) => math.sin(radians);
 
   @override
   void initState() {
@@ -2995,20 +2999,35 @@ Card(
 LayoutBuilder(
   builder: (context, constraints) {
     final wheelWidth = constraints.maxWidth;
-final buttonSize = (wheelWidth * 0.125).clamp(40.0, 46.0);
-final centerSize = (wheelWidth * 0.16).clamp(52.0, 60.0);
+    final wheelHeight = 290.0;
 
-// Wheel alignment
-final sideInset = wheelWidth * 0.035;
-final leftSide = sideInset;
-final rightSide = wheelWidth - buttonSize - sideInset;
-final middleSide = (wheelWidth - buttonSize) / 2;
+    final buttonSize =
+        (wheelWidth * 0.125).clamp(40.0, 46.0);
+    final centerSize =
+        (wheelWidth * 0.16).clamp(52.0, 60.0);
+
+    final centerX = (wheelWidth - centerSize) / 2;
+    final centerY = (wheelHeight - centerSize) / 2;
+
+    // Circular wheel: 8 buttons around the VIP center.
+    final radiusX = wheelWidth * 0.34;
+    final radiusY = wheelHeight * 0.36;
+
     Widget wheelButton(
       IconData icon,
       String title,
-      double left,
-      double top,
+      double angle,
     ) {
+      final radians = angle * 3.141592653589793 / 180;
+
+      final left = (wheelWidth / 2) +
+          radiusX * _cosWheel(radians) -
+          buttonSize / 2;
+
+      final top = (wheelHeight / 2) +
+          radiusY * _sinWheel(radians) -
+          buttonSize / 2;
+
       return Positioned(
         left: left,
         top: top,
@@ -3017,35 +3036,34 @@ final middleSide = (wheelWidth - buttonSize) / 2;
         child: GestureDetector(
           onTap: () => openComingSoon(title),
           child: Container(
-decoration: BoxDecoration(
-  shape: BoxShape.circle,
-  gradient: const LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [
-      Color(0xFF1D4E89),
-      Color(0xFF102A56),
-      Color(0xFF08152E),
-    ],
-  ),
-  border: Border.all(
-    color: const Color(0xFFFFD36A),
-    width: 1.5,
-  ),
-  boxShadow: const [
-    BoxShadow(
-      color: Color(0x66FFD36A),
-      blurRadius: 10,
-      spreadRadius: 1,
-    ),
-    BoxShadow(
-      color: Color(0x660080FF),
-      blurRadius: 12,
-      spreadRadius: 1,
-    ),
-  ],
-),
-
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF1D4E89),
+                  Color(0xFF102A56),
+                  Color(0xFF08152E),
+                ],
+              ),
+              border: Border.all(
+                color: const Color(0xFFFFD36A),
+                width: 1.5,
+              ),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x66FFD36A),
+                  blurRadius: 10,
+                  spreadRadius: 1,
+                ),
+                BoxShadow(
+                  color: Color(0x660080FF),
+                  blurRadius: 12,
+                  spreadRadius: 1,
+                ),
+              ],
+            ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -3056,7 +3074,8 @@ decoration: BoxDecoration(
                 ),
                 const SizedBox(height: 2),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 2),
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
@@ -3078,7 +3097,7 @@ decoration: BoxDecoration(
     }
 
     return SizedBox(
-      height: 220,
+      height: wheelHeight,
       width: double.infinity,
       child: Stack(
         clipBehavior: Clip.none,
@@ -3091,7 +3110,8 @@ decoration: BoxDecoration(
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: const Color(0xFFFFB52E).withOpacity(0.65),
+                    color: const Color(0xFFFFB52E)
+                        .withOpacity(0.65),
                     width: 1.5,
                   ),
                   boxShadow: const [
@@ -3106,68 +3126,74 @@ decoration: BoxDecoration(
             ),
           ),
 
-wheelButton(Icons.account_balance_wallet, 'Wallet', middleSide, 0),
-wheelButton(Icons.shopping_bag, 'Mall', rightSide, 25),
-wheelButton(Icons.star, 'Wealth Level', rightSide, 75),
-wheelButton(Icons.military_tech, 'HONOR', rightSide, 125),
-wheelButton(Icons.business, 'My Agency', middleSide, 150),
-wheelButton(Icons.attach_money, 'My Income', leftSide, 125),
-wheelButton(Icons.feedback, 'Feedback', leftSide, 75),
-wheelButton(Icons.settings, 'Settings', leftSide, 25),
+          // Top, upper-right, lower-right, bottom,
+          // lower-left, upper-left and the two side positions.
+          wheelButton(
+            Icons.account_balance_wallet,
+            'Wallet',
+            -90,
+          ),
+          wheelButton(Icons.shopping_bag, 'Mall', -45),
+          wheelButton(Icons.star, 'Wealth Level', 0),
+          wheelButton(Icons.military_tech, 'HONOR', 45),
+          wheelButton(Icons.business, 'My Agency', 90),
+          wheelButton(Icons.attach_money, 'My Income', 135),
+          wheelButton(Icons.feedback, 'Feedback', 180),
+          wheelButton(Icons.settings, 'Settings', 225),
 
-          Positioned.fill(
-            child: Align(
-              alignment: Alignment.center,
-              child: GestureDetector(
-                onTap: () => openComingSoon('VIP'),
-                child: Container(
-                  width: centerSize,
-                  height: centerSize,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: const RadialGradient(
-                      colors: [
-                        Color(0xFFFFD12A),
-                        Color(0xFFFF2106),
-                        Color(0xFF0B0314),
-                      ],
+          // VIP stays exactly at the wheel center.
+          Positioned(
+            left: centerX,
+            top: centerY,
+            width: centerSize,
+            height: centerSize,
+            child: GestureDetector(
+              onTap: () => openComingSoon('VIP'),
+              child: Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: const RadialGradient(
+                    colors: [
+                      Color(0xFFFFD12A),
+                      Color(0xFFFF2106),
+                      Color(0xFFB0314B),
+                    ],
+                  ),
+                  border: Border.all(
+                    color: const Color(0xFFFFD36A),
+                    width: 3,
+                  ),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0xFFFF8A00),
+                      blurRadius: 14,
+                      spreadRadius: 2,
                     ),
-                    border: Border.all(
+                    BoxShadow(
+                      color: Color(0xFFB000FF),
+                      blurRadius: 16,
+                      spreadRadius: 1,
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.workspace_premium,
                       color: const Color(0xFFFFD36A),
-                      width: 3,
+                      size: centerSize * 0.34,
                     ),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0xFFFF8A00),
-                        blurRadius: 14,
-                        spreadRadius: 2,
-                      ),
-                      BoxShadow(
-                        color: Color(0xFFB000FF),
-                        blurRadius: 16,
-                        spreadRadius: 1,
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.workspace_premium,
+                    const SizedBox(height: 2),
+                    Text(
+                      'VIP',
+                      style: TextStyle(
                         color: const Color(0xFFFFD36A),
-                        size: centerSize * 0.34,
+                        fontSize: centerSize * 0.17,
+                        fontWeight: FontWeight.w900,
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'VIP',
-                        style: TextStyle(
-                          color: const Color(0xFFFFD36A),
-                          fontSize: centerSize * 0.17,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),
