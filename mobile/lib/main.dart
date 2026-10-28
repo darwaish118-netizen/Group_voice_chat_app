@@ -2995,13 +2995,15 @@ Card(
 
 LayoutBuilder(
   builder: (context, constraints) {
-    final wheelWidth = constraints.maxWidth;
-final buttonSize = (wheelWidth * 0.13).clamp(40.0, 48.0);
+final wheelWidth = constraints.maxWidth;
+final buttonSize = (wheelWidth * 0.125).clamp(40.0, 46.0);
 final centerSize = (wheelWidth * 0.16).clamp(52.0, 60.0);
-final leftSide = (wheelWidth - buttonSize) * 0.02;
-final rightSide = wheelWidth - buttonSize - leftSide;
-final middleSide = (wheelWidth - buttonSize) / 2;
 
+// Equal left/right spacing
+final sideInset = wheelWidth * 0.035;
+final leftSide = sideInset;
+final rightSide = wheelWidth - buttonSize - sideInset;
+final middleSide = (wheelWidth - buttonSize) / 2;
     Widget wheelButton(
       IconData icon,
       String title,
@@ -3106,17 +3108,17 @@ decoration: BoxDecoration(
           ),
 
 wheelButton(Icons.account_balance_wallet, 'Wallet', middleSide, 0),
-wheelButton(Icons.shopping_bag, 'Mall', rightSide, 35),
-wheelButton(Icons.star, 'Wealth Level', rightSide, 95),
-wheelButton(Icons.military_tech, 'HONOR', rightSide, 155),
-wheelButton(Icons.business, 'My Agency', middleSide, 195),
-wheelButton(Icons.attach_money, 'My Income', leftSide, 155),
-wheelButton(Icons.feedback, 'Feedback', leftSide, 95),
-wheelButton(Icons.settings, 'Settings', leftSide, 35),
+wheelButton(Icons.shopping_bag, 'Mall', rightSide, 30),
+wheelButton(Icons.star, 'Wealth Level', rightSide, 85),
+wheelButton(Icons.military_tech, 'HONOR', rightSide, 140),
+wheelButton(Icons.business, 'My Agency', middleSide, 175),
+wheelButton(Icons.attach_money, 'My Income', leftSide, 140),
+wheelButton(Icons.feedback, 'Feedback', leftSide, 85),
+wheelButton(Icons.settings, 'Settings', leftSide, 30),
 
           Positioned.fill(
             child: Align(
-              alignment: const Alignment(0, 0.05),
+              alignment: Alignment.center,
               child: GestureDetector(
                 onTap: () => openComingSoon('VIP'),
                 child: Container(
@@ -3177,10 +3179,10 @@ wheelButton(Icons.settings, 'Settings', leftSide, 35),
   },
 ),
 
-const SizedBox(height: 12),
+const SizedBox(height: 4),
 
           const SizedBox(
-            height: 8,
+            height: 2,
           ),
 
           // ======================================================
