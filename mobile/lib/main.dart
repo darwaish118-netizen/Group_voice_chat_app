@@ -2483,6 +2483,7 @@ double _sinWheel(double radians) => math.sin(radians);
             style: const TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.bold,
+                color: Color(0xFFFFD34D),
             ),
           ),
           const SizedBox(
@@ -2491,7 +2492,7 @@ double _sinWheel(double radians) => math.sin(radians);
           Text(
             label,
             style: const TextStyle(
-              color: Colors.grey,
+              color: Colors.white,
               fontSize: 12,
             ),
           ),
@@ -2782,7 +2783,7 @@ Card(
   surfaceTintColor: Colors.transparent,
   child: Padding(
     padding: const EdgeInsets.symmetric(
-      vertical: 16,
+      vertical: 6,
       horizontal: 8,
     ),
     child: Row(
@@ -2819,7 +2820,7 @@ Card(
   surfaceTintColor: Colors.transparent,
   child: Padding(
     padding: const EdgeInsets.symmetric(
-      vertical: 16,
+      vertical: 6,
       horizontal: 4,
     ),
     child: Row(
@@ -2842,6 +2843,7 @@ Card(
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
+                        color: Color(0xFFFFD34D),
                     ),
                   ),
                   const SizedBox(height: 5),
@@ -2849,7 +2851,7 @@ Card(
                     'Following',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: Colors.grey,
+                      color: Colors.white,
                       fontSize: 11,
                     ),
                   ),
