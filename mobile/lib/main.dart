@@ -2605,7 +2605,7 @@ return RefreshIndicator(
       physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(
         10,
-        0,
+        24,
         10,
         2,
       ),
@@ -2935,6 +2935,7 @@ Card(
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
+                    color: Color(0xFFFFD34D),
                   ),
                 ),
                 const SizedBox(height: 5),
@@ -2964,6 +2965,7 @@ Card(
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
+                    color: Color(0xFFFFD34D),
                   ),
                 ),
                 const SizedBox(height: 5),
@@ -3233,7 +3235,7 @@ LayoutBuilder(
   },
 ),
 
-const SizedBox(height: 0),
+const SizedBox(height: 16),
 
           // ======================================================
           // LOGOUT
