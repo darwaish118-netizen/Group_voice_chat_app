@@ -2992,9 +2992,9 @@ Card(
           // ======================================================
 
 
-
 LayoutBuilder(
   builder: (context, constraints) {
+    final wheelWidth = constraints.maxWidth;
 final buttonSize = (wheelWidth * 0.125).clamp(40.0, 46.0);
 final centerSize = (wheelWidth * 0.16).clamp(52.0, 60.0);
 
@@ -3076,6 +3076,7 @@ decoration: BoxDecoration(
         ),
       );
     }
+  }
 
     return SizedBox(
       height: 220,
