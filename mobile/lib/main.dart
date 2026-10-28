@@ -1678,7 +1678,18 @@ final pages = [
 ];
 
     return Scaffold(
+      extendBodyBehindAppBar: selectedIndex == 3,
       appBar: AppBar(
+        backgroundColor: selectedIndex == 3
+            ? Colors.transparent
+            : null,
+        surfaceTintColor: selectedIndex == 3
+            ? Colors.transparent
+            : null,
+        elevation: selectedIndex == 3 ? 0 : null,
+        foregroundColor: selectedIndex == 3
+            ? Colors.white
+            : null,
         title: Text(
           titles[selectedIndex],
         ),
@@ -2594,9 +2605,9 @@ return RefreshIndicator(
       physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(
         10,
-        6,
+        0,
         10,
-        4,
+        2,
       ),
       children: [
           // ======================================================
@@ -2651,7 +2662,7 @@ return RefreshIndicator(
           ),
 
           const SizedBox(
-            height: 12,
+            height: 6,
           ),
 
 Center(
@@ -2697,7 +2708,7 @@ Container(
   ),
 ),
 
-const SizedBox(height: 4),
+const SizedBox(height: 2),
 
           Center(
             child: Row(
@@ -2770,7 +2781,7 @@ AnimatedRainbowText(
           ],
 
           const SizedBox(
-            height: 14,
+            height: 6,
           ),
 
           // ======================================================
@@ -2778,9 +2789,16 @@ AnimatedRainbowText(
           // ======================================================
 
 Card(
-  color: Colors.transparent,
+  color: const Color(0xB30A1B3D),
   elevation: 0,
   surfaceTintColor: Colors.transparent,
+  shape: RoundedRectangleBorder(
+    borderRadius: BorderRadius.circular(16),
+    side: BorderSide(
+      color: const Color(0xFFFFD36A).withOpacity(0.45),
+      width: 1,
+    ),
+  ),
   child: Padding(
     padding: const EdgeInsets.symmetric(
       vertical: 6,
@@ -2807,7 +2825,7 @@ Card(
 ),
 
           const SizedBox(
-            height: 10,
+            height: 4,
           ),
             
  // ======================================================
@@ -2815,9 +2833,16 @@ Card(
 // ======================================================
 
 Card(
-  color: Colors.transparent,
+  color: const Color(0xB30A1B3D),
   elevation: 0,
   surfaceTintColor: Colors.transparent,
+  shape: RoundedRectangleBorder(
+    borderRadius: BorderRadius.circular(16),
+    side: BorderSide(
+      color: const Color(0xFFFFD36A).withOpacity(0.45),
+      width: 1,
+    ),
+  ),
   child: Padding(
     padding: const EdgeInsets.symmetric(
       vertical: 6,
@@ -2879,6 +2904,7 @@ Card(
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
+                      color: Color(0xFFFFD34D),
                     ),
                   ),
                   const SizedBox(height: 5),
@@ -2916,7 +2942,7 @@ Card(
                   'Gift Received',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: Colors.grey,
+                    color: Colors.white,
                     fontSize: 10,
                   ),
                 ),
@@ -2945,7 +2971,7 @@ Card(
                   'Gift Sent',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: Colors.grey,
+                    color: Colors.white,
                     fontSize: 10,
                   ),
                 ),
@@ -2972,6 +2998,7 @@ Card(
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
+                      color: Color(0xFFFFD34D),
                     ),
                   ),
                   const SizedBox(height: 5),
@@ -3004,7 +3031,7 @@ LayoutBuilder(
     final wheelHeight = 290.0;
 
     final buttonSize =
-        (wheelWidth * 0.125).clamp(40.0, 46.0);
+        (wheelWidth * 0.145).clamp(46.0, 54.0);
     final centerSize =
         (wheelWidth * 0.16).clamp(52.0, 60.0);
 
@@ -3012,7 +3039,7 @@ LayoutBuilder(
     final centerY = (wheelHeight - centerSize) / 2;
 
     // Circular wheel: 8 buttons around the VIP center.
-    final radiusX = wheelWidth * 0.34;
+    final radiusX = wheelWidth * 0.30;
     final radiusY = wheelHeight * 0.36;
 
     Widget wheelButton(
@@ -3206,11 +3233,7 @@ LayoutBuilder(
   },
 ),
 
-const SizedBox(height: 4),
-
-          const SizedBox(
-            height: 2,
-          ),
+const SizedBox(height: 0),
 
           // ======================================================
           // LOGOUT
@@ -3218,13 +3241,25 @@ const SizedBox(height: 4),
 
           SizedBox(
             height: 50,
-            child: OutlinedButton.icon(
+            child: ElevatedButton.icon(
               onPressed: confirmLogout,
-              icon: const Icon(
-                Icons.logout,
-              ),
-              label: const Text(
-                'Logout',
+              icon: const Icon(Icons.logout),
+              label: const Text('Logout'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF7B2CBF),
+                foregroundColor: Colors.white,
+                elevation: 5,
+                side: const BorderSide(
+                  color: Color(0xFFFFD36A),
+                  width: 1.2,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                textStyle: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
               ),
             ),
           ),
