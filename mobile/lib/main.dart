@@ -2648,20 +2648,249 @@ class _DiamondWalletScreenState extends State<DiamondWalletScreen> {
   }
 }
 
+
 class DiamondHistoryScreen extends StatefulWidget {
   final String token;
-  const DiamondHistoryScreen({super.key, required this.token});
-  @override State<DiamondHistoryScreen> createState() => _DiamondHistoryScreenState();
+
+  const DiamondHistoryScreen({
+    super.key,
+    required this.token,
+  });
+
+  @override
+  State<DiamondHistoryScreen> createState() =>
+      _DiamondHistoryScreenState();
 }
-class _DiamondHistoryScreenState extends State<DiamondHistoryScreen> {
+
+class _DiamondHistoryScreenState
+    extends State<DiamondHistoryScreen> {
   static const gold = Color(0xFFFFD66B);
+
   List<dynamic> transactions = [];
   bool loading = true;
   String? error;
-  @override void initState() { super.initState(); load(); }
-  Future<void> load() async { setState(() { loading = true; error = null; }); try { final data = await api.getDiamondHistory(widget.token); if (mounted) setState(() { transactions = data['transactions'] as List? ?? []; }); } catch (e) { if (mounted) setState(() { error = e.toString().replaceFirst('Exception: ', ''); }); } finally { if (mounted) setState(() { loading = false; }); } }
-  String fmt(dynamic raw) { final d = DateTime.tryParse('$raw')?.toLocal(); if (d == null) return '$raw'; final mm = d.month.toString().padLeft(2, '0'); final dd = d.day.toString().padLeft(2, '0'); final hh = d.hour.toString().padLeft(2, '0'); final min = d.minute.toString().padLeft(2, '0'); final ss = d.second.toString().padLeft(2, '0'); return '${d.year}-$mm-$dd  $hh:$min:$ss'; }
-  @override Widget build(BuildContext context) => Scaffold(backgroundColor: const Color(0xFF080A18), appBar: AppBar(title: const Text('Diamond History'), backgroundColor: const Color(0xFF101329), foregroundColor: gold, actions: [IconButton(onPressed: load, icon: const Icon(Icons.refresh_rounded))]), body: loading ? const Center(child: CircularProgressIndicator(color: gold)) : error != null ? Center(child: Text(error!, style: const TextStyle(color: Colors.redAccent))) : transactions.isEmpty ? const Center(child: Text('No diamond transactions yet', style: TextStyle(color: Colors.white70))) : RefreshIndicator(color: gold, onRefresh: load, child: ListView.separated(padding: const EdgeInsets.all(14), itemCount: transactions.length, separatorBuilder: (_, __) => const SizedBox(height: 10), itemBuilder: (context, i) { final t = Map<String, dynamic>.from(transactions[i] as Map); final deltaD = int.tryParse('${t['diamonds_delta'] ?? 0}') ?? 0; final deltaC = int.tryParse('${t['coins_delta'] ?? 0}') ?? 0; final status = '${t['status'] ?? 'success'}'; return Container(padding: const EdgeInsets.all(15), decoration: BoxDecoration(color: const Color(0xFF171225), borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFF8D6A32))), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Row(children: [const Icon(Icons.diamond_rounded, color: Color(0xFFD9B7FF), size: 28), const SizedBox(width: 8), Expanded(child: Text('Diamond Exchange', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16))), Text(status.toUpperCase(), style: TextStyle(color: status.toLowerCase() == 'success' ? Colors.greenAccent : Colors.orangeAccent, fontWeight: FontWeight.bold, fontSize: 11))]), const SizedBox(height: 8), Text(fmt(t['created_at']), style: const TextStyle(color: Colors.white60, fontSize: 12)), const SizedBox(height: 8), Row(children: [const Expanded(child: Text('Diamonds exchanged', style: TextStyle(color: Colors.white70))), Text(deltaD < 0 ? '${-deltaD}' : '$deltaD', style: const TextStyle(color: Color(0xFFD9B7FF), fontWeight: FontWeight.w900))]), const SizedBox(height: 4), Row(children: [const Expanded(child: Text('M Coins received', style: TextStyle(color: Colors.white70))), Text(deltaC > 0 ? '+$deltaC' : '$deltaC', style: const TextStyle(color: gold, fontWeight: FontWeight.w900))]), const SizedBox(height: 5), Text('Transaction ID: ${t['id']}', style: const TextStyle(color: Colors.white38, fontSize: 10)), Text('Balances after: ${t['diamonds_balance_after']} diamonds · ${t['coins_balance_after']} M Coins', style: const TextStyle(color: Colors.white54, fontSize: 11))])); }));
+
+  @override
+  void initState() {
+    super.initState();
+    load();
+  }
+
+  Future<void> load() async {
+    setState(() {
+      loading = true;
+      error = null;
+    });
+
+    try {
+      final data = await api.getDiamondHistory(widget.token);
+
+      if (!mounted) return;
+
+      setState(() {
+        transactions = data['transactions'] as List? ?? [];
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        error = e.toString().replaceFirst('Exception: ', '');
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          loading = false;
+        });
+      }
+    }
+  }
+
+  String fmt(dynamic raw) {
+    final d = DateTime.tryParse('$raw')?.toLocal();
+    if (d == null) return '$raw';
+
+    final mm = d.month.toString().padLeft(2, '0');
+    final dd = d.day.toString().padLeft(2, '0');
+    final hh = d.hour.toString().padLeft(2, '0');
+    final min = d.minute.toString().padLeft(2, '0');
+    final ss = d.second.toString().padLeft(2, '0');
+
+    return '${d.year}-$mm-$dd  $hh:$min:$ss';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF080A18),
+      appBar: AppBar(
+        title: const Text('Diamond History'),
+        backgroundColor: const Color(0xFF101329),
+        foregroundColor: gold,
+        actions: [
+          IconButton(
+            onPressed: load,
+            icon: const Icon(Icons.refresh_rounded),
+          ),
+        ],
+      ),
+      body: loading
+          ? const Center(
+              child: CircularProgressIndicator(color: gold),
+            )
+          : error != null
+              ? Center(
+                  child: Text(
+                    error!,
+                    style: const TextStyle(color: Colors.redAccent),
+                  ),
+                )
+              : transactions.isEmpty
+                  ? const Center(
+                      child: Text(
+                        'No diamond transactions yet',
+                        style: TextStyle(color: Colors.white70),
+                      ),
+                    )
+                  : RefreshIndicator(
+                      color: gold,
+                      onRefresh: load,
+                      child: ListView.separated(
+                        padding: const EdgeInsets.all(14),
+                        itemCount: transactions.length,
+                        separatorBuilder: (_, __) =>
+                            const SizedBox(height: 10),
+                        itemBuilder: (context, i) {
+                          final t = Map<String, dynamic>.from(
+                            transactions[i] as Map,
+                          );
+
+                          final deltaD = int.tryParse(
+                                '${t['diamonds_delta'] ?? 0}',
+                              ) ??
+                              0;
+
+                          final deltaC = int.tryParse(
+                                '${t['coins_delta'] ?? 0}',
+                              ) ??
+                              0;
+
+                          final status = '${t['status'] ?? 'success'}';
+
+                          return Container(
+                            padding: const EdgeInsets.all(15),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF171225),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: const Color(0xFF8D6A32),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.diamond_rounded,
+                                      color: Color(0xFFD9B7FF),
+                                      size: 28,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    const Expanded(
+                                      child: Text(
+                                        'Diamond Exchange',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                    ),
+                                    Text(
+                                      status.toUpperCase(),
+                                      style: TextStyle(
+                                        color: status.toLowerCase() == 'success'
+                                            ? Colors.greenAccent
+                                            : Colors.orangeAccent,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  fmt(t['created_at']),
+                                  style: const TextStyle(
+                                    color: Colors.white60,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    const Expanded(
+                                      child: Text(
+                                        'Diamonds exchanged',
+                                        style: TextStyle(
+                                          color: Colors.white70,
+                                        ),
+                                      ),
+                                    ),
+                                    Text(
+                                      deltaD < 0 ? '${-deltaD}' : '$deltaD',
+                                      style: const TextStyle(
+                                        color: Color(0xFFD9B7FF),
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    const Expanded(
+                                      child: Text(
+                                        'M Coins received',
+                                        style: TextStyle(
+                                          color: Colors.white70,
+                                        ),
+                                      ),
+                                    ),
+                                    Text(
+                                      deltaC > 0 ? '+$deltaC' : '$deltaC',
+                                      style: const TextStyle(
+                                        color: gold,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 5),
+                                Text(
+                                  'Transaction ID: ${t['id']}',
+                                  style: const TextStyle(
+                                    color: Colors.white38,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                                Text(
+                                  'Balances after: '
+                                  '${t['diamonds_balance_after']} diamonds · '
+                                  '${t['coins_balance_after']} M Coins',
+                                  style: const TextStyle(
+                                    color: Colors.white54,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+    );
+  }
 }
 
 
