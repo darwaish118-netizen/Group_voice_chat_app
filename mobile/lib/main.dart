@@ -2440,23 +2440,48 @@ class _MindoWalletScreenState extends State<MindoWalletScreen> {
   }
 
   Widget _mCoinLogo({required double size}) {
+    // Keep the M visible at every size, including the small package icons.
     return Container(
-      width: size, height: size,
+      width: size,
+      height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: const RadialGradient(colors: [Color(0xFFFFF1A8), Color(0xFFFFC83D), Color(0xFF9A4D08)]),
-        border: Border.all(color: const Color(0xFFFFF0A5), width: 3),
-        boxShadow: const [BoxShadow(color: Color(0x99FFB52E), blurRadius: 18, spreadRadius: 2)],
+        gradient: const RadialGradient(
+          colors: [Color(0xFFFFF1A8), Color(0xFFFFC83D), Color(0xFF9A4D08)],
+        ),
+        border: Border.all(color: const Color(0xFFFFF0A5), width: size * 0.026),
+        boxShadow: const [
+          BoxShadow(color: Color(0x99FFB52E), blurRadius: 18, spreadRadius: 2),
+        ],
       ),
+      padding: EdgeInsets.all(size * 0.12),
       child: Container(
-        margin: const EdgeInsets.all(7),
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
-            colors: [Color(0xFF6B2CC2), Color(0xFF190C35), Color(0xFF7A2BB0)]),
-          border: Border.all(color: const Color(0xFFFFD66B), width: 2),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF6B2CC2), Color(0xFF190C35), Color(0xFF7A2BB0)],
+          ),
+          border: Border.all(color: const Color(0xFFFFD66B), width: size * 0.018),
         ),
-        child: const Center(child: Text('M', style: TextStyle(color: gold, fontSize: 48, fontWeight: FontWeight.w900, shadows: [Shadow(color: Colors.black87, blurRadius: 5, offset: Offset(1, 2))]))),
+        child: Center(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              'M',
+              style: TextStyle(
+                color: gold,
+                fontSize: size * 0.56,
+                height: 1,
+                fontWeight: FontWeight.w900,
+                shadows: const [
+                  Shadow(color: Colors.black87, blurRadius: 5, offset: Offset(1, 2)),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -2515,17 +2540,207 @@ class _MindoWalletScreenState extends State<MindoWalletScreen> {
   }
 
   void _openWalletInfo(String title) {
-    Navigator.push(context, MaterialPageRoute(builder: (_) => Scaffold(
-      backgroundColor: dark,
-      appBar: AppBar(title: Text(title), backgroundColor: const Color(0xFF101329), foregroundColor: gold),
-      body: Center(child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Text('$title will display verified server records once its backend is connected.',
-          textAlign: TextAlign.center, style: const TextStyle(color: Colors.white70, fontSize: 16)),
-      )),
-    )));
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MindoWalletHistoryScreen(
+          title: title,
+          isCoinHistory: title == 'Coin History',
+        ),
+      ),
+    );
   }
 }
+
+// ============================================================
+// MINDO WALLET HISTORY — categories, date/time, coin change, status
+// Real records should be loaded from the backend history API.
+// ============================================================
+class MindoWalletHistoryScreen extends StatefulWidget {
+  final String title;
+  final bool isCoinHistory;
+
+  const MindoWalletHistoryScreen({
+    super.key,
+    required this.title,
+    required this.isCoinHistory,
+  });
+
+  @override
+  State<MindoWalletHistoryScreen> createState() => _MindoWalletHistoryScreenState();
+}
+
+class _MindoWalletHistoryScreenState extends State<MindoWalletHistoryScreen> {
+  static const gold = Color(0xFFFFD66B);
+  static const dark = Color(0xFF080A18);
+
+  static const List<String> _coinCategories = [
+    'All',
+    'Recharge',
+    'Lucky Bonus',
+    'Gift Spending',
+    'Gift Income',
+    'Game Spending',
+    'Game Winning',
+  ];
+
+  static const List<String> _diamondCategories = [
+    'All',
+    'Diamond Received',
+    'Diamond Exchange',
+  ];
+
+  String selectedCategory = 'All';
+
+  @override
+  Widget build(BuildContext context) {
+    final categories = widget.isCoinHistory ? _coinCategories : _diamondCategories;
+
+    return Scaffold(
+      backgroundColor: dark,
+      appBar: AppBar(
+        title: Text(widget.title, style: const TextStyle(fontWeight: FontWeight.w800)),
+        backgroundColor: const Color(0xFF101329),
+        foregroundColor: gold,
+      ),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.asset(
+            'assets/Futuristic Gold Carbon Fiber Frame.png',
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => const ColoredBox(color: dark),
+          ),
+          Container(color: const Color(0xE6080A18)),
+          ListView(
+            padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xE9161027), Color(0xE9221035)],
+                  ),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: gold, width: 1.2),
+                ),
+                child: Row(
+                  children: [
+                    if (widget.isCoinHistory)
+                      Container(
+                        width: 52,
+                        height: 52,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: RadialGradient(colors: [Color(0xFFFFF1A8), Color(0xFFFFC83D), Color(0xFF9A4D08)]),
+                        ),
+                        child: const Center(
+                          child: Text('M', style: TextStyle(color: Color(0xFF24133A), fontSize: 30, fontWeight: FontWeight.w900)),
+                        ),
+                      )
+                    else
+                      const Icon(Icons.diamond_outlined, color: gold, size: 48),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(widget.isCoinHistory ? 'MINDO COIN HISTORY' : 'DIAMOND HISTORY',
+                            style: const TextStyle(color: gold, fontSize: 17, fontWeight: FontWeight.w900)),
+                          const SizedBox(height: 5),
+                          const Text('Transaction date, time, amount and status',
+                            style: TextStyle(color: Colors.white70, fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 18),
+              const Text('Transaction Type', style: TextStyle(color: gold, fontSize: 18, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: categories.map((category) => ChoiceChip(
+                  label: Text(category),
+                  selected: selectedCategory == category,
+                  onSelected: (_) => setState(() => selectedCategory = category),
+                  selectedColor: gold,
+                  backgroundColor: const Color(0xFF171329),
+                  labelStyle: TextStyle(
+                    color: selectedCategory == category ? const Color(0xFF211328) : Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                  ),
+                  side: const BorderSide(color: gold, width: 0.8),
+                )).toList(),
+              ),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xE9161027),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: const Color(0xFF8D6A32), width: 1),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('History Details', style: TextStyle(color: gold, fontSize: 17, fontWeight: FontWeight.w900)),
+                    const SizedBox(height: 12),
+                    _detailLine(Icons.calendar_month_outlined, 'Date & Time', 'Shown for every transaction'),
+                    _detailLine(Icons.receipt_long_outlined, 'Transaction Type', widget.isCoinHistory
+                      ? 'Recharge, Lucky Bonus, Gift Spending, Gift Income, Game Spending, Game Winning'
+                      : 'Diamond Received, Diamond Exchange'),
+                    _detailLine(Icons.toll_outlined, widget.isCoinHistory ? 'Coin Added / Deducted' : 'Diamonds Added / Deducted', 'Amount and direction'),
+                    _detailLine(Icons.verified_outlined, 'Transaction Status', 'Pending, Success or Failed'),
+                    const SizedBox(height: 14),
+                    const Divider(color: Color(0xFF6F552B)),
+                    const SizedBox(height: 10),
+                    const Center(child: Icon(Icons.history_toggle_off_rounded, color: gold, size: 42)),
+                    const SizedBox(height: 8),
+                    const Center(child: Text('No transaction records yet',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15))),
+                    const SizedBox(height: 5),
+                    const Text('Your real history will appear here once transaction records and the backend history API are connected. No sample transactions are shown.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.white70, fontSize: 12, height: 1.4)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _detailLine(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: gold, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13)),
+                const SizedBox(height: 3),
+                Text(value, style: const TextStyle(color: Colors.white70, fontSize: 12, height: 1.35)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 
 
 // ============================================================
