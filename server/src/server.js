@@ -174,6 +174,77 @@ await pool.query(`
     UNIQUE (room_id, user_id)
   )
 `);
+    // Wallet balances
+  await pool.query(`
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS diamonds BIGINT NOT NULL DEFAULT 0
+    CHECK (diamonds >= 0)
+  `);
+
+  // Recharge packages configured by admin
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS recharge_packages (
+      id UUID PRIMARY KEY,
+      title VARCHAR(100) NOT NULL,
+      product_id_android VARCHAR(200) NOT NULL UNIQUE,
+      product_id_ios VARCHAR(200) NOT NULL UNIQUE,
+      base_coins INTEGER NOT NULL CHECK (base_coins > 0),
+      bonus_coins INTEGER NOT NULL DEFAULT 0 CHECK (bonus_coins >= 0),
+      display_price VARCHAR(40),
+      currency VARCHAR(10),
+      active BOOLEAN NOT NULL DEFAULT TRUE,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS wallet_settings (
+      setting_key VARCHAR(100) PRIMARY KEY,
+      setting_value JSONB NOT NULL,
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
+    INSERT INTO wallet_settings (setting_key, setting_value)
+    VALUES (
+      'diamond_exchange',
+      '{"enabled":false,"coins_per_diamond":0,"min_diamonds":1,"max_diamonds":100000}'::jsonb
+    )
+    ON CONFLICT (setting_key) DO NOTHING
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS wallet_transactions (
+      id UUID PRIMARY KEY,
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      transaction_type VARCHAR(40) NOT NULL,
+      status VARCHAR(20) NOT NULL DEFAULT 'success',
+      coins_delta BIGINT NOT NULL DEFAULT 0,
+      diamonds_delta BIGINT NOT NULL DEFAULT 0,
+      provider VARCHAR(30),
+      provider_transaction_id VARCHAR(255),
+      package_id UUID REFERENCES recharge_packages(id) ON DELETE SET NULL,
+      description VARCHAR(255),
+      metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      CHECK (status IN ('pending','success','failed','refunded'))
+    )
+  `);
+
+  await pool.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS wallet_transactions_provider_tx_unique
+    ON wallet_transactions(provider, provider_transaction_id)
+    WHERE provider IS NOT NULL
+      AND provider_transaction_id IS NOT NULL
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS wallet_transactions_user_created_idx
+    ON wallet_transactions(user_id, created_at DESC)
+  `);
   console.log("Database initialized.");
 }
 
@@ -1294,36 +1365,282 @@ app.post(
 // Demo Coins
 // -------------------------
 
-app.post("/api/coins/demo", authMiddleware, async (req, res) => {
+
+ // Demo Coins - disabled for production
+app.post("/api/coins/demo", authMiddleware, (req, res) => {
+  return res.status(410).json({
+    message: "Demo coins are disabled."
+  });
+});
+
+
+/* =========================================
+   MINDO VOICE CHAT - WALLET APIs
+   Store purchase verification is disabled
+   until Google/Apple verification is configured.
+========================================= */
+
+// Get current wallet balance
+app.get("/api/wallet/balance", authMiddleware, async (req, res) => {
   if (!pool) {
-    return res.status(500).json({
-      message: "Database is not configured",
-    });
+    return res.status(500).json({ message: "Database is not configured" });
   }
 
   try {
     const result = await pool.query(
-      `
-      UPDATE users
-      SET coins = coins + 100
-      WHERE id = $1
-      RETURNING id, username, coins, level
-      `,
+      `SELECT coins, diamonds FROM users WHERE id = $1`,
       [req.user.id]
     );
 
-    res.json({
-      message: "100 demo coins added",
-      user: result.rows[0],
-    });
-  } catch (error) {
-    console.error(error);
+    if (!result.rows.length) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
-    res.status(500).json({
-      message: "Could not add coins",
-    });
+    return res.json({ wallet: result.rows[0] });
+  } catch (error) {
+    console.error("Wallet balance error:", error);
+    return res.status(500).json({ message: "Could not load wallet balance" });
   }
 });
+
+// Get active recharge packages
+app.get("/api/wallet/recharge-packages", authMiddleware, async (req, res) => {
+  if (!pool) {
+    return res.status(500).json({ message: "Database is not configured" });
+  }
+
+  try {
+    const result = await pool.query(`
+      SELECT id, title, base_coins, bonus_coins,
+             display_price, currency, product_id_android,
+             product_id_ios
+      FROM recharge_packages
+      WHERE active = TRUE
+      ORDER BY sort_order ASC, created_at ASC
+    `);
+
+    return res.json({ packages: result.rows });
+  } catch (error) {
+    console.error("Recharge packages error:", error);
+    return res.status(500).json({ message: "Could not load recharge packages" });
+  }
+});
+
+// Secure purchase verification is NOT enabled yet.
+// Never credit coins from an unverified client receipt.
+app.post("/api/wallet/purchases/verify", authMiddleware, async (req, res) => {
+  return res.status(503).json({
+    verified: false,
+    message:
+      "Store purchase verification is not configured. No coins were added."
+  });
+});
+
+// Get coin transaction history
+app.get("/api/wallet/coin-history", authMiddleware, async (req, res) => {
+  if (!pool) {
+    return res.status(500).json({ message: "Database is not configured" });
+  }
+
+  try {
+    const limit = Math.min(
+      Math.max(parseInt(req.query.limit, 10) || 30, 1),
+      100
+    );
+    const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
+
+    const result = await pool.query(
+      `SELECT id, transaction_type, status, coins_delta,
+              description, provider, provider_transaction_id, created_at
+       FROM wallet_transactions
+       WHERE user_id = $1 AND coins_delta <> 0
+       ORDER BY created_at DESC
+       LIMIT $2 OFFSET $3`,
+      [req.user.id, limit, offset]
+    );
+
+    return res.json({ transactions: result.rows });
+  } catch (error) {
+    console.error("Coin history error:", error);
+    return res.status(500).json({ message: "Could not load coin history" });
+  }
+});
+
+// Get diamond transaction history
+app.get("/api/wallet/diamond-history", authMiddleware, async (req, res) => {
+  if (!pool) {
+    return res.status(500).json({ message: "Database is not configured" });
+  }
+
+  try {
+    const limit = Math.min(
+      Math.max(parseInt(req.query.limit, 10) || 30, 1),
+      100
+    );
+    const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
+
+    const result = await pool.query(
+      `SELECT id, transaction_type, status, diamonds_delta,
+              coins_delta, description, created_at
+       FROM wallet_transactions
+       WHERE user_id = $1 AND diamonds_delta <> 0
+       ORDER BY created_at DESC
+       LIMIT $2 OFFSET $3`,
+      [req.user.id, limit, offset]
+    );
+
+    return res.json({ transactions: result.rows });
+  } catch (error) {
+    console.error("Diamond history error:", error);
+    return res.status(500).json({ message: "Could not load diamond history" });
+  }
+});
+
+// Read diamond exchange settings
+app.get(
+  "/api/wallet/diamond-exchange-config",
+  authMiddleware,
+  async (req, res) => {
+    if (!pool) {
+      return res.status(500).json({ message: "Database is not configured" });
+    }
+
+    try {
+      const result = await pool.query(
+        `SELECT setting_value
+         FROM wallet_settings
+         WHERE setting_key = 'diamond_exchange'`
+      );
+
+      const config = result.rows[0]?.setting_value || {
+        enabled: false,
+        coins_per_diamond: 0,
+        min_diamonds: 1,
+        max_diamonds: 100000
+      };
+
+      return res.json({ config });
+    } catch (error) {
+      console.error("Exchange config error:", error);
+      return res.status(500).json({
+        message: "Could not load diamond exchange settings"
+      });
+    }
+  }
+);
+
+// Exchange diamonds for coins (disabled until admin configures a valid rate)
+app.post(
+  "/api/wallet/diamond-exchange",
+  authMiddleware,
+  async (req, res) => {
+    if (!pool) {
+      return res.status(500).json({ message: "Database is not configured" });
+    }
+
+    const diamonds = Number(req.body.diamonds);
+
+    if (!Number.isSafeInteger(diamonds) || diamonds <= 0) {
+      return res.status(400).json({
+        message: "Enter a valid whole number of diamonds"
+      });
+    }
+
+    const client = await pool.connect();
+
+    try {
+      await client.query("BEGIN");
+
+      const settingResult = await client.query(
+        `SELECT setting_value
+         FROM wallet_settings
+         WHERE setting_key = 'diamond_exchange'
+         FOR UPDATE`
+      );
+
+      const config = settingResult.rows[0]?.setting_value;
+
+      if (
+        !config ||
+        config.enabled !== true ||
+        !Number.isSafeInteger(config.coins_per_diamond) ||
+        config.coins_per_diamond <= 0
+      ) {
+        await client.query("ROLLBACK");
+        return res.status(503).json({
+          message: "Diamond exchange is not enabled by the administrator"
+        });
+      }
+
+      const min = Number(config.min_diamonds) || 1;
+      const max = Number(config.max_diamonds) || 100000;
+
+      if (diamonds < min || diamonds > max) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({
+          message: `Exchange must be between ${min} and ${max} diamonds`
+        });
+      }
+
+      const coins = diamonds * config.coins_per_diamond;
+
+      if (!Number.isSafeInteger(coins) || coins <= 0) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({ message: "Invalid exchange amount" });
+      }
+
+      const userResult = await client.query(
+        `UPDATE users
+         SET diamonds = diamonds - $1,
+             coins = coins + $2
+         WHERE id = $3 AND diamonds >= $1
+         RETURNING coins, diamonds`,
+        [diamonds, coins, req.user.id]
+      );
+
+      if (!userResult.rows.length) {
+        await client.query("ROLLBACK");
+        return res.status(409).json({
+          message: "Insufficient diamonds or user not found"
+        });
+      }
+
+      await client.query(
+        `INSERT INTO wallet_transactions
+         (id, user_id, transaction_type, status,
+          coins_delta, diamonds_delta, description)
+         VALUES
+         ($1, $2, 'diamond_exchange', 'success',
+          $3, $4, $5)`,
+        [
+          uuidv4(),
+          req.user.id,
+          coins,
+          -diamonds,
+          `Exchanged ${diamonds} diamonds for ${coins} coins`
+        ]
+      );
+
+      await client.query("COMMIT");
+
+      return res.json({
+        message: "Diamond exchange successful",
+        exchanged_diamonds: diamonds,
+        coins_received: coins,
+        wallet: userResult.rows[0]
+      });
+    } catch (error) {
+      try {
+        await client.query("ROLLBACK");
+      } catch (_) {}
+
+      console.error("Diamond exchange error:", error);
+      return res.status(500).json({ message: "Diamond exchange failed" });
+    } finally {
+      client.release();
+    }
+  }
+);
 
 // -------------------------
 // Start Server
