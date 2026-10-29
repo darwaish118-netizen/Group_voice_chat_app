@@ -272,7 +272,28 @@ Future<Map<String, dynamic>> createRoom(
 
     
   Future<Map<String, dynamic>> getDiamondExchange(String token) async {
-    final response = await http.get(Uri.parse('$apiBaseUrl/api/wallet/diamond-exchange'), headers: {'Authorization': 'Bearer $token'});
+    final headers = {'Authorization': 'Bearer $token'};
+    final configResponse = await http.get(
+      Uri.parse('$apiBaseUrl/api/wallet/diamond-exchange-config'),
+      headers: headers,
+    );
+    final configData = _handleResponse(configResponse);
+    final balanceResponse = await http.get(
+      Uri.parse('$apiBaseUrl/api/wallet/balance'),
+      headers: headers,
+    );
+    final balanceData = _handleResponse(balanceResponse);
+    return {
+      'config': configData['config'] ?? configData,
+      'balance': balanceData['balance'] ?? balanceData['user'] ?? balanceData,
+    };
+  }
+
+  Future<Map<String, dynamic>> getCoinHistory(String token) async {
+    final response = await http.get(
+      Uri.parse('$apiBaseUrl/api/wallet/coin-history'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
     return _handleResponse(response);
   }
 
@@ -2573,13 +2594,107 @@ Widget _mCoinLogo({required double size}) {
       Navigator.push(context, MaterialPageRoute(builder: (_) => DiamondWalletScreen(token: widget.token)));
       return;
     }
-    Navigator.push(context, MaterialPageRoute(builder: (_) => Scaffold(
-      backgroundColor: dark,
-      appBar: AppBar(title: Text(title), backgroundColor: const Color(0xFF101329), foregroundColor: gold),
-      body: const Center(child: Padding(padding: EdgeInsets.all(24), child: Text('Coin history will be connected to the verified transaction ledger next.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white70, fontSize: 16)))),
-    )));
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => CoinHistoryScreen(token: widget.token)),
+    );
   }
 }
+
+class CoinHistoryScreen extends StatefulWidget {
+  final String token;
+  const CoinHistoryScreen({super.key, required this.token});
+
+  @override
+  State<CoinHistoryScreen> createState() => _CoinHistoryScreenState();
+}
+
+class _CoinHistoryScreenState extends State<CoinHistoryScreen> {
+  static const gold = Color(0xFFFFD66B);
+  static const dark = Color(0xFF080A18);
+  List<dynamic> transactions = [];
+  bool loading = true;
+  String? error;
+
+  @override
+  void initState() { super.initState(); load(); }
+
+  Future<void> load() async {
+    setState(() { loading = true; error = null; });
+    try {
+      final data = await api.getCoinHistory(widget.token);
+      if (!mounted) return;
+      setState(() { transactions = data['transactions'] as List? ?? data['history'] as List? ?? []; });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() { error = e.toString().replaceFirst('Exception: ', ''); });
+    } finally {
+      if (mounted) setState(() { loading = false; });
+    }
+  }
+
+  String _date(dynamic raw) {
+    final parsed = DateTime.tryParse('$raw')?.toLocal();
+    if (parsed == null) return raw == null ? 'Date unavailable' : '$raw';
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${parsed.year}-${two(parsed.month)}-${two(parsed.day)}  ${two(parsed.hour)}:${two(parsed.minute)}:${two(parsed.second)}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: dark,
+      appBar: AppBar(
+        title: const Text('Coin History'),
+        backgroundColor: const Color(0xFF101329),
+        foregroundColor: gold,
+        actions: [IconButton(onPressed: load, icon: const Icon(Icons.refresh_rounded))],
+      ),
+      body: loading
+          ? const Center(child: CircularProgressIndicator(color: gold))
+          : error != null
+              ? Center(child: Padding(padding: const EdgeInsets.all(20), child: Text(error!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.redAccent))))
+              : transactions.isEmpty
+                  ? const Center(child: Text('No coin transactions yet', style: TextStyle(color: Colors.white70)))
+                  : RefreshIndicator(
+                      color: gold,
+                      onRefresh: load,
+                      child: ListView.separated(
+                        padding: const EdgeInsets.all(14),
+                        itemCount: transactions.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 10),
+                        itemBuilder: (context, index) {
+                          final t = Map<String, dynamic>.from(transactions[index] as Map);
+                          final delta = int.tryParse('${t['coins_delta'] ?? t['amount'] ?? t['coins'] ?? 0}') ?? 0;
+                          final type = '${t['type'] ?? t['transaction_type'] ?? t['description'] ?? 'Coin transaction'}';
+                          final status = '${t['status'] ?? 'success'}';
+                          final time = t['created_at'] ?? t['timestamp'] ?? t['createdAt'];
+                          return Container(
+                            padding: const EdgeInsets.all(15),
+                            decoration: BoxDecoration(color: const Color(0xFF171225), borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFF8D6A32))),
+                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              Row(children: [
+                                const Icon(Icons.monetization_on_rounded, color: gold, size: 28),
+                                const SizedBox(width: 9),
+                                Expanded(child: Text(type, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15))),
+                                Text(delta >= 0 ? '+$delta' : '$delta', style: TextStyle(color: delta >= 0 ? Colors.greenAccent : Colors.redAccent, fontWeight: FontWeight.w900)),
+                              ]),
+                              const SizedBox(height: 8),
+                              Text(_date(time), style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                              const SizedBox(height: 5),
+                              Text('Status: ${status.toUpperCase()}', style: TextStyle(color: status.toLowerCase() == 'success' ? Colors.greenAccent : Colors.orangeAccent, fontSize: 11, fontWeight: FontWeight.bold)),
+                              if (t['id'] != null) Text('Transaction ID: ${t['id']}', style: const TextStyle(color: Colors.white38, fontSize: 10)),
+                              if (t['balance_after'] != null || t['coins_balance_after'] != null)
+                                Text('Balance after: ${t['balance_after'] ?? t['coins_balance_after']} M Coins', style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                            ]),
+                          );
+                        },
+                      ),
+                    ),
+    );
+  }
+}
+
 
 class DiamondWalletScreen extends StatefulWidget {
   final String token;
@@ -2642,8 +2757,24 @@ class _DiamondWalletScreenState extends State<DiamondWalletScreen> {
       body: Stack(fit: StackFit.expand, children: [Image.asset('assets/Futuristic Gold Carbon Fiber Frame.png', fit: BoxFit.cover, errorBuilder: (_, __, ___) => const ColoredBox(color: dark)), Container(color: const Color(0xE6080A18)), RefreshIndicator(color: gold, onRefresh: load, child: ListView(padding: const EdgeInsets.all(18), children: [
         Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xE9221035), Color(0xE6080A18)]), borderRadius: BorderRadius.circular(24), border: Border.all(color: gold)), child: Column(children: [const Icon(Icons.diamond_rounded, size: 76, color: Color(0xFFB58CFF), shadows: [Shadow(color: Color(0xFF8A2BE2), blurRadius: 22)]), const SizedBox(height: 8), const Text('MY DIAMONDS', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)), Text(loading ? '...' : '$diamonds', style: const TextStyle(color: Color(0xFFD9B7FF), fontSize: 34, fontWeight: FontWeight.w900)), const SizedBox(height: 12), const Divider(color: Colors.white24), Row(mainAxisAlignment: MainAxisAlignment.center, children: [Container(width: 34, height: 34, decoration: const BoxDecoration(shape: BoxShape.circle, gradient: RadialGradient(colors: [Color(0xFFFFF1A8), Color(0xFFFFC83D), Color(0xFF9A4D08)])), child: const Center(child: Text('M', style: TextStyle(color: Color(0xFF371B08), fontWeight: FontWeight.w900, fontSize: 21)))), const SizedBox(width: 9), Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('MY M COINS', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)), Text('$coins', style: const TextStyle(color: gold, fontSize: 24, fontWeight: FontWeight.w900))])])])),
         const SizedBox(height: 20), const Text('EXCHANGE DIAMONDS', style: TextStyle(color: gold, fontSize: 22, fontWeight: FontWeight.w900)), const SizedBox(height: 12),
-        Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: const Color(0xE9151027), borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFF8D6A32))), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Diamonds to exchange', style: TextStyle(color: Colors.white70)), const SizedBox(height: 8), TextField(controller: controller, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], onChanged: (_) => setState(() {}), style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold), decoration: InputDecoration(prefixIcon: const Icon(Icons.diamond_rounded, color: Color(0xFFD9B7FF)), filled: true, fillColor: const Color(0xFF080A18), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)), hintText: 'Enter diamonds', hintStyle: const TextStyle(color: Colors.white38))), const SizedBox(height: 12), Text('Rate: ${config['diamonds_per_exchange'] ?? 1000} Diamonds = ${config['coins_per_exchange'] ?? 800} M Coins', style: const TextStyle(color: gold, fontWeight: FontWeight.bold)), const SizedBox(height: 12), Row(children: [const Expanded(child: Text('You will receive', style: TextStyle(color: Colors.white70))), const Icon(Icons.arrow_forward_rounded, color: gold), const SizedBox(width: 8), const Text('M', style: TextStyle(color: gold, fontSize: 22, fontWeight: FontWeight.w900)), const SizedBox(width: 6), Text('$estimatedCoins', style: const TextStyle(color: gold, fontSize: 24, fontWeight: FontWeight.w900))]), if (error != null) Padding(padding: const EdgeInsets.only(top: 12), child: Text(error!, style: const TextStyle(color: Colors.redAccent))), const SizedBox(height: 14), SizedBox(width: double.infinity, child: ElevatedButton.icon(onPressed: loading || exchanging || !enabled ? null : exchange, icon: exchanging ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.swap_horiz_rounded), label: Text(!enabled ? 'EXCHANGE DISABLED' : exchanging ? 'PROCESSING...' : 'EXCHANGE NOW'), style: ElevatedButton.styleFrom(backgroundColor: gold, foregroundColor: const Color(0xFF211328), padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)))))])),
-        const SizedBox(height: 14), OutlinedButton.icon(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => DiamondHistoryScreen(token: widget.token))), icon: const Icon(Icons.history_rounded), label: const Text('DIAMOND HISTORY'), style: OutlinedButton.styleFrom(foregroundColor: gold, side: const BorderSide(color: gold), padding: const EdgeInsets.symmetric(vertical: 14))),
+        Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: const Color(0xE9151027), borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFF8D6A32))), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Diamonds to exchange', style: TextStyle(color: Colors.white70)), const SizedBox(height: 8), TextField(controller: controller, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], onChanged: (_) => setState(() {}), style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold), decoration: InputDecoration(prefixIcon: const Icon(Icons.diamond_rounded, color: Color(0xFFD9B7FF)), filled: true, fillColor: const Color(0xFF080A18), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)), hintText: 'Enter diamonds', hintStyle: const TextStyle(color: Colors.white38))), const SizedBox(height: 12), Text('Rate: ${config['diamonds_per_exchange'] ?? 1000} Diamonds = ${config['coins_per_exchange'] ?? 800} M Coins', style: const TextStyle(color: gold, fontWeight: FontWeight.bold)), const SizedBox(height: 12), Row(children: [const Expanded(child: Text('You will receive', style: TextStyle(color: Colors.white70))), const Icon(Icons.arrow_forward_rounded, color: gold), const SizedBox(width: 8), const Text('M', style: TextStyle(color: gold, fontSize: 22, fontWeight: FontWeight.w900)), const SizedBox(width: 6), Text('$estimatedCoins', style: const TextStyle(color: gold, fontSize: 24, fontWeight: FontWeight.w900))]), if (error != null) Padding(padding: const EdgeInsets.only(top: 12), child: Text(error!, style: const TextStyle(color: Colors.redAccent))), ])),
+        const SizedBox(height: 14),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: loading || exchanging || !enabled ? null : exchange,
+            icon: exchanging
+                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(Icons.check_circle_outline_rounded),
+            label: Text(!enabled ? 'EXCHANGE DISABLED' : exchanging ? 'PROCESSING...' : 'CONFIRM EXCHANGE'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: gold,
+              foregroundColor: const Color(0xFF211328),
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+          ),
+        ),
       ]))]));
   }
 }
