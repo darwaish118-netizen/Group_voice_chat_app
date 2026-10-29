@@ -2295,7 +2295,7 @@ class FriendsScreen
 
 
 // ============================================================
-// MINDO WALLET — live coin balance, recharge UI (payment pending)
+// MINDO WALLET — balance, recharge packages, history shortcuts
 // ============================================================
 class MindoWalletScreen extends StatefulWidget {
   final String token;
@@ -2307,9 +2307,21 @@ class MindoWalletScreen extends StatefulWidget {
 
 class _MindoWalletScreenState extends State<MindoWalletScreen> {
   static const gold = Color(0xFFFFD66B);
+  static const dark = Color(0xFF080A18);
   bool loading = true;
   String? error;
   String balance = '—';
+  int selectedPackage = 0;
+
+  // Visual sample values only. Real prices/coin amounts must come from the
+  // backend/Admin Dashboard before secure recharge can be enabled.
+  static const List<Map<String, String>> _samplePackages = [
+    {'name': 'Package 1', 'coins': '500 M Coins', 'bonus': '+ 50 Bonus Coins', 'price': '\$0.99'},
+    {'name': 'Package 2', 'coins': '1,200 M Coins', 'bonus': '+ 120 Bonus Coins', 'price': '\$1.99'},
+    {'name': 'Package 3', 'coins': '2,500 M Coins', 'bonus': '+ 300 Bonus Coins', 'price': '\$3.99'},
+    {'name': 'Package 4', 'coins': '5,000 M Coins', 'bonus': '+ 700 Bonus Coins', 'price': '\$7.99'},
+    {'name': 'Package 5', 'coins': '10,000 M Coins', 'bonus': '+ 1,500 Bonus Coins', 'price': '\$14.99'},
+  ];
 
   @override
   void initState() {
@@ -2333,87 +2345,157 @@ class _MindoWalletScreenState extends State<MindoWalletScreen> {
     }
   }
 
-  void notReady(String feature) {
+  void _notReady(String feature) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text('$feature will be enabled after the secure backend is connected.'),
+      content: Text('$feature will be enabled after secure backend/payment setup.'),
     ));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF080A18),
+      backgroundColor: dark,
       appBar: AppBar(
         backgroundColor: const Color(0xFF101329),
         foregroundColor: gold,
-        title: const Text('MINDO Wallet', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('MINDO Wallet', style: TextStyle(fontWeight: FontWeight.w900, color: gold, fontSize: 23)),
         centerTitle: true,
       ),
-      body: RefreshIndicator(
-        onRefresh: refreshBalance,
-        child: ListView(
-          padding: const EdgeInsets.all(18),
-          children: [
-            Container(
-              padding: const EdgeInsets.all(22),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [Color(0xFF132F58), Color(0xFF151027)]),
-                borderRadius: BorderRadius.circular(22),
-                border: Border.all(color: gold, width: 1.2),
-              ),
-              child: Column(children: [
-                const Icon(Icons.monetization_on_rounded, color: gold, size: 46),
-                const SizedBox(height: 8),
-                const Text('My Coin Balance', style: TextStyle(color: Colors.white70, fontSize: 16)),
-                const SizedBox(height: 8),
-                if (loading) const CircularProgressIndicator(color: gold)
-                else Text(balance, style: const TextStyle(color: gold, fontSize: 36, fontWeight: FontWeight.w900)),
-                if (error != null) Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(error!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.orangeAccent)),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.asset(
+            'assets/Futuristic Gold Carbon Fiber Frame.png',
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => const ColoredBox(color: dark),
+          ),
+          Container(color: const Color(0xE6080A18)),
+          RefreshIndicator(
+            color: gold,
+            backgroundColor: const Color(0xFF151027),
+            onRefresh: refreshBalance,
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
+              children: [
+                Container(
+                  padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
+                      colors: [Color(0xE9161027), Color(0xE6080A18), Color(0xE9221035)]),
+                    borderRadius: BorderRadius.circular(26),
+                    border: Border.all(color: gold, width: 1.6),
+                    boxShadow: const [BoxShadow(color: Color(0x66FFB52E), blurRadius: 18, spreadRadius: 1)],
+                  ),
+                  child: Column(children: [
+                    _mCoinLogo(size: 116),
+                    const SizedBox(height: 10),
+                    const Text('My Coin Balance', style: TextStyle(color: Color(0xFFFFE7A0), fontSize: 19, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 3),
+                    if (loading)
+                      const Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(color: gold))
+                    else
+                      Text(balance, style: const TextStyle(color: gold, fontSize: 38, fontWeight: FontWeight.w900, letterSpacing: 1)),
+                    if (error != null)
+                      Padding(padding: const EdgeInsets.only(top: 5), child: Text(error!, textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.orangeAccent, fontSize: 12))),
+                    const SizedBox(height: 5),
+                    OutlinedButton.icon(
+                      onPressed: refreshBalance,
+                      icon: const Icon(Icons.refresh_rounded, size: 19),
+                      label: const Text('Refresh Balance'),
+                      style: OutlinedButton.styleFrom(foregroundColor: gold, side: const BorderSide(color: gold),
+                        shape: const StadiumBorder(), padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10)),
+                    ),
+                  ]),
                 ),
-                TextButton.icon(onPressed: refreshBalance, icon: const Icon(Icons.refresh), label: const Text('Refresh balance')),
-              ]),
-            ),
-            const SizedBox(height: 20),
-            Row(children: [
-              Expanded(child: _walletAction(Icons.history, 'Coin History', () => _openWalletInfo('Coin Recharge History'))),
-              const SizedBox(width: 12),
-              Expanded(child: _walletAction(Icons.diamond_outlined, 'Diamonds', () => _openWalletInfo('Diamond Wallet'))),
-            ]),
-            const SizedBox(height: 26),
-            const Text('Recharge Coins', style: TextStyle(color: gold, fontSize: 22, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 7),
-            const Text('Five recharge packages. Coin amounts and prices will be configured from the Admin Dashboard.',
-                style: TextStyle(color: Colors.white70)),
-            const SizedBox(height: 12),
-            for (var i = 1; i <= 5; i++)
-              Card(
-                color: const Color(0xFF171B32),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: Color(0xFF715C39))),
-                child: ListTile(
-                  leading: const Icon(Icons.paid, color: gold, size: 32),
-                  title: Text('Recharge Package $i', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  subtitle: const Text('Price and coins: pending admin setup', style: TextStyle(color: Colors.white60)),
-                  trailing: const Icon(Icons.lock_outline, color: gold),
-                  onTap: () => notReady('Recharge'),
+                const SizedBox(height: 16),
+                Row(children: [
+                  Expanded(child: _walletAction(Icons.history_rounded, 'Coin History', () => _openWalletInfo('Coin History'))),
+                  const SizedBox(width: 12),
+                  Expanded(child: _walletAction(Icons.diamond_outlined, 'Diamonds', () => _openWalletInfo('Diamond Wallet'))),
+                ]),
+                const SizedBox(height: 23),
+                const Text('Recharge Coins', style: TextStyle(color: gold, fontSize: 25, fontWeight: FontWeight.w900)),
+                const SizedBox(height: 13),
+                for (var i = 0; i < _samplePackages.length; i++)
+                  _packageCard(i),
+                const SizedBox(height: 12),
+                ElevatedButton.icon(
+                  onPressed: () => _notReady('Secure recharge/payment'),
+                  icon: const Icon(Icons.arrow_forward_rounded),
+                  label: const Text('RECHARGE NOW', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, letterSpacing: .5)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: gold, foregroundColor: const Color(0xFF211328),
+                    padding: const EdgeInsets.symmetric(vertical: 17),
+                    elevation: 8, shadowColor: const Color(0x99FFB52E),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: const BorderSide(color: Colors.white70, width: 1)),
+                  ),
                 ),
-              ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: () => notReady('Secure recharge'),
-              icon: const Icon(Icons.lock_outline),
-              label: const Text('Recharge Now — Coming Soon'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF7132AA), foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-              ),
+              ],
             ),
-            const SizedBox(height: 12),
-            const Text('No coins will be credited until a payment is verified by the server.',
-              textAlign: TextAlign.center, style: TextStyle(color: Colors.white54, fontSize: 12)),
-          ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _mCoinLogo({required double size}) {
+    return Container(
+      width: size, height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: const RadialGradient(colors: [Color(0xFFFFF1A8), Color(0xFFFFC83D), Color(0xFF9A4D08)]),
+        border: Border.all(color: const Color(0xFFFFF0A5), width: 3),
+        boxShadow: const [BoxShadow(color: Color(0x99FFB52E), blurRadius: 18, spreadRadius: 2)],
+      ),
+      child: Container(
+        margin: const EdgeInsets.all(7),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
+            colors: [Color(0xFF6B2CC2), Color(0xFF190C35), Color(0xFF7A2BB0)]),
+          border: Border.all(color: const Color(0xFFFFD66B), width: 2),
         ),
+        child: const Center(child: Text('M', style: TextStyle(color: gold, fontSize: 48, fontWeight: FontWeight.w900, shadows: [Shadow(color: Colors.black87, blurRadius: 5, offset: Offset(1, 2))])),
+      ),
+    );
+  }
+
+  Widget _packageCard(int index) {
+    final p = _samplePackages[index];
+    final selected = selectedPackage == index;
+    return GestureDetector(
+      onTap: () => setState(() => selectedPackage = index),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(colors: [Color(0xF51B112B), Color(0xF5101020), Color(0xF52A123B)]),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: selected ? gold : const Color(0xFF8D6A32), width: selected ? 2 : 1),
+          boxShadow: selected ? const [BoxShadow(color: Color(0x55FFB52E), blurRadius: 12)] : null,
+        ),
+        child: Row(children: [
+          _mCoinLogo(size: 48),
+          const SizedBox(width: 10),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(p['name']!, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+            const SizedBox(height: 2),
+            Text(p['coins']!, style: const TextStyle(color: gold, fontWeight: FontWeight.w900, fontSize: 16)),
+            Text(p['bonus']!, style: const TextStyle(color: Color(0xFFBD80FF), fontWeight: FontWeight.w600, fontSize: 12)),
+          ])),
+          const SizedBox(width: 6),
+          Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            Text(p['price']!, style: const TextStyle(color: gold, fontSize: 17, fontWeight: FontWeight.w900)),
+            const SizedBox(height: 7),
+            SizedBox(height: 34, child: ElevatedButton(
+              onPressed: () { setState(() => selectedPackage = index); _notReady('Payment for ${p['name']}'); },
+              style: ElevatedButton.styleFrom(backgroundColor: gold, foregroundColor: const Color(0xFF211328), padding: const EdgeInsets.symmetric(horizontal: 10),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+              child: const Text('Recharge', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900)),
+            )),
+          ]),
+        ]),
       ),
     );
   }
@@ -2422,18 +2504,19 @@ class _MindoWalletScreenState extends State<MindoWalletScreen> {
     return OutlinedButton.icon(
       onPressed: onTap,
       icon: Icon(icon, color: gold),
-      label: Text(title, style: const TextStyle(color: Colors.white)),
+      label: Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       style: OutlinedButton.styleFrom(
+        backgroundColor: const Color(0xCC100B20),
         padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 6),
-        side: const BorderSide(color: gold),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        side: const BorderSide(color: gold, width: 1.3),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
     );
   }
 
   void _openWalletInfo(String title) {
     Navigator.push(context, MaterialPageRoute(builder: (_) => Scaffold(
-      backgroundColor: const Color(0xFF080A18),
+      backgroundColor: dark,
       appBar: AppBar(title: Text(title), backgroundColor: const Color(0xFF101329), foregroundColor: gold),
       body: Center(child: Padding(
         padding: const EdgeInsets.all(24),
@@ -2443,6 +2526,7 @@ class _MindoWalletScreenState extends State<MindoWalletScreen> {
     )));
   }
 }
+
 
 // ============================================================
 // PERSONAL PROFILE
