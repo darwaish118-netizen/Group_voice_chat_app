@@ -2454,27 +2454,66 @@ class _MindoWalletScreenState extends State<MindoWalletScreen> {
     );
   }
 
-  Widget _mCoinLogo({required double size}) {
-    return Container(
-      width: size, height: size,
+
+Widget _mCoinLogo({required double size}) {
+  return Container(
+    width: size,
+    height: size,
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      gradient: const RadialGradient(
+        colors: [
+          Color(0xFFFFF1A8),
+          Color(0xFFFFC83D),
+          Color(0xFF9A4D08),
+        ],
+      ),
+      border: Border.all(
+        color: const Color(0xFFFFF5A5),
+        width: 1.5,
+      ),
+      boxShadow: const [
+        BoxShadow(
+          color: Color(0x99FFB52E),
+          blurRadius: 18,
+          spreadRadius: 2,
+        ),
+      ],
+    ),
+    child: Container(
+      margin: const EdgeInsets.all(7),
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: const RadialGradient(colors: [Color(0xFFFFF1A8), Color(0xFFFFC83D), Color(0xFF9A4D08)]),
-        border: Border.all(color: const Color(0xFFFFF0A5), width: 3),
-        boxShadow: const [BoxShadow(color: Color(0x99FFB52E), blurRadius: 18, spreadRadius: 2)],
-      ),
-      child: Container(
-        margin: const EdgeInsets.all(7),
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
-            colors: [Color(0xFF6B2CC2), Color(0xFF190C35), Color(0xFF7A2BB0)]),
-          border: Border.all(color: const Color(0xFFFFD66B), width: 2),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFFF6B2C2),
+            Color(0xFFFF90C3),
+            Color(0xFF7FA2B0),
+          ],
         ),
-        child: const Center(child: Text('M', style: TextStyle(color: gold, fontSize: 48, fontWeight: FontWeight.w900, shadows: [Shadow(color: Colors.black87, blurRadius: 5, offset: Offset(1, 2))])),
+        border: Border.all(
+          color: const Color(0xFFFFF6D6),
+          width: 2,
+        ),
       ),
-    );
-  }
+      child: Center(
+        child: FittedBox(
+          child: Text(
+            'M',
+            style: TextStyle(
+              color: const Color(0xFFFFD700),
+              fontSize: size * 0.55,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+    
 
   Widget _packageCard(int index) {
     final p = _samplePackages[index];
