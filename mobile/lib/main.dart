@@ -2456,7 +2456,7 @@ class _MindoWalletScreenState extends State<MindoWalletScreen> {
             colors: [Color(0xFF6B2CC2), Color(0xFF190C35), Color(0xFF7A2BB0)]),
           border: Border.all(color: const Color(0xFFFFD66B), width: 2),
         ),
-        child: const Center(child: Text('M', style: TextStyle(color: gold, fontSize: 48, fontWeight: FontWeight.w900, shadows: [Shadow(color: Colors.black87, blurRadius: 5, offset: Offset(1, 2))])),
+        child: const Center(child: Text('M', style: TextStyle(color: gold, fontSize: 48, fontWeight: FontWeight.w900, shadows: [Shadow(color: Colors.black87, blurRadius: 5, offset: Offset(1, 2))]))),
       ),
     );
   }
