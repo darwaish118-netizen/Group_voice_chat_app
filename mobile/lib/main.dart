@@ -3814,6 +3814,10 @@ LayoutBuilder(
               Navigator.push(context, MaterialPageRoute(
                 builder: (_) => MindoMallScreen(token: widget.token),
               ));
+            } else if (title == 'HONOR') {
+              Navigator.push(context, MaterialPageRoute(
+                builder: (_) => const MindoHonorScreen(),
+              ));
             } else {
               openComingSoon(title);
             }
@@ -4030,6 +4034,260 @@ const SizedBox(height: 16),
 // UI and confirmation flow are ready. Live purchases, inventory
 // and transfers will be connected to the backend after restore.
 // ============================================================
+
+
+// ============================================================
+// HONOR / BADGE CENTER
+// ============================================================
+
+class MindoHonorScreen extends StatefulWidget {
+  const MindoHonorScreen({super.key});
+
+  @override
+  State<MindoHonorScreen> createState() => _MindoHonorScreenState();
+}
+
+class _MindoHonorScreenState extends State<MindoHonorScreen> {
+  int _category = 0;
+
+  final List<Map<String, dynamic>> _badges = [
+    {'name': 'Charm No 1', 'category': 'Achievement', 'owned': true, 'active': false},
+    {'name': 'Wealth No 1', 'category': 'Achievement', 'owned': true, 'active': false},
+    {'name': 'Popular Host', 'category': 'Achievement', 'owned': false, 'active': false},
+    {'name': 'Top Gifter', 'category': 'Achievement', 'owned': false, 'active': false},
+    {'name': 'Charm No 1', 'category': 'Activity', 'owned': true, 'active': false},
+    {'name': 'Daily Active', 'category': 'Activity', 'owned': true, 'active': false},
+    {'name': 'Room Star', 'category': 'Activity', 'owned': false, 'active': false},
+    {'name': 'Social Star', 'category': 'Activity', 'owned': false, 'active': false},
+  ];
+
+  static const Color _pink = Color(0xFFFF168D);
+  static const Color _purple = Color(0xFFB45AFF);
+  static const Color _gold = Color(0xFFFFD76A);
+
+  @override
+  Widget build(BuildContext context) {
+    final categoryName = _category == 0 ? 'Achievement' : 'Activity';
+    final visible = _badges.where((b) => b['category'] == categoryName).toList();
+    return Scaffold(
+      backgroundColor: const Color(0xFF242424),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF303030),
+        elevation: 0,
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: _pink),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text('Badge', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+      ),
+      body: Column(
+        children: [
+          Row(children: [
+            _categoryTab('Achievement Badges', 0),
+            _categoryTab('Activity Badges', 1),
+          ]),
+          Expanded(
+            child: GridView.builder(
+              padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
+              itemCount: visible.length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2, crossAxisSpacing: 14, mainAxisSpacing: 16,
+                childAspectRatio: 0.91,
+              ),
+              itemBuilder: (context, index) {
+                final badge = visible[index];
+                return _badgeCard(badge, showOwned: false);
+              },
+            ),
+          ),
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(18, 8, 18, 18),
+              child: SizedBox(
+                width: double.infinity,
+                height: 58,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _purple,
+                    foregroundColor: Colors.white,
+                    shape: const StadiumBorder(),
+                    elevation: 0,
+                  ),
+                  onPressed: _openMyBadges,
+                  child: const Text('My Badges', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w600)),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _categoryTab(String title, int index) {
+    final selected = _category == index;
+    return Expanded(
+      child: InkWell(
+        onTap: () => setState(() => _category = index),
+        child: Container(
+          height: 62,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: selected ? Colors.white : Colors.transparent, width: 3)),
+          ),
+          child: FittedBox(
+            child: Text(title, style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: selected ? FontWeight.w600 : FontWeight.w400)),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _badgeCard(Map<String, dynamic> badge, {required bool showOwned}) {
+    return Container(
+      decoration: BoxDecoration(color: const Color(0xFF303030), borderRadius: BorderRadius.circular(25)),
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Expanded(child: Center(child: _badgeEmblem())),
+          const SizedBox(height: 8),
+          Text('${badge['name']}', textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w500)),
+          if (showOwned) ...[
+            const SizedBox(height: 8),
+            Text(badge['active'] == true ? 'ACTIVE' : 'INACTIVE',
+              style: TextStyle(color: badge['active'] == true ? const Color(0xFF72E6A1) : Colors.white60, fontSize: 11, fontWeight: FontWeight.bold)),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _badgeEmblem() {
+    return Container(
+      width: 118, height: 132,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: [BoxShadow(color: _gold.withOpacity(0.18), blurRadius: 18, spreadRadius: 2)],
+      ),
+      child: Stack(alignment: Alignment.center, children: [
+        const Icon(Icons.workspace_premium, size: 112, color: Color(0xFFD8B45A)),
+        Container(
+          width: 57, height: 66,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(colors: [Color(0xFFFF3B24), Color(0xFFB90019)]),
+            border: Border.all(color: const Color(0xFFFFE18A), width: 3),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: const Icon(Icons.shield, color: Colors.white24, size: 35),
+        ),
+        const Positioned(top: 0, child: Icon(Icons.workspace_premium, color: _gold, size: 30)),
+      ]),
+    );
+  }
+
+  void _openMyBadges() {
+    Navigator.push(context, MaterialPageRoute(
+      builder: (_) => MindoMyBadgesScreen(
+        badges: _badges,
+        onToggle: (badge, active) {
+          setState(() => badge['active'] = active);
+        },
+      ),
+    ));
+  }
+}
+
+class MindoMyBadgesScreen extends StatefulWidget {
+  final List<Map<String, dynamic>> badges;
+  final void Function(Map<String, dynamic>, bool) onToggle;
+
+  const MindoMyBadgesScreen({super.key, required this.badges, required this.onToggle});
+
+  @override
+  State<MindoMyBadgesScreen> createState() => _MindoMyBadgesScreenState();
+}
+
+class _MindoMyBadgesScreenState extends State<MindoMyBadgesScreen> {
+  int _category = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final categoryName = _category == 0 ? 'Achievement' : 'Activity';
+    final owned = widget.badges.where((b) => b['category'] == categoryName && b['owned'] == true).toList();
+    return Scaffold(
+      backgroundColor: const Color(0xFF242424),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF303030), centerTitle: true, elevation: 0,
+        leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new, color: Color(0xFFFF168D)), onPressed: () => Navigator.pop(context)),
+        title: const Text('My Badges', style: TextStyle(color: Colors.white)),
+      ),
+      body: Column(children: [
+        Row(children: [
+          _tab('Achievement Badges', 0),
+          _tab('Activity Badges', 1),
+        ]),
+        Expanded(
+          child: owned.isEmpty
+            ? const Center(child: Text('No badges assigned yet', style: TextStyle(color: Colors.white70)))
+            : ListView.separated(
+                padding: const EdgeInsets.all(16),
+                itemCount: owned.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  final badge = owned[index];
+                  final active = badge['active'] == true;
+                  return Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(color: const Color(0xFF303030), borderRadius: BorderRadius.circular(20)),
+                    child: Row(children: [
+                      SizedBox(width: 76, height: 82, child: _smallEmblem()),
+                      const SizedBox(width: 12),
+                      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text('${badge['name']}', style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 5),
+                        Text(active ? 'Shown on public profile' : 'Not shown on public profile',
+                          style: TextStyle(color: active ? const Color(0xFF72E6A1) : Colors.white60, fontSize: 12)),
+                      ])),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: active ? const Color(0xFF555555) : const Color(0xFFB45AFF),
+                          foregroundColor: Colors.white,
+                          shape: const StadiumBorder(),
+                        ),
+                        onPressed: () {
+                          setState(() => badge['active'] = !active);
+                          widget.onToggle(badge, !active);
+                        },
+                        child: Text(active ? 'DEACTIVATE' : 'ACTIVE'),
+                      ),
+                    ]),
+                  );
+                },
+              ),
+        ),
+      ]),
+    );
+  }
+
+  Widget _tab(String title, int index) {
+    final selected = _category == index;
+    return Expanded(child: InkWell(
+      onTap: () => setState(() => _category = index),
+      child: Container(height: 58, alignment: Alignment.center,
+        decoration: BoxDecoration(border: Border(bottom: BorderSide(color: selected ? Colors.white : Colors.transparent, width: 3))),
+        child: FittedBox(child: Text(title, style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: selected ? FontWeight.w600 : FontWeight.normal))),
+      ),
+    ));
+  }
+
+  Widget _smallEmblem() {
+    return const Icon(Icons.workspace_premium, size: 70, color: Color(0xFFFFD76A));
+  }
+}
 
 class MindoMallScreen extends StatefulWidget {
   final String token;
