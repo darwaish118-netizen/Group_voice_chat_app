@@ -3810,6 +3810,10 @@ LayoutBuilder(
               Navigator.push(context, MaterialPageRoute(
                 builder: (_) => MindoWalletScreen(token: widget.token),
               ));
+            } else if (title == 'Mall') {
+              Navigator.push(context, MaterialPageRoute(
+                builder: (_) => MindoMallScreen(token: widget.token),
+              ));
             } else {
               openComingSoon(title);
             }
@@ -4019,6 +4023,506 @@ const SizedBox(height: 16),
   );
 }
 }
+
+
+// ============================================================
+// MINDO MALL — PROPS SHOP + MY PROPS
+// UI and confirmation flow are ready. Live purchases, inventory
+// and transfers will be connected to the backend after restore.
+// ============================================================
+
+class MindoMallScreen extends StatefulWidget {
+  final String token;
+
+  const MindoMallScreen({super.key, required this.token});
+
+  @override
+  State<MindoMallScreen> createState() => _MindoMallScreenState();
+}
+
+class _MindoMallScreenState extends State<MindoMallScreen> {
+  static const Color _bg = Color(0xFF090316);
+  static const Color _panel = Color(0xFF19092D);
+  static const Color _purple = Color(0xFF9D35E8);
+  static const Color _pink = Color(0xFFFF2998);
+  static const Color _gold = Color(0xFFFFD36A);
+
+  final List<String> _categories = const [
+    'Frame',
+    'Entry',
+    'Chat Bubble',
+    'Unique ID',
+  ];
+
+  int _tab = 0; // 0 = Props, 1 = My Props
+  String _category = 'Frame';
+  int? _selectedProduct;
+
+  // Temporary visual catalogue. These are demo products, not live store data.
+  final List<Map<String, dynamic>> _products = [
+    {'id': 1, 'name': 'Golden Wings', 'category': 'Frame', 'days': 100, 'price': 500, 'icon': Icons.workspace_premium_rounded, 'owned': false, 'source': 'Shop'},
+    {'id': 2, 'name': 'Rose Love', 'category': 'Frame', 'days': 100, 'price': 600, 'icon': Icons.favorite_rounded, 'owned': true, 'source': 'Purchased'},
+    {'id': 3, 'name': 'Crystal Crown', 'category': 'Frame', 'days': 30, 'price': 300, 'icon': Icons.diamond_rounded, 'owned': false, 'source': 'Shop'},
+    {'id': 4, 'name': 'Blue Butterfly', 'category': 'Frame', 'days': 100, 'price': 500, 'icon': Icons.auto_awesome_rounded, 'owned': true, 'source': 'Event Reward'},
+    {'id': 5, 'name': 'Royal Entrance', 'category': 'Entry', 'days': 30, 'price': 800, 'icon': Icons.flash_on_rounded, 'owned': false, 'source': 'Shop'},
+    {'id': 6, 'name': 'Love Entrance', 'category': 'Entry', 'days': 100, 'price': 1000, 'icon': Icons.favorite, 'owned': false, 'source': 'Shop'},
+    {'id': 7, 'name': 'Neon Bubble', 'category': 'Chat Bubble', 'days': 30, 'price': 250, 'icon': Icons.chat_bubble_rounded, 'owned': false, 'source': 'Shop'},
+    {'id': 8, 'name': 'Royal Bubble', 'category': 'Chat Bubble', 'days': 100, 'price': 450, 'icon': Icons.forum_rounded, 'owned': false, 'source': 'Shop'},
+    {'id': 9, 'name': 'Golden ID', 'category': 'Unique ID', 'days': 100, 'price': 700, 'icon': Icons.badge_rounded, 'owned': false, 'source': 'Shop'},
+    {'id': 10, 'name': 'Pink ID', 'category': 'Unique ID', 'days': 30, 'price': 350, 'icon': Icons.fingerprint_rounded, 'owned': false, 'source': 'Shop'},
+  ];
+
+  final Set<int> _activeIds = {2};
+
+  List<Map<String, dynamic>> get _visibleProducts {
+    return _products.where((p) {
+      final matchesCategory = p['category'] == _category;
+      final matchesTab = _tab == 0 || p['owned'] == true;
+      return matchesCategory && matchesTab;
+    }).toList();
+  }
+
+  void _message(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: const Color(0xFF35104F),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Future<bool> _confirmAction({
+    required String title,
+    required Map<String, dynamic> product,
+    required String action,
+    required String detail,
+  }) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: _panel,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(22),
+          side: BorderSide(color: _purple.withOpacity(0.8)),
+        ),
+        title: Text(
+          title,
+          style: const TextStyle(color: _gold, fontWeight: FontWeight.w900),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _productArtwork(product, size: 104),
+            const SizedBox(height: 12),
+            Text(
+              '${product['name']}',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Validity: ${product['days']} Days',
+              style: const TextStyle(color: Colors.white70),
+            ),
+            if (action == 'BUY') ...[
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.monetization_on_rounded, color: _gold),
+                  const SizedBox(width: 6),
+                  Text('${product['price']} Coins', style: const TextStyle(color: _gold, fontWeight: FontWeight.w900, fontSize: 18)),
+                ],
+              ),
+            ],
+            const SizedBox(height: 10),
+            Text(detail, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white60, fontSize: 12)),
+          ],
+        ),
+        actionsAlignment: MainAxisAlignment.spaceBetween,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('CANCEL', style: TextStyle(color: Colors.white70)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _pink,
+              foregroundColor: Colors.white,
+              shape: const StadiumBorder(),
+            ),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(
+              action == 'BUY'
+                  ? 'CONFIRM BUY'
+                  : action == 'USE'
+                      ? 'CONFIRM ACTIVATE'
+                      : action == 'DEACTIVATE'
+                          ? 'CONFIRM DEACTIVATE'
+                          : 'CONFIRM SEND',
+            ),
+          ),
+        ],
+      ),
+    );
+    return result == true;
+  }
+
+  Future<void> _buySelected() async {
+    final matches = _visibleProducts;
+    if (_selectedProduct == null) {
+      _message('Please select a product first.');
+      return;
+    }
+    final product = matches.firstWhere((p) => p['id'] == _selectedProduct);
+    final confirmed = await _confirmAction(
+      title: 'Confirm Purchase',
+      product: product,
+      action: 'BUY',
+      detail: 'Coins will only be deducted after the secure store connection is enabled.',
+    );
+    if (confirmed && mounted) {
+      _message('Purchase confirmation is ready. Live coin deduction will be connected after server restoration.');
+    }
+  }
+
+  Future<void> _togglePropStatus(Map<String, dynamic> product) async {
+    final id = product['id'] as int;
+    final isActive = _activeIds.contains(id);
+
+    final confirmed = await _confirmAction(
+      title: isActive ? 'Deactivate Prop?' : 'Activate Prop?',
+      product: product,
+      action: isActive ? 'DEACTIVATE' : 'USE',
+      detail: isActive
+          ? 'This prop will be removed from your active profile display.'
+          : 'This prop will be applied to your profile.',
+    );
+
+    if (!confirmed || !mounted) return;
+
+    setState(() {
+      if (isActive) {
+        _activeIds.remove(id);
+      } else {
+        _activeIds.add(id);
+      }
+    });
+
+    _message(isActive
+        ? '${product['name']} has been deactivated.'
+        : '${product['name']} has been activated.');
+  }
+
+  Future<void> _openSendSheet() async {
+    if (_selectedProduct == null) {
+      _message('Please select the prop you want to send first.');
+      return;
+    }
+    final idController = TextEditingController();
+    String? searchedId;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: _panel,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+      ),
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setSheetState) {
+          return Padding(
+            padding: EdgeInsets.fromLTRB(
+              18, 20, 18, MediaQuery.of(context).viewInsets.bottom + 24,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(child: Container(width: 42, height: 4, decoration: BoxDecoration(color: Colors.white30, borderRadius: BorderRadius.circular(5)))),
+                const SizedBox(height: 18),
+                const Text('SEND PROP TO USER', style: TextStyle(color: _gold, fontSize: 19, fontWeight: FontWeight.w900)),
+                const SizedBox(height: 8),
+                const Text('Enter the receiver’s MINDO User ID', style: TextStyle(color: Colors.white70)),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: idController,
+                  keyboardType: TextInputType.number,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    hintText: 'Search by User ID',
+                    hintStyle: const TextStyle(color: Colors.white38),
+                    prefixIcon: const Icon(Icons.search, color: _purple),
+                    filled: true,
+                    fillColor: const Color(0xFF0D0619),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: _purple)),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: _purple.withOpacity(0.6))),
+                  ),
+                  onChanged: (_) => setSheetState(() => searchedId = null),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      if (idController.text.trim().isEmpty) {
+                        setSheetState(() => searchedId = '');
+                      } else {
+                        setSheetState(() => searchedId = idController.text.trim());
+                      }
+                    },
+                    icon: const Icon(Icons.search),
+                    label: const Text('SEARCH USER ID'),
+                    style: ElevatedButton.styleFrom(backgroundColor: _purple, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 13)),
+                  ),
+                ),
+                if (searchedId != null) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(13),
+                    decoration: BoxDecoration(color: const Color(0xFF0D0619), borderRadius: BorderRadius.circular(14), border: Border.all(color: _pink.withOpacity(0.6))),
+                    child: Text(
+                      searchedId!.isEmpty
+                          ? 'Please enter a valid User ID.'
+                          : 'User lookup for ID $searchedId will be enabled when the server is restored. No item has been sent.',
+                      style: const TextStyle(color: Colors.white70),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          );
+        },
+      ),
+    );
+    idController.dispose();
+  }
+
+  Widget _productArtwork(Map<String, dynamic> product, {double size = 132}) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: const RadialGradient(colors: [Color(0xFF59118B), Color(0xFF19052D), Color(0xFF080312)]),
+        border: Border.all(color: _gold, width: 2),
+        boxShadow: const [
+          BoxShadow(color: Color(0xAAE82DFF), blurRadius: 15, spreadRadius: 1),
+          BoxShadow(color: Color(0x88FFB52E), blurRadius: 10),
+        ],
+      ),
+      child: Icon(
+        product['icon'] as IconData,
+        size: size * 0.48,
+        color: _gold,
+        shadows: const [Shadow(color: _pink, blurRadius: 16)],
+      ),
+    );
+  }
+
+  Widget _categoryChip(String category) {
+    final selected = _category == category;
+    return Padding(
+      padding: const EdgeInsets.only(right: 9),
+      child: ChoiceChip(
+        label: Text(category),
+        selected: selected,
+        onSelected: (_) => setState(() {
+          _category = category;
+          _selectedProduct = null;
+        }),
+        selectedColor: _purple,
+        backgroundColor: const Color(0xFF28113D),
+        labelStyle: TextStyle(color: selected ? Colors.white : Colors.white70, fontWeight: FontWeight.bold),
+        side: BorderSide(color: selected ? _gold : _purple.withOpacity(0.55)),
+        shape: const StadiumBorder(),
+      ),
+    );
+  }
+
+  Widget _productCard(Map<String, dynamic> product) {
+    final id = product['id'] as int;
+    final selected = _selectedProduct == id;
+    final owned = product['owned'] == true;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedProduct = id),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        decoration: BoxDecoration(
+          color: const Color(0xE8170928),
+          borderRadius: BorderRadius.circular(19),
+          border: Border.all(color: selected ? _gold : _purple.withOpacity(0.65), width: selected ? 2 : 1),
+          boxShadow: selected ? const [BoxShadow(color: Color(0x66FFB52E), blurRadius: 13)] : null,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 10, 10, 5),
+              child: Row(
+                children: [
+                  Expanded(child: Text('${product['days']} Days', style: const TextStyle(color: Color(0xFFD9A6FF), fontSize: 12, fontWeight: FontWeight.bold))),
+                  if (owned) Icon(Icons.verified_rounded, color: _gold, size: 16),
+                ],
+              ),
+            ),
+            Expanded(
+              child: Center(child: _productArtwork(product, size: 116)),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              child: Text('${product['name']}', maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+            ),
+            const SizedBox(height: 7),
+            Container(
+              margin: const EdgeInsets.fromLTRB(7, 0, 7, 8),
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: [Color(0xFF7618B7), Color(0xFFB044F0)]),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: _tab == 0
+                  ? Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                      const Icon(Icons.monetization_on_rounded, color: _gold, size: 18),
+                      const SizedBox(width: 5),
+                      Text('${product['price']}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
+                    ])
+                  : GestureDetector(
+                      onTap: () => _togglePropStatus(product),
+                      child: Text(
+                        _activeIds.contains(id) ? 'DEACTIVATE' : 'ACTIVATE',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12),
+                      ),
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final products = _visibleProducts;
+    return Scaffold(
+      backgroundColor: _bg,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFF30064B), _bg, Color(0xFF10051D)]),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(10, 8, 14, 10),
+                child: Row(
+                  children: [
+                    IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.arrow_back_ios_new_rounded, color: _gold)),
+                    const Expanded(child: Column(children: [
+                      Text('MINDO', style: TextStyle(color: _gold, fontSize: 21, fontWeight: FontWeight.w900, letterSpacing: 2)),
+                      Text('VOICE CHAT', style: TextStyle(color: Color(0xFFD9A6FF), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 3)),
+                    ])),
+                    const Icon(Icons.monetization_on_rounded, color: _gold),
+                    const SizedBox(width: 5),
+                    const Text('—', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(color: const Color(0xFF0D0619), borderRadius: BorderRadius.circular(30), border: Border.all(color: _purple)),
+                  child: Row(children: [
+                    Expanded(child: _topTab('Props', 0)),
+                    Expanded(child: _topTab('My Props', 1)),
+                  ]),
+                ),
+              ),
+              const SizedBox(height: 13),
+              Container(
+                width: 74, height: 74,
+                decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: _pink, width: 2.5), boxShadow: const [BoxShadow(color: _pink, blurRadius: 16)]),
+                child: const CircleAvatar(backgroundColor: Color(0xFF260B3D), child: Icon(Icons.person_rounded, color: _gold, size: 40)),
+              ),
+              const SizedBox(height: 13),
+              SizedBox(
+                height: 43,
+                child: ListView(
+                  padding: const EdgeInsets.symmetric(horizontal: 13),
+                  scrollDirection: Axis.horizontal,
+                  children: _categories.map(_categoryChip).toList(),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: products.isEmpty
+                    ? Center(child: Text(_tab == 0 ? 'No products in this category yet.' : 'No owned items in this category yet.', style: const TextStyle(color: Colors.white70)))
+                    : GridView.builder(
+                        padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
+                        itemCount: products.length,
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 0.76),
+                        itemBuilder: (_, index) => _productCard(products[index]),
+                      ),
+              ),
+              Container(
+                padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+                decoration: BoxDecoration(color: const Color(0xF5090316), border: Border(top: BorderSide(color: _purple.withOpacity(0.5)))),
+                child: _tab == 0
+                    ? Row(children: [
+                        Expanded(child: _bottomAction('Send', Icons.card_giftcard_rounded, _purple, _openSendSheet)),
+                        const SizedBox(width: 12),
+                        Expanded(child: _bottomAction('Buy', Icons.shopping_bag_rounded, _pink, _buySelected)),
+                      ])
+                    : Center(child: SizedBox(width: 190, child: _bottomAction('Send', Icons.card_giftcard_rounded, _purple, _openSendSheet))),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _topTab(String label, int index) {
+    final selected = _tab == index;
+    return GestureDetector(
+      onTap: () => setState(() {
+        _tab = index;
+        _selectedProduct = null;
+      }),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(vertical: 11),
+        decoration: BoxDecoration(
+          gradient: selected ? const LinearGradient(colors: [_purple, Color(0xFFCE35C9)]) : null,
+          borderRadius: BorderRadius.circular(25),
+        ),
+        child: Text(label, textAlign: TextAlign.center, style: TextStyle(color: selected ? Colors.white : Colors.white70, fontWeight: FontWeight.bold)),
+      ),
+    );
+  }
+
+  Widget _bottomAction(String label, IconData icon, Color color, VoidCallback onTap) {
+    return SizedBox(
+      height: 48,
+      child: ElevatedButton.icon(
+        onPressed: onTap,
+        icon: Icon(icon, size: 20),
+        label: Text(label.toUpperCase(), style: const TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1)),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          foregroundColor: Colors.white,
+          elevation: 8,
+          shadowColor: color.withOpacity(0.6),
+          shape: const StadiumBorder(),
+        ),
+      ),
+    );
+  }
+}
+
 
 // ============================================================
 // PUBLIC PROFILE SCREEN
