@@ -3851,6 +3851,10 @@ LayoutBuilder(
               Navigator.push(context, MaterialPageRoute(
                 builder: (_) => MindoWealthLevelScreen(token: widget.token),
               ));
+            } else if (title == 'My Agency') {
+              Navigator.push(context, MaterialPageRoute(
+                builder: (_) => const AgencyDirectoryScreen(),
+              ));
             } else {
               openComingSoon(title);
             }
@@ -7729,4 +7733,260 @@ Widget build(BuildContext context) {
     },
   );
 }
+}
+
+
+// ============================================================
+// MINDO AGENCY UI (LOCAL DEMO WORKFLOW - BACKEND LATER)
+// ============================================================
+
+class AgencyDirectoryScreen extends StatefulWidget {
+  const AgencyDirectoryScreen({super.key});
+
+  @override
+  State<AgencyDirectoryScreen> createState() => _AgencyDirectoryScreenState();
+}
+
+class _AgencyDirectoryScreenState extends State<AgencyDirectoryScreen> {
+  static final List<Map<String, dynamic>> _agencies = [
+    {'name': 'Agency Rio Star', 'uid': '123456', 'country': 'Angola', 'flag': '🇦🇴', 'members': 62, 'status': 'Approved', 'dp': null},
+    {'name': 'Mindo Royal', 'uid': '234567', 'country': 'United Arab Emirates', 'flag': '🇦🇪', 'members': 48, 'status': 'Approved', 'dp': null},
+    {'name': 'Pink Galaxy', 'uid': '345678', 'country': 'Pakistan', 'flag': '🇵🇰', 'members': 35, 'status': 'Approved', 'dp': null},
+  ];
+  final TextEditingController _search = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final visible = _agencies.where((a) {
+      final q = _query.trim().toLowerCase();
+      return a['status'] == 'Approved' &&
+          (q.isEmpty || a['name'].toString().toLowerCase().contains(q) || a['uid'].toString().contains(q));
+    }).toList();
+    return Scaffold(
+      backgroundColor: const Color(0xFFF3F2F7),
+      appBar: AppBar(
+        backgroundColor: Colors.white, elevation: 0,
+        leading: IconButton(icon: const Icon(Icons.arrow_back, color: Color(0xFFFF1685)), onPressed: () => Navigator.pop(context)),
+        centerTitle: true, title: const Text('Agency', style: TextStyle(color: Colors.black, fontWeight: FontWeight.w700)),
+      ),
+      body: Stack(children: [
+        Column(children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 20, 18, 14),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(38), boxShadow: const [BoxShadow(color: Color(0x22000000), blurRadius: 12, offset: Offset(0, 4))]),
+              child: Row(children: [
+                const Icon(Icons.search, size: 28, color: Colors.black),
+                const SizedBox(width: 10),
+                Expanded(child: TextField(controller: _search, onChanged: (v) => setState(() => _query = v), decoration: const InputDecoration(border: InputBorder.none, hintText: 'Search By ID Or Nick', hintStyle: TextStyle(color: Colors.black87)))),
+                ElevatedButton(onPressed: () => setState(() => _query = _search.text), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFC66AF0), foregroundColor: Colors.white, shape: const StadiumBorder()), child: const Text('Search')),
+              ]),
+            ),
+          ),
+          Expanded(child: visible.isEmpty
+              ? const Center(child: Text('No approved agencies found'))
+              : GridView.builder(
+                  padding: const EdgeInsets.fromLTRB(14, 4, 14, 100),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 14, mainAxisSpacing: 16, childAspectRatio: .83),
+                  itemCount: visible.length,
+                  itemBuilder: (context, index) {
+                    final a = visible[index];
+                    return InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AgencyPublicDetailScreen(agency: a))),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: const [BoxShadow(color: Color(0x22000000), blurRadius: 10, offset: Offset(0, 3))]),
+                        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                          Container(width: 104, height: 104, decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: const Color(0xFFFF1685), width: 3)), child: CircleAvatar(backgroundColor: const Color(0xFFF5E9FA), backgroundImage: a['dp'] is String ? FileImage(File(a['dp'])) : null, child: a['dp'] == null ? const Icon(Icons.business, size: 48, color: Color(0xFFC66AF0)) : null)),
+                          const SizedBox(height: 14),
+                          Text(a['name'], maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700), textAlign: TextAlign.center),
+                          const SizedBox(height: 12),
+                          Row(mainAxisAlignment: MainAxisAlignment.center, children: [Text(a['flag'], style: const TextStyle(fontSize: 22)), const SizedBox(width: 12), const Icon(Icons.person, color: Colors.grey, size: 22), const SizedBox(width: 5), Text('${a['members']}', style: const TextStyle(color: Colors.grey, fontSize: 16))]),
+                        ]),
+                      ),
+                    );
+                  },
+                )),
+        ]),
+        Positioned(right: 24, bottom: 22, child: Column(children: [
+          FloatingActionButton(onPressed: () async {
+            final result = await Navigator.push<Map<String, dynamic>>(context, MaterialPageRoute(builder: (_) => const AgencyCreateScreen()));
+            if (result != null && mounted) setState(() => _agencies.add(result));
+          }, backgroundColor: const Color(0xFFC66AF0), child: const Icon(Icons.add, size: 34, color: Colors.white)),
+          const SizedBox(height: 5), const Text('Create', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+        ])),
+      ]),
+    );
+  }
+}
+
+class AgencyCreateScreen extends StatefulWidget {
+  const AgencyCreateScreen({super.key});
+  @override
+  State<AgencyCreateScreen> createState() => _AgencyCreateScreenState();
+}
+
+class _AgencyCreateScreenState extends State<AgencyCreateScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _name = TextEditingController();
+  final _phone = TextEditingController();
+  final _address = TextEditingController();
+  final _adminId = TextEditingController();
+  final _picker = ImagePicker();
+  String? _country;
+  String? _agencyDp, _idFront, _idBack;
+  bool _submitting = false;
+  final List<String> _countries = const ['United Arab Emirates', 'Pakistan', 'India', 'Bangladesh', 'Angola', 'Saudi Arabia', 'United States', 'United Kingdom', 'Indonesia', 'Philippines'];
+
+  Future<void> _pick(String type) async {
+    final image = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 82);
+    if (image == null) return;
+    setState(() { if (type == 'dp') _agencyDp = image.path; if (type == 'front') _idFront = image.path; if (type == 'back') _idBack = image.path; });
+  }
+
+  Widget _uploadBox(String label, String? path, VoidCallback onTap, {double height = 112}) => InkWell(
+    onTap: onTap,
+    child: Container(height: height, decoration: BoxDecoration(color: const Color(0xFFFFFDF5), border: Border.all(color: const Color(0xFFE5E0D5), style: BorderStyle.solid), borderRadius: BorderRadius.circular(12)),
+      child: path == null ? Column(mainAxisAlignment: MainAxisAlignment.center, children: [const Icon(Icons.camera_alt, size: 48, color: Colors.black), const SizedBox(height: 5), Text(label, style: const TextStyle(color: Colors.grey))]) : ClipRRect(borderRadius: BorderRadius.circular(11), child: Image.file(File(path), fit: BoxFit.cover, width: double.infinity)),
+    ),
+  );
+
+  InputDecoration _decoration(String hint) => InputDecoration(hintText: hint, filled: true, fillColor: Colors.white, contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 19), border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none), enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none));
+  Widget _section(String title, String subtitle) => Padding(padding: const EdgeInsets.only(top: 30, bottom: 12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w700)), const SizedBox(height: 5), Text(subtitle, style: const TextStyle(fontSize: 15))]));
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    if (_agencyDp == null || _idFront == null || _idBack == null || _country == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Agency DP, country aur ID ke front/back images upload karein'))); return;
+    }
+    setState(() => _submitting = true);
+    final result = {'name': _name.text.trim(), 'uid': DateTime.now().millisecondsSinceEpoch.toString().substring(7), 'country': _country!, 'flag': '🌐', 'members': 1, 'status': 'Pending', 'dp': _agencyDp, 'phone': _phone.text.trim(), 'address': _address.text.trim(), 'adminId': _adminId.text.trim(), 'idFront': _idFront, 'idBack': _idBack};
+    if (!mounted) return;
+    setState(() => _submitting = false);
+    Navigator.pop(context, result);
+  }
+
+  @override
+  void dispose() { _name.dispose(); _phone.dispose(); _address.dispose(); _adminId.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: const Color(0xFFF3F2F7),
+    appBar: AppBar(backgroundColor: Colors.white, elevation: 0, leading: IconButton(icon: const Icon(Icons.arrow_back, color: Color(0xFFFF1685)), onPressed: () => Navigator.pop(context)), centerTitle: true, title: const Text('Agency', style: TextStyle(color: Colors.black, fontWeight: FontWeight.w700))),
+    body: Form(key: _formKey, child: ListView(padding: const EdgeInsets.fromLTRB(18, 22, 18, 30), children: [
+      Center(child: SizedBox(width: 150, child: _uploadBox('+ Upload', _agencyDp, () => _pick('dp'), height: 150))),
+      _section('＊Agency name and country', 'Cannot be modified once created'),
+      TextFormField(controller: _name, maxLength: 20, decoration: _decoration('No more than 20 characters').copyWith(counterText: ''), validator: (v) => v == null || v.trim().isEmpty ? 'Agency name required' : null),
+      const SizedBox(height: 12),
+      DropdownButtonFormField<String>(value: _country, decoration: _decoration('Chose a country'), items: _countries.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(), onChanged: (v) => setState(() => _country = v), validator: (v) => v == null ? 'Country select karein' : null),
+      _section('＊ID Information', 'Please upload real and valid information'),
+      Row(children: [Expanded(child: Column(children: [_uploadBox('ID Front', _idFront, () => _pick('front')), const SizedBox(height: 8), const Text('ID Front', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600))])), const SizedBox(width: 16), Expanded(child: Column(children: [_uploadBox('ID Back', _idBack, () => _pick('back')), const SizedBox(height: 8), const Text('ID Back', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600))]))]),
+      _section('Phone and Address', 'Cannot be modified once created'),
+      TextFormField(controller: _phone, keyboardType: TextInputType.phone, decoration: _decoration('Phone Number'), validator: (v) => v == null || v.trim().isEmpty ? 'Phone number required' : null),
+      const SizedBox(height: 12),
+      TextFormField(controller: _address, maxLines: 2, decoration: _decoration('Address'), validator: (v) => v == null || v.trim().isEmpty ? 'Address required' : null),
+      _section('Admin ID (Optional)', 'You can leave this field empty'),
+      TextFormField(controller: _adminId, decoration: _decoration('Admin ID')),
+      const SizedBox(height: 25),
+      Center(child: ElevatedButton(onPressed: _submitting ? null : _submit, style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFC66AF0), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 38, vertical: 17), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))), child: Text(_submitting ? 'Please wait...' : 'Submit Review', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)))),
+    ])),
+  );
+}
+
+class AgencyOwnerDashboardScreen extends StatelessWidget {
+  final Map<String, dynamic> agency;
+  const AgencyOwnerDashboardScreen({super.key, required this.agency});
+
+  @override
+  Widget build(BuildContext context) {
+    final pending = agency['status'] == 'Pending';
+    final items = ['Member Request', 'Member Income', 'Member Invite', 'Member active days', 'Agency data query', 'Agency Leave Request'];
+    final icons = [Icons.mark_email_unread, Icons.database, Icons.person_add_alt_1, Icons.calendar_month, Icons.storage, Icons.logout];
+    return Scaffold(
+      backgroundColor: const Color(0xFFF3F2F7),
+      appBar: AppBar(backgroundColor: Colors.white, elevation: 0, leading: IconButton(icon: const Icon(Icons.arrow_back, color: Color(0xFFFF1685)), onPressed: () => Navigator.pop(context)), centerTitle: true, title: const Text('Agency', style: TextStyle(color: Colors.black, fontWeight: FontWeight.w700))),
+      body: pending ? Center(child: Container(margin: const EdgeInsets.all(24), padding: const EdgeInsets.all(24), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)), child: const Column(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.hourglass_top, color: Color(0xFFC66AF0), size: 54), SizedBox(height: 12), Text('Agency Under Review', style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold)), SizedBox(height: 8), Text('Your agency has been submitted. The dashboard will be available after main admin approval.', textAlign: TextAlign.center)])))
+      : ListView(children: [
+        Container(padding: const EdgeInsets.fromLTRB(20, 20, 20, 28), decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFFFF5AA5), Color(0xFFFF0080)]), borderRadius: BorderRadius.vertical(bottom: Radius.circular(34))), child: Column(children: [
+          Row(children: [CircleAvatar(radius: 29, backgroundColor: Colors.white, backgroundImage: agency['dp'] is String ? FileImage(File(agency['dp'])) : null, child: agency['dp'] == null ? const Icon(Icons.business, color: Color(0xFFC66AF0)) : null), const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Name: ${agency['name']}', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)), Text('ID: ${agency['uid']}', style: const TextStyle(color: Colors.white, fontSize: 17))]))]),
+          const SizedBox(height: 18), Container(width: double.infinity, padding: const EdgeInsets.all(18), decoration: BoxDecoration(border: Border.all(color: Colors.white54), borderRadius: BorderRadius.circular(16), color: Colors.white.withOpacity(.08)), child: Column(children: [const Text('Balance', style: TextStyle(color: Colors.white, fontSize: 22)), const SizedBox(height: 8), const Text('0.00 USD', style: TextStyle(color: Colors.white, fontSize: 34, fontWeight: FontWeight.bold)), const SizedBox(height: 16), Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: const [Column(children: [Text('Total Coins', style: TextStyle(color: Colors.white)), Text('0', style: TextStyle(color: Colors.white, fontSize: 27, fontWeight: FontWeight.bold))]), Column(children: [Text('Members', style: TextStyle(color: Colors.white)), Text('1', style: TextStyle(color: Colors.white, fontSize: 27, fontWeight: FontWeight.bold))])])]))
+        ])),
+        const SizedBox(height: 8),
+        ...List.generate(items.length, (i) => ListTile(tileColor: Colors.white, contentPadding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12), leading: Icon(icons[i], color: const Color(0xFFC66AF0), size: 31), title: Text(items[i], style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600)), trailing: const Icon(Icons.chevron_right, color: Color(0xFFFF1685), size: 32), onTap: () {
+          final Widget page = switch (i) {
+            0 => AgencyMemberRequestsScreen(agency: agency),
+            1 => AgencyMemberIncomeScreen(agency: agency),
+            2 => AgencyMemberInviteScreen(agency: agency),
+            3 => AgencyActiveDaysScreen(agency: agency),
+            4 => AgencyDataQueryScreen(agency: agency),
+            _ => AgencyLeaveRequestsScreen(agency: agency),
+          };
+          Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+        }))),
+      ]),
+    );
+  }
+}
+
+// Agency dashboard sub-screens. Local demo UI only; backend integration later.
+const Color _agencyPink = Color(0xFFFF1685);
+const Color _agencyPurple = Color(0xFFC66AF0);
+const Color _agencyBg = Color(0xFFF3F2F7);
+PreferredSizeWidget _agencyBar(BuildContext c, String title) => AppBar(
+  backgroundColor: Colors.white, elevation: 0, centerTitle: true,
+  leading: IconButton(icon: const Icon(Icons.arrow_back, color: _agencyPink), onPressed: () => Navigator.pop(c)),
+  title: Text(title, style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w700)),
+);
+Widget _agencyBtn(String label, VoidCallback tap) => ElevatedButton(
+  onPressed: tap, style: ElevatedButton.styleFrom(backgroundColor: _agencyPurple, foregroundColor: Colors.white, shape: const StadiumBorder()), child: Text(label));
+void _agencyToast(BuildContext c, String text) => ScaffoldMessenger.of(c).showSnackBar(SnackBar(content: Text(text)));
+
+class AgencyMemberRequestsScreen extends StatefulWidget {
+  final Map<String,dynamic> agency; const AgencyMemberRequestsScreen({super.key,required this.agency});
+  @override State<AgencyMemberRequestsScreen> createState()=>_AgencyMemberRequestsScreenState();
+}
+class _AgencyMemberRequestsScreenState extends State<AgencyMemberRequestsScreen>{
+  final rows=List.generate(5,(i)=>{'name':['Hori ♛','Mindo Star','Royal Host','Luna','Ayesha'][i],'id':['179121','284512','391820','451209','562310'][i]});
+  void decide(int i,bool accept){setState(()=>rows.removeAt(i));_agencyToast(context,accept?'Member request accepted (demo).':'Member request rejected (demo).');}
+  @override Widget build(BuildContext c)=>Scaffold(backgroundColor:_agencyBg,appBar:_agencyBar(c,'Member Requests'),body:ListView.builder(itemCount:rows.length,itemBuilder:(c,i){final r=rows[i];return Container(color:Colors.white,margin:const EdgeInsets.only(bottom:8),padding:const EdgeInsets.all(14),child:Row(children:[const CircleAvatar(radius:30,child:Icon(Icons.person)),const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(r['name']!,style:const TextStyle(fontSize:18)),Text('ID: ${r['id']}')])),_agencyBtn('Agree',()=>decide(i,true)),IconButton(onPressed:()=>decide(i,false),icon:const Icon(Icons.close,color:_agencyPink,size:30))]));}));
+}
+
+class AgencyMemberIncomeScreen extends StatefulWidget {
+ final Map<String,dynamic> agency; const AgencyMemberIncomeScreen({super.key,required this.agency});
+ @override State<AgencyMemberIncomeScreen> createState()=>_AgencyMemberIncomeScreenState();
+}
+class _AgencyMemberIncomeScreenState extends State<AgencyMemberIncomeScreen>{
+ String month='2026-10',duration='Monthly';
+ final rows=List.generate(10,(i)=>{'name':['Hori ♛','Mindo Star','Royal Host','Luna'][i%4],'id':['179121','284512','391820','451209'][i%4],'coins':['2292.3','18500','76400','125000'][i%4],'salary':['0.00','12.00','35.00','50.00'][i%4],'commission':['0.00','1.20','3.50','5.00'][i%4]});
+ @override Widget build(BuildContext c){final total=rows.fold<double>(0,(v,r)=>v+(double.tryParse(r['coins']!)??0));return Scaffold(backgroundColor:_agencyBg,appBar:_agencyBar(c,'Member Income'),body:Column(children:[Container(width:double.infinity,padding:const EdgeInsets.all(18),decoration:const BoxDecoration(gradient:LinearGradient(colors:[Color(0xFFFF5AA5),Color(0xFFFF0080)]),borderRadius:BorderRadius.vertical(bottom:Radius.circular(30))),child:Column(children:[DropdownButton<String>(value:month,dropdownColor:_agencyPurple,underline:const SizedBox(),items:List.generate(6,(i){final d=DateTime(2026,10-i);final v='${d.year}-${d.month.toString().padLeft(2,'0')}';return DropdownMenuItem(value:v,child:Text(v,style:const TextStyle(color:Colors.white)));}),onChanged:(v)=>setState(()=>month=v!)),Row(children:[Expanded(child:_metric('Monthly Coins',total.toStringAsFixed(2))),Container(width:1,height:55,color:Colors.white54),Expanded(child:_metric('Estimated Salary','\$50.00'))]),const SizedBox(height:12),Chip(label:Text('Target Duration: $duration'),backgroundColor:Colors.white),const Text('Target duration and salary rules are controlled by Main Admin',style:TextStyle(color:Colors.white70,fontSize:11))])),Container(color:Colors.white,padding:const EdgeInsets.symmetric(vertical:14,horizontal:3),child:const Row(children:[Expanded(flex:3,child:Text('HOST',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold))),Expanded(flex:2,child:Text('TOTAL COINS',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:11))),Expanded(child:Text('SALARY',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:11))),Expanded(child:Text('COMMISSION',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10)))])),Expanded(child:ListView.builder(itemCount:rows.length,itemBuilder:(c,i){final r=rows[i];return Container(color:i.isEven?const Color(0xFFE5E5E5):Colors.white,padding:const EdgeInsets.symmetric(vertical:13,horizontal:4),child:Row(children:[Expanded(flex:3,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(r['name']!),Text('ID: ${r['id']}') ])),Expanded(flex:2,child:Text(r['coins']!,textAlign:TextAlign.center)),Expanded(child:Text('\$${r['salary']}',textAlign:TextAlign.center)),Expanded(child:Text('\$${r['commission']}',textAlign:TextAlign.center))]));}))]));}
+ Widget _metric(String t,String v)=>Column(children:[Text(t,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:17)),Text(v,style:const TextStyle(color:Colors.white,fontSize:22,fontWeight:FontWeight.bold))]);
+}
+
+class AgencyMemberInviteScreen extends StatefulWidget {final Map<String,dynamic> agency;const AgencyMemberInviteScreen({super.key,required this.agency});@override State<AgencyMemberInviteScreen> createState()=>_AgencyMemberInviteScreenState();}
+class _AgencyMemberInviteScreenState extends State<AgencyMemberInviteScreen>{final id=TextEditingController();bool found=false;@override void dispose(){id.dispose();super.dispose();}@override Widget build(BuildContext c)=>Scaffold(backgroundColor:_agencyBg,appBar:_agencyBar(c,'Member Invite'),body:Padding(padding:const EdgeInsets.all(20),child:Column(children:[TextField(controller:id,keyboardType:TextInputType.number,decoration:InputDecoration(prefixIcon:const Icon(Icons.search),hintText:'Search by User ID',filled:true,fillColor:Colors.white,border:OutlineInputBorder(borderRadius:BorderRadius.circular(30),borderSide:BorderSide.none))),const SizedBox(height:14),SizedBox(width:double.infinity,child:_agencyBtn('Search',(){setState(()=>found=id.text.trim().isNotEmpty);if(!found)_agencyToast(c,'User ID enter karein.');})),if(found)...[const SizedBox(height:24),Container(color:Colors.white,padding:const EdgeInsets.all(18),child:Row(children:[const CircleAvatar(child:Icon(Icons.person)),const SizedBox(width:12),Expanded(child:Text('User ID: ${id.text}\nDemo User',style:const TextStyle(fontSize:17)))])),const SizedBox(height:16),SizedBox(width:double.infinity,child:_agencyBtn('Send Invitation',()=>_agencyToast(c,'Invitation sent. Default validity 24 hours; Main Admin can change expiry.')))] ])));}
+
+class AgencyActiveDaysScreen extends StatefulWidget {final Map<String,dynamic> agency;const AgencyActiveDaysScreen({super.key,required this.agency});@override State<AgencyActiveDaysScreen> createState()=>_AgencyActiveDaysScreenState();}
+class _AgencyActiveDaysScreenState extends State<AgencyActiveDaysScreen>{String range='This Week';final rows=List.generate(12,(i)=>{'name':['Hori ♛','Mindo Star','Royal Host'][i%3],'id':['179121','284512','391820'][i%3],'days':'${i%6+1}','time':['05H21M','12H40M','02H15M'][i%3]});@override Widget build(BuildContext c)=>Scaffold(backgroundColor:_agencyBg,appBar:_agencyBar(c,'Member Active Days'),body:Column(children:[Container(color:_agencyPink,padding:const EdgeInsets.all(15),alignment:Alignment.centerRight,child:DropdownButton<String>(value:range,underline:const SizedBox(),dropdownColor:_agencyPurple,items:['Today','This Week','This Month','Last 7 Days','Last 30 Days'].map((v)=>DropdownMenuItem(value:v,child:Text(v,style:const TextStyle(color:Colors.white)))).toList(),onChanged:(v)=>setState(()=>range=v!))),Container(color:Colors.white,padding:const EdgeInsets.all(15),child:const Row(children:[Expanded(child:Text('Anchor',textAlign:TextAlign.center)),Expanded(child:Text('Valid Days',textAlign:TextAlign.center)),Expanded(child:Text('Valid Time',textAlign:TextAlign.center))])),Expanded(child:ListView.builder(itemCount:rows.length,itemBuilder:(c,i){final r=rows[i];return Container(color:i.isEven?const Color(0xFFC8C8C8):Colors.white,padding:const EdgeInsets.all(14),child:Row(children:[Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(r['name']!),Text('ID: ${r['id']}')])),Expanded(child:Text(r['days']!,textAlign:TextAlign.center)),Expanded(child:Text(r['time']!,textAlign:TextAlign.center))]));}))]));}
+
+class AgencyDataQueryScreen extends StatefulWidget {final Map<String,dynamic> agency;const AgencyDataQueryScreen({super.key,required this.agency});@override State<AgencyDataQueryScreen> createState()=>_AgencyDataQueryScreenState();}
+class _AgencyDataQueryScreenState extends State<AgencyDataQueryScreen>{DateTime? start,end;bool show=false;Future<void> pick(bool first)async{final now=DateTime.now();final d=await showDatePicker(context:context,initialDate:first?(start??now):(end??now),firstDate:DateTime(now.year,now.month-2,1),lastDate:now);if(d!=null)setState((){if(first)start=d;else end=d;show=false;});}@override Widget build(BuildContext c)=>Scaffold(backgroundColor:_agencyBg,appBar:_agencyBar(c,'Agency Database'),body:ListView(children:[Container(color:Colors.white,padding:const EdgeInsets.all(20),child:Column(children:[Container(width:double.infinity,padding:const EdgeInsets.all(18),decoration:BoxDecoration(color:const Color(0xFF00D8D0),borderRadius:BorderRadius.circular(8)),child:const Text('Only the data of the past two months can be queried',textAlign:TextAlign.center,style:TextStyle(fontSize:17))),const SizedBox(height:25),_date('Time of Start',start,()=>pick(true)),const SizedBox(height:15),_date('End Time',end,()=>pick(false)),const SizedBox(height:20),_agencyBtn('Get Data',(){if(start==null||end==null||end!.isBefore(start!)){_agencyToast(c,'Please select a valid date range.');return;}if(start!.isBefore(DateTime.now().subtract(const Duration(days:62)))){_agencyToast(c,'Only last two months are available to agency owners.');return;}setState(()=>show=true);})])),if(show)Container(color:Colors.white,margin:const EdgeInsets.only(top:24),padding:const EdgeInsets.all(20),child:Column(children:[const Text('Search Results',style:TextStyle(fontSize:24,fontWeight:FontWeight.bold)),const Text('13347.5',style:TextStyle(fontSize:30,fontWeight:FontWeight.bold)),const Text('Coins'),const Divider(),...List.generate(5,(i)=>ListTile(title:Text(['Hori ♛','Mindo Star','Royal Host','Luna','Ayesha'][i]),subtitle:Text('ID: ${179121+i}'),trailing:Text(['2292.3','3100','2750','2900','2305.2'][i])))]))]));}
+Widget _date(String label,DateTime? d,VoidCallback tap)=>Row(children:[Expanded(child:Text(label,style:const TextStyle(fontSize:17))),InkWell(onTap:tap,child:Container(width:185,padding:const EdgeInsets.all(14),decoration:BoxDecoration(color:_agencyBg,borderRadius:BorderRadius.circular(28)),child:Text(d==null?'Select date':'${d.year}-${d.month.toString().padLeft(2,'0')}-${d.day.toString().padLeft(2,'0')}')))]);
+
+class AgencyLeaveRequestsScreen extends StatefulWidget {final Map<String,dynamic> agency;const AgencyLeaveRequestsScreen({super.key,required this.agency});@override State<AgencyLeaveRequestsScreen> createState()=>_AgencyLeaveRequestsScreenState();}
+class _AgencyLeaveRequestsScreenState extends State<AgencyLeaveRequestsScreen>{final rows=List.generate(5,(i)=>{'name':['Hori ♛','Mindo Star','Royal Host','Luna','Ayesha'][i],'id':['179121','284512','391820','451209','562310'][i]});void decide(int i,bool ok){setState(()=>rows.removeAt(i));_agencyToast(context,ok?'Agency leave approved (demo).':'Agency leave rejected (demo).');}@override Widget build(BuildContext c)=>Scaffold(backgroundColor:_agencyBg,appBar:_agencyBar(c,'Member Leave Requests'),body:ListView.builder(itemCount:rows.length,itemBuilder:(c,i){final r=rows[i];return Container(color:Colors.white,margin:const EdgeInsets.only(bottom:8),padding:const EdgeInsets.all(14),child:Row(children:[const CircleAvatar(radius:30,child:Icon(Icons.person)),const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(r['name']!,style:const TextStyle(fontSize:18)),Text('ID: ${r['id']}')])),_agencyBtn('Agree',()=>decide(i,true)),IconButton(onPressed:()=>decide(i,false),icon:const Icon(Icons.close,color:_agencyPink,size:30))]));}));}
+
+
+class AgencyPublicDetailScreen extends StatelessWidget {
+  final Map<String,dynamic> agency;
+  const AgencyPublicDetailScreen({super.key,required this.agency});
+  @override Widget build(BuildContext c)=>Scaffold(backgroundColor:_agencyBg,appBar:_agencyBar(c,'Agency'),body:Center(child:Container(margin:const EdgeInsets.all(24),padding:const EdgeInsets.all(24),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(22),boxShadow:const [BoxShadow(color:Color(0x22000000),blurRadius:12)]),child:Column(mainAxisSize:MainAxisSize.min,children:[CircleAvatar(radius: 60,backgroundColor:const Color(0xFFFCE3F1),backgroundImage:agency['dp'] is String?FileImage(File(agency['dp'])):null,child:agency['dp']==null?const Icon(Icons.business,size:55,color:_agencyPurple):null),const SizedBox(height:18),Text('${agency['name']}',style:const TextStyle(fontSize:24,fontWeight:FontWeight.bold)),const SizedBox(height:8),Text('${agency['flag']??'🌐'}  ${agency['country']}'),Text('Agency ID: ${agency['uid']}'),Text('Members: ${agency['members']}'),const SizedBox(height:24),SizedBox(width:double.infinity,child:_agencyBtn('Join',()=>_agencyToast(c,'Joining request sent to agency owner. Pending requests expire after the Main Admin configured duration (default 24 hours).'))),const SizedBox(height:8),const Text('One account can join only one agency.',style:TextStyle(color:Colors.grey))]))));
 }
