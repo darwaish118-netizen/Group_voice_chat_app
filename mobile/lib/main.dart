@@ -307,6 +307,22 @@ Future<Map<String, dynamic>> createRoom(
     return _handleResponse(response);
   }
 
+  Future<Map<String, dynamic>> getLevelProgress(String token) async {
+    final response = await http.get(
+      Uri.parse('$apiBaseUrl/api/levels/me'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    return _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> getLevelConfig(String token) async {
+    final response = await http.get(
+      Uri.parse('$apiBaseUrl/api/levels/config'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    return _handleResponse(response);
+  }
+
   Map<String, dynamic> _handleResponse(
     http.Response response,
   ) {
@@ -3224,18 +3240,31 @@ double _sinWheel(double radians) => math.sin(radians);
 
   Widget statItem(
     String value,
-    String label,
-  ) {
+    String label, {
+    String? iconUrl,
+  }) {
     return Expanded(
       child: Column(
         children: [
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.bold,
-                color: Color(0xFFFFD34D),
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (iconUrl != null && iconUrl.isNotEmpty)
+                ClipOval(child: Image.network(iconUrl, width: 19, height: 19, fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const Icon(Icons.workspace_premium, color: Color(0xFFFFD34D), size: 18)))
+              else
+                const Icon(Icons.workspace_premium, color: Color(0xFFFFD34D), size: 18),
+              const SizedBox(width: 3),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFFFFD34D),
+                ),
+              ),
+            ],
           ),
           const SizedBox(
             height: 4,
@@ -3546,13 +3575,13 @@ Card(
     ),
     child: Row(
       children: [
-        statItem('Lv.${user?['level'] ?? 1}', 'Wealth Level'),
+        statItem('Lv.${user?['wealth_level'] ?? user?['level'] ?? 1}', 'Wealth Level', iconUrl: user?['wealth_level_icon_url']?.toString()),
         Container(
           width: 1,
           height: 35,
           color: Colors.white24,
         ),
-        statItem('Lv.1', 'Charm Level'),
+        statItem('Lv.${user?['charm_level'] ?? 1}', 'Charm Level', iconUrl: user?['charm_level_icon_url']?.toString()),
         Container(
           width: 1,
           height: 35,
@@ -3818,6 +3847,10 @@ LayoutBuilder(
               Navigator.push(context, MaterialPageRoute(
                 builder: (_) => const MindoHonorScreen(),
               ));
+            } else if (title == 'Wealth Level') {
+              Navigator.push(context, MaterialPageRoute(
+                builder: (_) => MindoWealthLevelScreen(token: widget.token),
+              ));
             } else {
               openComingSoon(title);
             }
@@ -4035,6 +4068,252 @@ const SizedBox(height: 16),
 // and transfers will be connected to the backend after restore.
 // ============================================================
 
+
+// ============================================================
+// WEALTH / CHARM LEVEL CENTER
+// ============================================================
+
+class MindoWealthLevelScreen extends StatefulWidget {
+  final String token;
+  const MindoWealthLevelScreen({super.key, required this.token});
+
+  @override
+  State<MindoWealthLevelScreen> createState() => _MindoWealthLevelScreenState();
+}
+
+class _MindoWealthLevelScreenState extends State<MindoWealthLevelScreen> {
+  int _tab = 0;
+  bool _loading = true;
+  String? _error;
+  Map<String, dynamic> _progress = {};
+  List<dynamic> _config = [];
+
+  static const Color _purple = Color(0xFF9B35E8);
+  static const Color _pink = Color(0xFFE66BFF);
+  static const Color _gold = Color(0xFFFFD27A);
+  static const Color _background = Color(0xFF100319);
+
+  static const List<Map<String, dynamic>> _tiers = [
+    {'label': '1–9', 'level': 1, 'color': Color(0xFF19C6C8)},
+    {'label': '10–19', 'level': 10, 'color': Color(0xFFFFC928)},
+    {'label': '20–29', 'level': 20, 'color': Color(0xFFFFA31A)},
+    {'label': '30–39', 'level': 30, 'color': Color(0xFF159DFF)},
+    {'label': '40–49', 'level': 40, 'color': Color(0xFF2875E8)},
+    {'label': '50–59', 'level': 50, 'color': Color(0xFFFF654B)},
+    {'label': '60–69', 'level': 60, 'color': Color(0xFFE83C55)},
+    {'label': '70–79', 'level': 70, 'color': Color(0xFFD93664)},
+    {'label': '80–89', 'level': 80, 'color': Color(0xFFFF477D)},
+    {'label': '90–99', 'level': 90, 'color': Color(0xFF56D7E8)},
+    {'label': '100–110', 'level': 100, 'color': Color(0xFFFFC33B)},
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLevels();
+  }
+
+  Future<void> _loadLevels() async {
+    if (mounted) setState(() { _loading = true; _error = null; });
+    try {
+      final results = await Future.wait([
+        api.getLevelProgress(widget.token),
+        api.getLevelConfig(widget.token),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _progress = Map<String, dynamic>.from(results[0]['levels'] ?? {});
+        _config = List<dynamic>.from(results[1]['levels'] ?? []);
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = 'Level information is temporarily unavailable. It will load when the server is online.';
+      });
+    }
+  }
+
+  Map<String, dynamic> get _current {
+    final key = _tab == 0 ? 'wealth' : 'charm';
+    final raw = _progress[key];
+    return raw is Map ? Map<String, dynamic>.from(raw) : <String, dynamic>{};
+  }
+
+  String get _type => _tab == 0 ? 'wealth' : 'charm';
+  String get _title => _tab == 0 ? 'Wealth Level' : 'Charm Level';
+  int _number(dynamic value, [int fallback = 0]) => value is num ? value.toInt() : int.tryParse('$value') ?? fallback;
+  String _format(dynamic value) {
+    final number = _number(value);
+    return number.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => ',');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final level = _number(_current['level'], 1).clamp(1, 110).toInt();
+    final value = _number(_current['value']);
+    final nextLevel = _current['next_level'] == null ? null : _number(_current['next_level']);
+    final remaining = _current['remaining'] == null ? null : _number(_current['remaining']);
+    final progress = (_current['progress'] is num ? (_current['progress'] as num).toDouble() : 0.0).clamp(0.0, 1.0).toDouble();
+
+    return Scaffold(
+      backgroundColor: _background,
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF16051F),
+        elevation: 0,
+        centerTitle: true,
+        leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new, color: _pink), onPressed: () => Navigator.pop(context)),
+        title: Text(_title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+        actions: [IconButton(onPressed: _loadLevels, icon: const Icon(Icons.refresh, color: Colors.white70))],
+      ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFF170022), Color(0xFF09010F), Color(0xFF21002D)]),
+        ),
+        child: Column(children: [
+          Row(children: [
+            _tabButton('Wealth Level', 0),
+            _tabButton('Charm Level', 1),
+          ]),
+          Expanded(
+            child: RefreshIndicator(
+              color: _pink,
+              onRefresh: _loadLevels,
+              child: ListView(padding: const EdgeInsets.fromLTRB(16, 16, 16, 26), children: [
+                _progressCard(level, value, nextLevel, remaining, progress),
+                if (_error != null) ...[
+                  const SizedBox(height: 10),
+                  Text(_error!, style: const TextStyle(color: Colors.orangeAccent, fontSize: 12), textAlign: TextAlign.center),
+                ],
+                const SizedBox(height: 18),
+                _descriptionCard(),
+                const SizedBox(height: 18),
+                _tierTable(level),
+                if (_loading) const Padding(padding: EdgeInsets.all(18), child: Center(child: CircularProgressIndicator(color: _pink))),
+              ]),
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
+
+  Widget _tabButton(String label, int index) {
+    final selected = _tab == index;
+    return Expanded(child: InkWell(
+      onTap: () => setState(() => _tab = index),
+      child: Container(height: 58, alignment: Alignment.center,
+        decoration: BoxDecoration(border: Border(bottom: BorderSide(color: selected ? _pink : Colors.transparent, width: 2.5))),
+        child: Text(label, style: TextStyle(color: selected ? Colors.white : Colors.white54, fontSize: 16, fontWeight: selected ? FontWeight.w700 : FontWeight.w400)),
+      ),
+    ));
+  }
+
+  Widget _progressCard(int level, int value, int? nextLevel, int? remaining, double progress) {
+    final iconUrl = _current['icon_url']?.toString();
+    return Container(
+      padding: const EdgeInsets.fromLTRB(18, 20, 18, 22),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(26),
+        gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF7900B9), Color(0xFF310052), Color(0xFF160020)]),
+        border: Border.all(color: const Color(0xFFB54AFF).withOpacity(.65)),
+        boxShadow: [BoxShadow(color: _purple.withOpacity(.22), blurRadius: 20, spreadRadius: 2)],
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Container(width: 76, height: 76, decoration: BoxDecoration(shape: BoxShape.circle, color: const Color(0xFFFFE8C2), border: Border.all(color: _gold, width: 2)), child: const Center(child: Text('😺', style: TextStyle(fontSize: 42)))),
+          const SizedBox(width: 14),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [Text('LV.$level', style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)), const SizedBox(width: 9), _levelPill(level, iconUrl)],),
+            const SizedBox(height: 7),
+            Text('${_tab == 0 ? 'Wealth' : 'Charm'} Value: ${_format(value)}', style: const TextStyle(color: Color(0xFFE8B7FF), fontSize: 16, fontWeight: FontWeight.w500)),
+          ])),
+        ]),
+        const SizedBox(height: 26),
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Text('LV.$level', style: const TextStyle(color: Color(0xFFE9C5FF), fontSize: 14)),
+          Text(nextLevel == null ? 'MAX / CONFIG PENDING' : 'LV.$nextLevel', style: const TextStyle(color: Color(0xFFE9C5FF), fontSize: 14)),
+        ]),
+        const SizedBox(height: 9),
+        ClipRRect(borderRadius: BorderRadius.circular(20), child: LinearProgressIndicator(value: progress, minHeight: 11, backgroundColor: Colors.white, valueColor: const AlwaysStoppedAnimation<Color>(_pink))),
+        const SizedBox(height: 11),
+        Center(child: Text(remaining == null ? 'Next level threshold will be set by Admin' : '${_format(remaining)} coins required for upgrade', style: const TextStyle(color: Color(0xFFE8B7FF), fontSize: 14), textAlign: TextAlign.center)),
+      ]),
+    );
+  }
+
+  Widget _levelPill(int level, String? iconUrl) {
+    final tier = _tiers.lastWhere((t) => level >= (t['level'] as int), orElse: () => _tiers.first);
+    final color = tier['color'] as Color;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(18), gradient: LinearGradient(colors: [color.withOpacity(.95), color.withOpacity(.55)]), border: Border.all(color: Colors.white70, width: .8)),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        if (iconUrl != null && iconUrl.isNotEmpty) ClipOval(child: Image.network(iconUrl, width: 23, height: 23, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.workspace_premium, color: Colors.white, size: 21)))
+        else const Icon(Icons.workspace_premium, color: Colors.white, size: 21),
+        const SizedBox(width: 5), Text('$level', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+      ]),
+    );
+  }
+
+  Widget _descriptionCard() {
+    final description = _tab == 0
+      ? 'Wealth Level grows when you send gold-coin gifts. Every eligible coin spent on gifts adds to your Wealth Value. Your level badge updates automatically, and higher levels can unlock more dazzling room-entry effects.'
+      : 'Charm Level grows when you receive gold-coin gifts. Every eligible coin received adds to your Charm Value. Your level badge updates automatically as your received-gift total increases.';
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(color: const Color(0xFF21002E).withOpacity(.94), borderRadius: BorderRadius.circular(22), border: Border.all(color: const Color(0xFF7B25B4).withOpacity(.7))),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [const Icon(Icons.workspace_premium, color: _pink, size: 22), const SizedBox(width: 7), Text('$_title Description', style: const TextStyle(color: Color(0xFFE5A5FF), fontSize: 18, fontWeight: FontWeight.w600))]),
+        const SizedBox(height: 12),
+        Text(description, style: const TextStyle(color: Color(0xFFE4B9F5), fontSize: 15, height: 1.55)),
+        if (_tab == 0) ...[
+          const SizedBox(height: 10),
+          const Text('Higher Wealth Levels may unlock upgraded room-entry special effects.', style: TextStyle(color: Color(0xFFE4B9F5), fontSize: 14, height: 1.45)),
+        ],
+      ]),
+    );
+  }
+
+  Widget _tierTable(int currentLevel) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 15, 12, 12),
+      decoration: BoxDecoration(color: const Color(0xFF1A0328), borderRadius: BorderRadius.circular(24), border: Border.all(color: const Color(0xFF9B45D5), width: 1.3)),
+      child: Column(children: [
+        const Padding(padding: EdgeInsets.fromLTRB(12, 5, 12, 15), child: Row(children: [Expanded(child: Text('Level', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFFEAC7FF), fontSize: 17, fontWeight: FontWeight.w600))), Expanded(child: Text('Icon', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFFEAC7FF), fontSize: 17, fontWeight: FontWeight.w600)))])),
+        for (int i = 0; i < _tiers.length; i++) ...[
+          Divider(height: 1, color: const Color(0xFF71349B).withOpacity(.45)),
+          _tierRow(_tiers[i], currentLevel),
+        ],
+      ]),
+    );
+  }
+
+  Widget _tierRow(Map<String, dynamic> tier, int currentLevel) {
+    final firstLevel = tier['level'] as int;
+    final configRows = _config.where((item) => item is Map && item['level_type'] == _type && _number(item['level_number']) == firstLevel).toList();
+    final iconUrl = configRows.isNotEmpty ? configRows.first['icon_url']?.toString() : null;
+    final color = tier['color'] as Color;
+    final isCurrentTier = currentLevel >= firstLevel && (firstLevel == 100 || currentLevel < firstLevel + 10);
+    return Container(
+      color: isCurrentTier ? _purple.withOpacity(.12) : Colors.transparent,
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+      child: Row(children: [
+        Expanded(child: Text(tier['label'].toString(), textAlign: TextAlign.center, style: TextStyle(color: isCurrentTier ? Colors.white : const Color(0xFFE7C8F6), fontSize: 16, fontWeight: isCurrentTier ? FontWeight.bold : FontWeight.normal))),
+        Expanded(child: Center(child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(18), gradient: LinearGradient(colors: [color, color.withOpacity(.65)]), border: Border.all(color: Colors.white54, width: .7)),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            if (iconUrl != null && iconUrl.isNotEmpty) ClipOval(child: Image.network(iconUrl, width: 24, height: 24, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.workspace_premium, color: Colors.white, size: 23)))
+            else const Icon(Icons.workspace_premium, color: Colors.white, size: 23),
+            const SizedBox(width: 7), Text('$firstLevel', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+          ]),
+        ))),
+      ]),
+    );
+  }
+}
 
 // ============================================================
 // HONOR / BADGE CENTER
@@ -6558,6 +6837,27 @@ void initState() {
   super.initState();
   loadRoomMembers();
 }
+  Widget _roomLevelBadge(String prefix, dynamic rawLevel, {String? iconUrl}) {
+    final level = rawLevel is num ? rawLevel.toInt() : int.tryParse('$rawLevel') ?? 1;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+      decoration: BoxDecoration(
+        color: const Color(0xFF4B176B),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFFFD36A), width: .6),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        if (iconUrl != null && iconUrl.isNotEmpty)
+          ClipOval(child: Image.network(iconUrl, width: 11, height: 11, fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => const Icon(Icons.workspace_premium, size: 10, color: Color(0xFFFFD36A))))
+        else
+          const Icon(Icons.workspace_premium, size: 10, color: Color(0xFFFFD36A)),
+        const SizedBox(width: 2),
+        Text('$prefix$level', style: const TextStyle(color: Color(0xFFFFE2A0), fontSize: 8, fontWeight: FontWeight.bold)),
+      ]),
+    );
+  }
+
   @override
   Widget build(
     BuildContext context,
@@ -6928,6 +7228,14 @@ child: Column(
         fontSize: 11,
       ),
     ),
+    if (seatMembers[index + 1] != null) ...[
+      const SizedBox(height: 3),
+      Row(mainAxisSize: MainAxisSize.min, children: [
+        _roomLevelBadge('W', seatMembers[index + 1]?['wealth_level'], iconUrl: seatMembers[index + 1]?['wealth_level_icon_url']?.toString()),
+        const SizedBox(width: 3),
+        _roomLevelBadge('C', seatMembers[index + 1]?['charm_level'], iconUrl: seatMembers[index + 1]?['charm_level_icon_url']?.toString()),
+      ]),
+    ],
   ],
 ),
 );
