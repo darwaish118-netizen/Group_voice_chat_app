@@ -3855,10 +3855,6 @@ LayoutBuilder(
               Navigator.push(context, MaterialPageRoute(
                 builder: (_) => const AgencyDirectoryScreen(),
               ));
-            } else if (title == 'My Income') {
-              Navigator.push(context, MaterialPageRoute(
-                builder: (_) => const HostMyIncomeScreen(),
-              ));
             } else {
               openComingSoon(title);
             }
@@ -7914,7 +7910,7 @@ class AgencyOwnerDashboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final pending = agency['status'] == 'Pending';
     final items = ['Member Request', 'Member Income', 'Member Invite', 'Member active days', 'Agency data query', 'Agency Leave Request'];
-    final icons = [Icons.mark_email_unread, Icons.database, Icons.person_add_alt_1, Icons.calendar_month, Icons.storage, Icons.logout];
+    final icons = [Icons.mark_email_unread, Icons.monetization_on, Icons.person_add_alt_1, Icons.calendar_month, Icons.storage, Icons.logout];
     return Scaffold(
       backgroundColor: const Color(0xFFF3F2F7),
       appBar: AppBar(backgroundColor: Colors.white, elevation: 0, leading: IconButton(icon: const Icon(Icons.arrow_back, color: Color(0xFFFF1685)), onPressed: () => Navigator.pop(context)), centerTitle: true, title: const Text('Agency', style: TextStyle(color: Colors.black, fontWeight: FontWeight.w700))),
@@ -7935,106 +7931,7 @@ class AgencyOwnerDashboardScreen extends StatelessWidget {
             _ => AgencyLeaveRequestsScreen(agency: agency),
           };
           Navigator.push(context, MaterialPageRoute(builder: (_) => page));
-        }))),
-      ]),
-    );
-  }
-}
-
-// Host My Income screen. UI/demo data only; live income and leave requests
-// will be connected to the backend after the Flutter workflow is complete.
-class HostMyIncomeScreen extends StatefulWidget {
-  const HostMyIncomeScreen({super.key});
-  @override
-  State<HostMyIncomeScreen> createState() => _HostMyIncomeScreenState();
-}
-
-class _HostMyIncomeScreenState extends State<HostMyIncomeScreen> {
-  DateTime selectedMonth = DateTime.now();
-  final int totalCoins = 133475;
-  final int totalActiveDays = 12;
-  final int targetCoins = 163475;
-  final double surplusSalary = 150.00;
-  bool leaveRequestSubmitted = false;
-
-  int get remainingCoins => math.max(0, targetCoins - totalCoins);
-  String get monthLabel => '${selectedMonth.year}-${selectedMonth.month.toString().padLeft(2, '0')}';
-
-  final List<Map<String, String>> records = const [
-    {'date':'2026-10-29','duration':'05H 21M','coins':'12,500','days':'1'},
-    {'date':'2026-10-28','duration':'04H 12M','coins':'18,200','days':'1'},
-    {'date':'2026-10-27','duration':'06H 05M','coins':'9,750','days':'1'},
-    {'date':'2026-10-26','duration':'03H 45M','coins':'15,000','days':'1'},
-    {'date':'2026-10-25','duration':'07H 10M','coins':'21,300','days':'1'},
-    {'date':'2026-10-24','duration':'02H 55M','coins':'8,400','days':'1'},
-  ];
-
-  void _changeMonth(int delta) {
-    setState(() => selectedMonth = DateTime(selectedMonth.year, selectedMonth.month + delta, 1));
-  }
-
-  Future<void> _requestAgencyLeave() async {
-    if (leaveRequestSubmitted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Your agency leave request is already pending.')));
-      return;
-    }
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Leave Agency?', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold)),
-        content: const Text('If you leave the agency, your target progress may be lost. Do you want to send an agency leave request?', textAlign: TextAlign.center),
-        actionsAlignment: MainAxisAlignment.center,
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('CANCEL')),
-          ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE83E91), foregroundColor: Colors.white), onPressed: () => Navigator.pop(dialogContext, true), child: const Text('CONFIRM LEAVE')),
-        ],
-      ),
-    );
-    if (confirm == true && mounted) {
-      setState(() => leaveRequestSubmitted = true);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Agency leave request submitted. Your membership and target remain unchanged until the owner approves.')));
-    }
-  }
-
-  Widget _mCoin({double size = 18}) => Container(
-    width: size, height: size,
-    decoration: const BoxDecoration(shape: BoxShape.circle, gradient: LinearGradient(colors: [Color(0xFFFFD66B), Color(0xFFFFA51F)])),
-    alignment: Alignment.center,
-    child: Text('M', style: TextStyle(color: Colors.white, fontSize: size * .58, fontWeight: FontWeight.w900)),
-  );
-
-  Widget _summaryCard(String label, String value, {bool coin = false}) => Expanded(
-    child: Container(padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 8), decoration: BoxDecoration(color: Colors.white.withOpacity(.18), borderRadius: BorderRadius.circular(14)), child: Column(children: [
-      Text(label, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
-      const SizedBox(height: 7),
-      Row(mainAxisAlignment: MainAxisAlignment.center, children: [if (coin) ...[_mCoin(size: 20), const SizedBox(width: 5)], Flexible(child: Text(value, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.bold)))])
-    ])),
-  );
-
-  @override
-  Widget build(BuildContext context) {
-    final progress = targetCoins <= 0 ? 0.0 : (totalCoins / targetCoins).clamp(0.0, 1.0);
-    return Scaffold(
-      backgroundColor: const Color(0xFFF4F3F7),
-      appBar: AppBar(
-        backgroundColor: Colors.white, elevation: 0,
-        leading: IconButton(icon: const Icon(Icons.arrow_back, color: Color(0xFFE83E91)), onPressed: () => Navigator.pop(context)),
-        title: const Text('My Income', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)), centerTitle: true,
-        actions: [Padding(padding: const EdgeInsets.only(right: 10), child: Center(child: TextButton(onPressed: _requestAgencyLeave, style: TextButton.styleFrom(backgroundColor: const Color(0xFFFFE4F0), foregroundColor: const Color(0xFFE83E91), padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8)), child: Text(leaveRequestSubmitted ? 'Request Sent' : 'Agency Leave', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)))))],
-      ),
-      body: ListView(padding: const EdgeInsets.only(bottom: 24), children: [
-        Container(padding: const EdgeInsets.fromLTRB(16, 14, 16, 22), decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFFFF6BAE), Color(0xFFE83E91)]), borderRadius: BorderRadius.vertical(bottom: Radius.circular(26))), child: Column(children: [
-          Row(mainAxisAlignment: MainAxisAlignment.center, children: [IconButton(onPressed: () => _changeMonth(-1), icon: const Icon(Icons.chevron_left, color: Colors.white)), Text(monthLabel, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)), IconButton(onPressed: () => _changeMonth(1), icon: const Icon(Icons.chevron_right, color: Colors.white))]),
-          Container(width: double.infinity, padding: const EdgeInsets.all(15), decoration: BoxDecoration(color: Colors.white.withOpacity(.16), borderRadius: BorderRadius.circular(18), border: Border.all(color: Colors.white.withOpacity(.3))), child: Column(children: [const Text('Surplus Salary', style: TextStyle(color: Colors.white, fontSize: 17)), const SizedBox(height: 5), Text('\$${surplusSalary.toStringAsFixed(2)}', style: const TextStyle(color: Colors.white, fontSize: 31, fontWeight: FontWeight.w800)), const SizedBox(height: 14), Row(children: [_summaryCard('Total Coins', totalCoins.toString(), coin: true), const SizedBox(width: 10), _summaryCard('Total Active Days', '$totalActiveDays Days')])])),
-        ])),
-        Container(margin: const EdgeInsets.fromLTRB(14, 16, 14, 12), padding: const EdgeInsets.all(15), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), boxShadow: const [BoxShadow(color: Color(0x11000000), blurRadius: 7)]), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('Achieve the target to need coins:', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF34313A))),
-          const SizedBox(height: 9), Row(children: [_mCoin(size: 23), const SizedBox(width: 8), Text(remainingCoins.toString(), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: Color(0xFFE83E91))), const Spacer(), Text('${(progress * 100).toStringAsFixed(0)}%', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF77717D)))]),
-          const SizedBox(height: 9), ClipRRect(borderRadius: BorderRadius.circular(20), child: LinearProgressIndicator(value: progress, minHeight: 8, backgroundColor: const Color(0xFFF4DCE8), valueColor: const AlwaysStoppedAnimation(Color(0xFFE83E91)))),
-        ])),
-        Container(color: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 5), child: const Row(children: [Expanded(flex: 3, child: Text('DATE', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))), Expanded(flex: 2, child: Text('DURATION', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))), Expanded(flex: 2, child: Text('COINS', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))), Expanded(flex: 2, child: Text('VALID DAYS', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10)))])),
-        ...records.map((r) => Container(color: records.indexOf(r).isEven ? const Color(0xFFE8E7EA) : Colors.white, padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 5), child: Row(children: [Expanded(flex: 3, child: Text(r['date']!, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12))), Expanded(flex: 2, child: Text(r['duration']!, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12))), Expanded(flex: 2, child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [_mCoin(size: 16), const SizedBox(width: 4), Flexible(child: Text(r['coins']!, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12)))])), Expanded(flex: 2, child: Text(r['days']!, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12)))]))),
+        })),
       ]),
     );
   }
