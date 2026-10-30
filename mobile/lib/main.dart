@@ -7910,7 +7910,7 @@ class AgencyOwnerDashboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final pending = agency['status'] == 'Pending';
     final items = ['Member Request', 'Member Income', 'Member Invite', 'Member active days', 'Agency data query', 'Agency Leave Request'];
-    final icons = [Icons.mark_email_unread, Icons.database, Icons.person_add_alt_1, Icons.calendar_month, Icons.storage, Icons.logout];
+    final icons = [Icons.mark_email_unread, Icons.storage, Icons.person_add_alt_1, Icons.calendar_month, Icons.storage, Icons.logout];
     return Scaffold(
       backgroundColor: const Color(0xFFF3F2F7),
       appBar: AppBar(backgroundColor: Colors.white, elevation: 0, leading: IconButton(icon: const Icon(Icons.arrow_back, color: Color(0xFFFF1685)), onPressed: () => Navigator.pop(context)), centerTitle: true, title: const Text('Agency', style: TextStyle(color: Colors.black, fontWeight: FontWeight.w700))),
@@ -7931,7 +7931,7 @@ class AgencyOwnerDashboardScreen extends StatelessWidget {
             _ => AgencyLeaveRequestsScreen(agency: agency),
           };
           Navigator.push(context, MaterialPageRoute(builder: (_) => page));
-        }))),
+        })), 
       ]),
     );
   }
