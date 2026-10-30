@@ -3043,6 +3043,149 @@ class _DiamondHistoryScreenState
 
 
 // ============================================================
+// MINDO SETTINGS + FEEDBACK
+// UI is ready locally; server persistence/reply APIs are connected
+// in the backend integration phase.
+// ============================================================
+
+const Color _mindoSettingsBg = Color(0xFFF7F5FA);
+const Color _mindoPink = Color(0xFFE85D9E);
+const Color _mindoPurple = Color(0xFF7040B8);
+
+class MindoSettingsScreen extends StatelessWidget {
+  final String token;
+  final Map<String, dynamic> user;
+  const MindoSettingsScreen({super.key, required this.token, required this.user});
+
+  void _open(BuildContext context, Widget page) => Navigator.push(
+    context, MaterialPageRoute(builder: (_) => page));
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = <(IconData, String, Widget)>[
+      (Icons.phone_android_rounded, 'Account', MindoAccountSettingsScreen(token: token, user: user)),
+      (Icons.cleaning_services_rounded, 'Clear Cache', const MindoClearCacheScreen()),
+      (Icons.block_rounded, 'Black List', MindoBlacklistScreen(token: token)),
+      (Icons.info_outline_rounded, 'About Us', const MindoAboutScreen()),
+      (Icons.description_outlined, 'User Agreement', const MindoLegalScreen(title: 'User Agreement', isPrivacy: false)),
+      (Icons.privacy_tip_outlined, 'Privacy Policy', const MindoLegalScreen(title: 'Privacy Policy', isPrivacy: true)),
+    ];
+    return Scaffold(
+      backgroundColor: _mindoSettingsBg,
+      appBar: AppBar(title: const Text('Settings', style: TextStyle(fontWeight: FontWeight.w700)), centerTitle: true,
+        backgroundColor: _mindoSettingsBg, foregroundColor: const Color(0xFF29233A), elevation: 0,
+        leading: IconButton(icon: const Icon(Icons.arrow_back, color: _mindoPink), onPressed: () => Navigator.pop(context))),
+      body: ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 28), children: [
+        Container(padding: const EdgeInsets.all(18), decoration: BoxDecoration(
+          gradient: const LinearGradient(colors: [Color(0xFFFFE7F1), Color(0xFFEDE5FF)]),
+          borderRadius: BorderRadius.circular(20)), child: const Row(children: [
+            Icon(Icons.settings_suggest_rounded, size: 38, color: _mindoPurple), SizedBox(width: 12),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('MINDO VOICE CHAT', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFF34264F))),
+              SizedBox(height: 3), Text('Manage your account and preferences', style: TextStyle(color: Color(0xFF746A83), fontSize: 12)),
+            ]))
+          ])),
+        const SizedBox(height: 18),
+        ...rows.map((r) => Container(margin: const EdgeInsets.only(bottom: 10), decoration: BoxDecoration(
+          color: Colors.white, borderRadius: BorderRadius.circular(15), boxShadow: const [BoxShadow(color: Color(0x0D3D245F), blurRadius: 10, offset: Offset(0, 3))]),
+          child: ListTile(contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+            leading: CircleAvatar(backgroundColor: const Color(0xFFFCEAF2), child: Icon(r.$1, color: _mindoPink)),
+            title: Text(r.$2, style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF332B40))),
+            trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFF9B91A7)),
+            onTap: () => _open(context, r.$3)))),
+      ]),
+    );
+  }
+}
+
+class MindoAccountSettingsScreen extends StatefulWidget {
+  final String token; final Map<String, dynamic> user;
+  const MindoAccountSettingsScreen({super.key, required this.token, required this.user});
+  @override State<MindoAccountSettingsScreen> createState() => _MindoAccountSettingsScreenState();
+}
+class _MindoAccountSettingsScreenState extends State<MindoAccountSettingsScreen> {
+  final phone = TextEditingController(); final password = TextEditingController();
+  final confirm = TextEditingController(); final oldPassword = TextEditingController();
+  final newPassword = TextEditingController(); final confirmNew = TextEditingController();
+  String countryCode = '+971'; String countryFlag = '🇦🇪';
+  bool googleBound = false, facebookBound = false;
+  @override void dispose() { phone.dispose(); password.dispose(); confirm.dispose(); oldPassword.dispose(); newPassword.dispose(); confirmNew.dispose(); super.dispose(); }
+  void notice(String text) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  Widget field(TextEditingController c, String hint, {bool obscure = false, TextInputType? type}) => Padding(padding: const EdgeInsets.only(bottom: 12), child: TextField(controller: c, obscureText: obscure, keyboardType: type, decoration: InputDecoration(hintText: hint, filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(13), borderSide: BorderSide.none), contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15))));
+  Widget section(String title, List<Widget> children) => Container(margin: const EdgeInsets.only(bottom: 14), padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(17)), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _mindoPurple)), const SizedBox(height: 14), ...children]));
+  @override Widget build(BuildContext context) => Scaffold(backgroundColor: _mindoSettingsBg, appBar: AppBar(title: const Text('Account'), backgroundColor: _mindoSettingsBg, foregroundColor: const Color(0xFF29233A), elevation: 0), body: ListView(padding: const EdgeInsets.all(16), children: [
+    section('Change Account Number', [Row(children: [DropdownButton<String>(value: countryCode, items: const [DropdownMenuItem(value: '+971', child: Text('🇦🇪 +971')), DropdownMenuItem(value: '+92', child: Text('🇵🇰 +92')), DropdownMenuItem(value: '+91', child: Text('🇮🇳 +91')), DropdownMenuItem(value: '+1', child: Text('🇺🇸 +1')), DropdownMenuItem(value: '+44', child: Text('🇬🇧 +44'))], onChanged: (v) => setState(() => countryCode = v ?? '+971')), const SizedBox(width: 8), Expanded(child: field(phone, 'New phone number', type: TextInputType.phone))]), field(password, 'Current password', obscure: true), field(confirm, 'Confirm password', obscure: true), _mindoAction('Save Number', () => notice('Phone change request is ready. OTP is temporarily disabled; server verification will be connected later.'))]),
+    section('Change Password', [Row(children: [DropdownButton<String>(value: countryCode, items: const [DropdownMenuItem(value: '+971', child: Text('🇦🇪 +971')), DropdownMenuItem(value: '+92', child: Text('🇵🇰 +92')), DropdownMenuItem(value: '+91', child: Text('🇮🇳 +91')), DropdownMenuItem(value: '+1', child: Text('🇺🇸 +1')), DropdownMenuItem(value: '+44', child: Text('🇬🇧 +44'))], onChanged: (v) => setState(() => countryCode = v ?? '+971')), const SizedBox(width: 8), Expanded(child: field(phone, 'Registered phone number', type: TextInputType.phone))]), field(oldPassword, 'Old password', obscure: true), field(newPassword, 'New password', obscure: true), field(confirmNew, 'Confirm new password', obscure: true), _mindoAction('Update Password', () => notice('Password update form ready; secure backend verification will be connected later.'))]),
+    section('Linked Accounts', [ListTile(contentPadding: EdgeInsets.zero, leading: const Icon(Icons.g_mobiledata, size: 32), title: const Text('Google'), subtitle: Text(googleBound ? 'Bound' : 'Not connected'), trailing: TextButton(onPressed: () => setState(() => googleBound = !googleBound), child: Text(googleBound ? 'Unlink' : 'Bind'))), const Divider(height: 1), ListTile(contentPadding: EdgeInsets.zero, leading: const Icon(Icons.facebook, color: Colors.blue, size: 28), title: const Text('Facebook'), subtitle: Text(facebookBound ? 'Bound' : 'Not connected'), trailing: TextButton(onPressed: () => setState(() => facebookBound = !facebookBound), child: Text(facebookBound ? 'Unlink' : 'Bind')))]),
+    const Text('Phone OTP is temporarily disabled. Account changes must be verified securely by the server.', style: TextStyle(color: Colors.black54, fontSize: 12)),
+  ]));
+}
+
+Widget _mindoAction(String label, VoidCallback onTap) => SizedBox(width: double.infinity, child: ElevatedButton(onPressed: onTap, style: ElevatedButton.styleFrom(backgroundColor: _mindoPurple, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13))), child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold))));
+
+class MindoClearCacheScreen extends StatelessWidget {
+  const MindoClearCacheScreen({super.key});
+  @override Widget build(BuildContext context) => Scaffold(backgroundColor: _mindoSettingsBg, appBar: AppBar(title: const Text('Clear Cache'), backgroundColor: _mindoSettingsBg, foregroundColor: const Color(0xFF29233A), elevation: 0), body: Center(child: Padding(padding: const EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.cleaning_services_rounded, size: 70, color: _mindoPurple), const SizedBox(height: 14), const Text('Clear temporary cache files', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)), const SizedBox(height: 8), const Text('Your login, wallet, coins, diamonds, gifts and messages will remain safe.', textAlign: TextAlign.center, style: TextStyle(color: Colors.black54)), const SizedBox(height: 22), _mindoAction('Clear Cache', () async { final yes = await showDialog<bool>(context: context, builder: (d) => AlertDialog(title: const Text('Clear Cache'), content: const Text('Are you sure to clear the cache?'), actions: [TextButton(onPressed: () => Navigator.pop(d, false), child: const Text('Cancel')), ElevatedButton(onPressed: () => Navigator.pop(d, true), child: const Text('Confirm'))])); if (yes == true && context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cache Cleared Successfully'))); })]))));
+}
+
+class MindoBlacklistScreen extends StatelessWidget {
+  final String token; const MindoBlacklistScreen({super.key, required this.token});
+  @override Widget build(BuildContext context) => Scaffold(backgroundColor: _mindoSettingsBg, appBar: AppBar(title: const Text('Black List'), backgroundColor: _mindoSettingsBg, foregroundColor: const Color(0xFF29233A), elevation: 0), body: ListView(padding: const EdgeInsets.all(16), children: [Container(padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(15)), child: const Text('Blocked users cannot visit your profile or send you private messages. Existing chat history is not deleted.')), const SizedBox(height: 12), ...List.generate(3, (i) => Card(color: Colors.white, child: ListTile(leading: const CircleAvatar(child: Icon(Icons.person)), title: Text(['Blocked User ${i+1}', 'Mindo Member ${i+2}', 'Voice User ${i+3}'][i]), subtitle: Text('User ID: ${179121+i}'), trailing: TextButton(onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Unblock action will sync with the server.'))), child: const Text('Unblock')))))]));
+}
+
+class MindoAboutScreen extends StatelessWidget {
+  const MindoAboutScreen({super.key});
+  @override Widget build(BuildContext context) => Scaffold(backgroundColor: _mindoSettingsBg, appBar: AppBar(title: const Text('About Us'), backgroundColor: _mindoSettingsBg, foregroundColor: const Color(0xFF29233A), elevation: 0), body: ListView(padding: const EdgeInsets.all(24), children: [const SizedBox(height: 20), Center(child: Container(width: 112, height: 112, decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFFEDE5FF)), child: const Icon(Icons.graphic_eq_rounded, size: 65, color: _mindoPurple))), const SizedBox(height: 18), const Center(child: Text('MINDO VOICE CHAT', style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold, color: Color(0xFF34264F)))), const SizedBox(height: 5), const Center(child: Text('Version 1.0.0', style: TextStyle(color: Colors.black54))), const SizedBox(height: 28), const Text('Meet the MINDO VOICE CHAT Family', textAlign: TextAlign.center, style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: _mindoPurple)), const SizedBox(height: 12), const Text('MINDO VOICE CHAT brings people together through live group voice rooms. Discover communities, meet new friends, share conversations and enjoy a welcoming social experience.', textAlign: TextAlign.center, style: TextStyle(height: 1.6, color: Color(0xFF655D70))), const SizedBox(height: 18), const Text('Connect globally. Share moments. Make new friends.', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF8B5BB5)))]));
+}
+
+class MindoLegalScreen extends StatelessWidget {
+  final String title; final bool isPrivacy;
+  const MindoLegalScreen({super.key, required this.title, required this.isPrivacy});
+  @override Widget build(BuildContext context) {
+    final sections = isPrivacy ? <String, String>{
+      'Information We Collect': 'We may process account details, profile information, user-submitted content, wallet and transaction records, and technical data needed to operate and secure the service.',
+      'How We Use Information': 'Information is used to provide accounts, voice rooms, chat, gifts, wallet services, support, safety, fraud prevention and service improvements.',
+      'Voice Rooms and Messages': 'Live audio is processed to deliver real-time communication. MINDO does not record or store voice-room audio in its database. Private messages are not routinely inspected; Main Admin access, when necessary, must have a stated reason and an audit record. Sub Admins have no default private-message access.',
+      'Safety and Moderation': 'We may review reported content and use automated checks for prohibited content and restricted words. Voice moderation may process speech transiently; audio recordings are not retained.',
+      'Sharing and Security': 'Information may be shared with essential service providers, authorized administrators when needed, or authorities where legally required. Reasonable safeguards are used, but no system can guarantee absolute security.',
+      'Retention and Account Closure': 'Self-service account deletion is not available. Exceptional account-closure requests may be reviewed by Main Admin. Records may be retained where needed for security, disputes, financial records or legal obligations.',
+      'Your Choices and Updates': 'You are responsible for keeping account details accurate. This policy may be updated as the app and applicable requirements change.',
+    } : <String, String>{
+      'Acceptance': 'By creating an account or using MINDO VOICE CHAT, you agree to these terms. If you do not agree, do not use the service.',
+      'Accounts': 'Keep your login details secure and provide accurate information. You are responsible for activity performed through your account.',
+      'Community Conduct': 'Do not harass, threaten, impersonate, exploit, or abuse other users. Nude, sexually explicit, vulgar, hateful or otherwise prohibited content is not allowed in profiles, rooms, messages or uploads.',
+      'Voice Rooms and Content': 'Respect room owners, moderators and other participants. Do not misuse voice, chat, profile or room features or attempt to bypass moderation.',
+      'Coins, Diamonds and Gifts': 'Virtual items are governed by the package, pricing and transaction rules displayed in the app. Do not attempt unauthorized top-ups, transfers, refunds or manipulation of balances.',
+      'Agencies and Hosts': 'Agency owners, hosts and agents must follow app rules and dashboard-configured targets, commissions and operational requirements.',
+      'Enforcement': 'MINDO may warn, restrict, suspend or terminate access for violations, abuse, fraud, security risks or legal requirements.',
+      'Changes and Availability': 'Features may change, be updated or become temporarily unavailable. Continued use after updated terms are published means you accept the revised terms.',
+    };
+    return Scaffold(backgroundColor: _mindoSettingsBg, appBar: AppBar(title: Text(title), backgroundColor: _mindoSettingsBg, foregroundColor: const Color(0xFF29233A), elevation: 0), body: ListView(padding: const EdgeInsets.all(18), children: [Text('MINDO VOICE CHAT', style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: _mindoPurple)), const SizedBox(height: 6), const Text('Please read this information carefully.', style: TextStyle(color: Colors.black54)), const SizedBox(height: 16), ...sections.entries.map((e) => Container(margin: const EdgeInsets.only(bottom: 12), padding: const EdgeInsets.all(15), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(e.key, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)), const SizedBox(height: 7), Text(e.value, style: const TextStyle(height: 1.5, color: Color(0xFF625B6B)))]))), const Text('These in-app drafts must be reviewed against the final technical implementation and applicable laws before publication.', style: TextStyle(fontSize: 11, color: Colors.black45))]));
+  }
+}
+
+class MindoFeedbackScreen extends StatefulWidget {
+  final String token; final Map<String, dynamic> user;
+  const MindoFeedbackScreen({super.key, required this.token, required this.user});
+  @override State<MindoFeedbackScreen> createState() => _MindoFeedbackScreenState();
+}
+class _MindoFeedbackScreenState extends State<MindoFeedbackScreen> {
+  final details = TextEditingController(); final whatsapp = TextEditingController();
+  String type = 'Suggestion'; String dialCode = '+971'; String flag = '🇦🇪';
+  XFile? screenshot; final List<Map<String, String>> submitted = [];
+  bool get canSubmit => details.text.trim().isNotEmpty;
+  @override void dispose() { details.dispose(); whatsapp.dispose(); super.dispose(); }
+  Future<void> chooseImage() async { try { final picker = ImagePicker(); final image = await picker.pickImage(source: ImageSource.gallery, imageQuality: 82); if (image != null) setState(() => screenshot = image); } catch (_) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Unable to select image.'))); } }
+  String get userId => '${widget.user['uid'] ?? widget.user['id'] ?? 'Your User ID'}';
+  void submit() { if (!canSubmit) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter feedback details.'))); return; }
+    final id = 'MFD-${DateTime.now().millisecondsSinceEpoch}';
+    setState(() { submitted.insert(0, {'id': id, 'type': type, 'details': details.text.trim(), 'status': 'Pending', 'reply': 'No admin reply yet', 'whatsapp': whatsapp.text.trim().isEmpty ? 'Not provided' : '$dialCode ${whatsapp.text.trim()}', 'date': DateTime.now().toString().substring(0, 16)}); details.clear(); whatsapp.clear(); screenshot = null; });
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Feedback submitted. Your MFD ID is $id')));
+  }
+  @override Widget build(BuildContext context) => DefaultTabController(length: 2, child: Scaffold(backgroundColor: _mindoSettingsBg, appBar: AppBar(title: const Text('Feedback'), backgroundColor: _mindoSettingsBg, foregroundColor: const Color(0xFF29233A), elevation: 0, bottom: const TabBar(labelColor: _mindoPurple, unselectedLabelColor: Colors.black54, indicatorColor: _mindoPink, tabs: [Tab(text: 'Send Feedback'), Tab(text: 'My Feedback')])), body: TabBarView(children: [ListView(padding: const EdgeInsets.all(16), children: [Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Feedback Type', style: TextStyle(fontWeight: FontWeight.bold)), const SizedBox(height: 9), DropdownButtonFormField<String>(value: type, decoration: InputDecoration(filled: true, fillColor: _mindoSettingsBg, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)), items: const ['Suggestion', 'Bug Report', 'Complaint', 'Other'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), onChanged: (v) => setState(() => type = v ?? 'Suggestion')), const SizedBox(height: 15), const Text('Feedback Details', style: TextStyle(fontWeight: FontWeight.bold)), const SizedBox(height: 8), TextField(controller: details, maxLines: 6, onChanged: (_) => setState(() {}), decoration: InputDecoration(hintText: 'Describe your feedback or problem...', filled: true, fillColor: _mindoSettingsBg, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none))), const SizedBox(height: 15), const Text('Screenshot (Optional)', style: TextStyle(fontWeight: FontWeight.bold)), const SizedBox(height: 8), OutlinedButton.icon(onPressed: chooseImage, icon: const Icon(Icons.add_photo_alternate_outlined), label: Text(screenshot == null ? 'Attach Screenshot' : 'Screenshot Selected')), if (screenshot != null) Padding(padding: const EdgeInsets.only(top: 5), child: Text(screenshot!.name, maxLines: 1, overflow: TextOverflow.ellipsis)), const SizedBox(height: 15), const Text('WhatsApp Number (Optional)', style: TextStyle(fontWeight: FontWeight.bold)), const SizedBox(height: 8), Row(children: [DropdownButton<String>(value: dialCode, items: const [DropdownMenuItem(value: '+971', child: Text('🇦🇪 +971')), DropdownMenuItem(value: '+92', child: Text('🇵🇰 +92')), DropdownMenuItem(value: '+91', child: Text('🇮🇳 +91')), DropdownMenuItem(value: '+1', child: Text('🇺🇸 +1')), DropdownMenuItem(value: '+44', child: Text('🇬🇧 +44'))], onChanged: (v) => setState(() => dialCode = v ?? '+971')), const SizedBox(width: 8), Expanded(child: TextField(controller: whatsapp, keyboardType: TextInputType.phone, decoration: InputDecoration(hintText: 'WhatsApp number', filled: true, fillColor: _mindoSettingsBg, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none))))]), const SizedBox(height: 12), Text('User ID: $userId', style: const TextStyle(color: Colors.black54, fontSize: 12)), const SizedBox(height: 14), _mindoAction('Submit Feedback', submit)])), const Padding(padding: EdgeInsets.only(top: 10), child: Text('WhatsApp number is optional. We will use it only if you provide it for follow-up.', textAlign: TextAlign.center, style: TextStyle(fontSize: 11, color: Colors.black54)))]), submitted.isEmpty ? const Center(child: Text('No feedback submitted yet.')) : ListView.builder(padding: const EdgeInsets.all(16), itemCount: submitted.length, itemBuilder: (context, i) { final f = submitted[i]; return Container(margin: const EdgeInsets.only(bottom: 12), padding: const EdgeInsets.all(15), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(15)), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Row(children: [Expanded(child: Text(f['type']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))), Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5), decoration: BoxDecoration(color: const Color(0xFFFFF0D9), borderRadius: BorderRadius.circular(20)), child: Text(f['status']!, style: const TextStyle(fontSize: 11, color: Color(0xFF9A641A))))]), const SizedBox(height: 8), SelectableText('MFD ID: ${f['id']}', style: const TextStyle(fontWeight: FontWeight.bold, color: _mindoPurple)), const SizedBox(height: 5), Text(f['details']!), const SizedBox(height: 7), Text('WhatsApp: ${f['whatsapp']}', style: const TextStyle(fontSize: 12, color: Colors.black54)), Text('Submitted: ${f['date']}', style: const TextStyle(fontSize: 11, color: Colors.black45)), const Divider(height: 20), const Text('Admin Reply', style: TextStyle(fontWeight: FontWeight.bold)), Text(f['reply']!, style: const TextStyle(color: Colors.black54))])); })])));
+}
+
+// ============================================================
 // PERSONAL PROFILE
 // ============================================================
 
@@ -3854,6 +3997,14 @@ LayoutBuilder(
             } else if (title == 'My Agency') {
               Navigator.push(context, MaterialPageRoute(
                 builder: (_) => const AgencyDirectoryScreen(),
+              ));
+            } else if (title == 'Settings') {
+              Navigator.push(context, MaterialPageRoute(
+                builder: (_) => MindoSettingsScreen(token: widget.token, user: user ?? const {}),
+              ));
+            } else if (title == 'Feedback') {
+              Navigator.push(context, MaterialPageRoute(
+                builder: (_) => MindoFeedbackScreen(token: widget.token, user: user ?? const {}),
               ));
             } else {
               openComingSoon(title);
