@@ -5228,449 +5228,264 @@ class _MindoMallScreenState extends State<MindoMallScreen> {
 class PublicProfileScreen extends StatelessWidget {
   final Map<String, dynamic> user;
 
-  const PublicProfileScreen({
-    super.key,
-    required this.user,
-  });
+  const PublicProfileScreen({super.key, required this.user});
 
-  void showMessage(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+  static const Color _pink = Color(0xFFF12D86);
+  static const Color _purple = Color(0xFFB95BE8);
+  static const Color _ink = Color(0xFF17151B);
+  static const Color _page = Color(0xFFF5F3F8);
+
+  String _text(List<String> keys, [String fallback = '']) {
+    for (final key in keys) {
+      final value = user[key];
+      if (value != null && value.toString().trim().isNotEmpty) {
+        return value.toString().trim();
+      }
+    }
+    return fallback;
   }
 
-  void showMoreMenu(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.flag_outlined),
-                title: const Text('Report'),
-                onTap: () {
-                  Navigator.pop(context);
-                  showReportReasons(context);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.block),
-                title: const Text('Blacklist'),
-                onTap: () {
-                  Navigator.pop(context);
-                  showBlacklistConfirmation(context);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.close),
-                title: const Text('Cancel'),
-                onTap: () => Navigator.pop(context),
-              ),
-            ],
-          ),
-        );
-      },
-    );
+  int _number(List<String> keys) {
+    for (final key in keys) {
+      final value = user[key];
+      if (value is num) return value.toInt();
+      final parsed = int.tryParse(value?.toString() ?? '');
+      if (parsed != null) return parsed;
+    }
+    return 0;
   }
 
-  void showReportReasons(BuildContext context) {
-    const reasons = [
-      'Politically Sensitive',
-      'Pornographic vulgarity',
-      'User Harassment',
-      'Country Disrespect',
-      'Religious Disrespect',
-      'Cancel',
-    ];
+  List<dynamic> _items(List<String> keys) {
+    for (final key in keys) {
+      final value = user[key];
+      if (value is List) return value;
+    }
+    return const [];
+  }
 
+  bool get _isAgencyOwner => user['is_current_user'] == true ||
+      user['is_me'] == true || user['is_agency_owner'] == true;
+
+  void _message(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _openCollection(BuildContext context, String title, List<dynamic> items,
+      {IconData emptyIcon = Icons.workspace_premium_rounded}) {
     showModalBottomSheet(
       context: context,
-      builder: (context) {
-        return SafeArea(
-          child: ListView(
-            shrinkWrap: true,
-            children: [
-              const Padding(
-                padding: EdgeInsets.fromLTRB(20, 18, 20, 10),
-                child: Text(
-                  'Report User',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              ...reasons.map(
-                (reason) => ListTile(
-                  title: Text(reason),
-                  onTap: () {
-                    Navigator.pop(context);
-                    if (reason != 'Cancel') {
-                      showMessage(
-                        context,
-                        'Report reason: $reason',
-                      );
-                    }
+      isScrollControlled: true,
+      backgroundColor: _page,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(18, 12, 18, 24),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Container(width: 42, height: 4, decoration: BoxDecoration(
+              color: Colors.black26, borderRadius: BorderRadius.circular(8))),
+            const SizedBox(height: 16),
+            Text(title, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800, color: _ink)),
+            const SizedBox(height: 16),
+            if (items.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 32),
+                child: Column(children: [
+                  Icon(emptyIcon, size: 48, color: _purple),
+                  const SizedBox(height: 10),
+                  const Text('No items to display yet', style: TextStyle(color: Colors.black54)),
+                ]),
+              )
+            else
+              Flexible(
+                child: GridView.builder(
+                  shrinkWrap: true,
+                  itemCount: items.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3, crossAxisSpacing: 10, mainAxisSpacing: 10,
+                    childAspectRatio: .82),
+                  itemBuilder: (context, index) {
+                    final raw = items[index];
+                    final item = raw is Map ? Map<String, dynamic>.from(raw) : <String, dynamic>{'name': raw.toString()};
+                    final label = (item['name'] ?? item['title'] ?? item['label'] ?? 'Item').toString();
+                    final image = (item['image_url'] ?? item['icon_url'] ?? item['image'] ?? '').toString();
+                    final count = item['count'] ?? item['quantity'];
+                    return Container(
+                      padding: const EdgeInsets.all(9),
+                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: _purple.withOpacity(.18))),
+                      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                        Expanded(child: image.isNotEmpty
+                          ? Image.network(image, fit: BoxFit.contain,
+                              errorBuilder: (_, __, ___) => Icon(emptyIcon, size: 42, color: _purple))
+                          : Icon(emptyIcon, size: 42, color: _purple)),
+                        const SizedBox(height: 6),
+                        Text(label, maxLines: 2, overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                        if (count != null) Text('x$count', style: const TextStyle(fontSize: 10, color: Colors.black54)),
+                        if (item['active'] == true || item['equipped'] == true)
+                          const Text('Equipped', style: TextStyle(fontSize: 10, color: Colors.green, fontWeight: FontWeight.bold)),
+                      ]),
+                    );
                   },
                 ),
               ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void showBlacklistConfirmation(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Blacklist'),
-          content: const Text(
-            'Blacklist ke baad woh user aapko text nahi bhej sakega '
-            'aur aapki personal profile visit nahi kar sakega.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                showMessage(context, 'User blacklisted');
-              },
-              child: const Text('Blacklist'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget actionButton(
-    BuildContext context,
-    IconData icon,
-    String label,
-  ) {
-    return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        child: OutlinedButton.icon(
-          onPressed: () => showMessage(
-            context,
-            '$label will be connected next',
-          ),
-          icon: Icon(icon, size: 18),
-          label: Text(label),
+          ]),
         ),
       ),
     );
   }
 
-  Widget infoCard({
-    required IconData icon,
-    required String title,
-    required String value,
-  }) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 10),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: Colors.deepPurple.shade50,
-          child: Icon(
-            icon,
-            color: Colors.deepPurple,
-          ),
-        ),
-        title: Text(
-          title,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        subtitle: Text(value),
-        trailing: const Icon(Icons.chevron_right),
-      ),
-    );
-  }
+  Widget _stat(String value, String label) => Expanded(
+    child: Column(mainAxisSize: MainAxisSize.min, children: [
+      Text(value, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700)),
+      const SizedBox(height: 4),
+      Text(label, textAlign: TextAlign.center,
+        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+    ]),
+  );
+
+  Widget _collectionButton(BuildContext context, String label, IconData icon,
+      List<dynamic> items, Color color) => InkWell(
+    borderRadius: BorderRadius.circular(14),
+    onTap: () => _openCollection(context, label, items, emptyIcon: icon),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+      child: Column(children: [
+        Icon(icon, size: 29, color: color),
+        const SizedBox(height: 6),
+        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: _ink)),
+      ]),
+    ),
+  );
+
+  Widget _bottomAction(BuildContext context, String label, IconData icon,
+      Color color, VoidCallback onTap) => Expanded(
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 3),
+      child: SizedBox(height: 48, child: ElevatedButton.icon(
+        onPressed: onTap, icon: Icon(icon, size: 17),
+        label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800)),
+        style: ElevatedButton.styleFrom(backgroundColor: color, foregroundColor: Colors.white,
+          elevation: 3, padding: const EdgeInsets.symmetric(horizontal: 5),
+          shape: const StadiumBorder()),
+      )),
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
-    final name = user['display_name']?.toString().trim().isNotEmpty == true
-        ? user['display_name'].toString().trim()
-        : user['username']?.toString() ?? 'User';
-
-    final uid = user['public_uid']?.toString() ?? '------';
-    final signature = user['signature']?.toString().trim() ?? '';
-    final country = user['country']?.toString().trim() ?? '';
-    final avatarUrl = user['avatar_url']?.toString().trim() ?? '';
+    final name = _text(['display_name', 'username'], 'User');
+    final uid = _text(['public_uid', 'uid', 'user_id'], '------');
+    final avatar = _text(['avatar_url', 'avatar']);
+    final agencyName = _text(['agency_name'], 'No Agency');
+    final agencyDp = _text(['agency_dp', 'agency_avatar_url', 'agency_image']);
+    final agencyId = _text(['agency_uid', 'agency_id'], '--');
+    final agencyMembers = _number(['agency_total_members', 'agency_members_count', 'total_agency_members']);
+    final receivedGifts = _items(['received_gifts', 'gift_received_items', 'gifts_received']);
+    final vips = _items(['owned_vips', 'vip_items', 'achieved_vips']);
+    final entries = _items(['entry_effects', 'owned_entry_effects', 'achieved_entry_effects']);
+    final frames = _items(['owned_frames', 'profile_frames', 'achieved_frames']);
+    final honors = _items(['honor_badges', 'honors', 'earned_badges']);
+    final signature = _text(['signature']);
 
     return Scaffold(
+      backgroundColor: _page,
       appBar: AppBar(
-        toolbarHeight: 48,
-        backgroundColor: Colors.transparent,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        title: const Text(
-          'Profile',
-          style: TextStyle(
-            color: Color(0xFFFFD54F),
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        backgroundColor: _ink, surfaceTintColor: _ink, elevation: 0,
+        leading: IconButton(icon: const Icon(Icons.arrow_back, color: _pink), onPressed: () => Navigator.pop(context)),
+        title: const Text('Public Profile', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
         centerTitle: true,
-        actions: [
-          IconButton(
-            onPressed: () => showMoreMenu(context),
-            icon: const Icon(Icons.more_vert),
-          ),
-        ],
+        actions: [PopupMenuButton<String>(icon: const Icon(Icons.menu, color: _purple),
+          onSelected: (value) => _message(context, value == 'Report' ? 'Report option selected' : 'Blacklist option selected'),
+          itemBuilder: (_) => const [PopupMenuItem(value: 'Report', child: Text('Report')),
+            PopupMenuItem(value: 'Blacklist', child: Text('Blacklist'))])],
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(18, 20, 18, 30),
-          child: Column(
-            children: [
-              CircleAvatar(
-                radius: 62,
-                backgroundImage: avatarUrl.isNotEmpty
-                    ? NetworkImage(avatarUrl)
-                    : null,
-                child: avatarUrl.isEmpty
-                    ? const Icon(Icons.person, size: 62)
-                    : null,
-              ),
-
-              const SizedBox(height: 14),
-
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-
-Flexible(
-  child: AnimatedRainbowText(
-    text: name,
-    fontSize: 25,
-    fontWeight: FontWeight.bold,
-  ),
-),
-                  if (country.isNotEmpty) ...[
-                    const SizedBox(width: 6),
-                    const Text(
-                      '🌍',
-                      style: TextStyle(fontSize: 20),
-                    ),
-                  ],
-                ],
-              ),
-
-              const SizedBox(height: 5),
-
-              Text(
-                'UID: $uid',
-                style: const TextStyle(
-                  color: Colors.deepPurple,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-
-              if (signature.isNotEmpty) ...[
+      body: Stack(children: [
+        ListView(padding: const EdgeInsets.only(bottom: 86), children: [
+          Container(color: _ink, padding: const EdgeInsets.fromLTRB(20, 18, 20, 20), child: Column(children: [
+            Row(children: [
+              Container(width: 104, height: 104, padding: const EdgeInsets.all(5),
+                decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: const Color(0xFFFFC75A), width: 3),
+                  boxShadow: [BoxShadow(color: _pink.withOpacity(.35), blurRadius: 14)]),
+                child: CircleAvatar(backgroundColor: const Color(0xFF34243D),
+                  backgroundImage: avatar.isNotEmpty ? NetworkImage(avatar) : null,
+                  child: avatar.isEmpty ? const Icon(Icons.person, size: 48, color: Colors.white) : null)),
+              const SizedBox(width: 16),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(name, maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white, fontSize: 23, fontWeight: FontWeight.w800)),
                 const SizedBox(height: 8),
-                Text(
-                  signature,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.grey,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-
-              const SizedBox(height: 20),
-
-              Row(
-                children: [
-                  actionButton(
-                    context,
-                    Icons.track_changes,
-                    'Track',
-                  ),
-                  actionButton(
-                    context,
-                    Icons.mic,
-                    'Room',
-                  ),
-                  actionButton(
-                    context,
-                    Icons.person_add_alt_1,
-                    'Follow',
-                  ),
-                  actionButton(
-                    context,
-                    Icons.chat_bubble_outline,
-                    'Chat',
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 18),
-
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.deepPurple.shade50,
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Row(
-                  children: [
-                    const CircleAvatar(
-                      backgroundColor: Colors.white,
-                      child: Icon(
-                        Icons.business,
-                        color: Colors.deepPurple,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Agency',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                          SizedBox(height: 3),
-                          Text(
-                            'Agency information',
-                            style: TextStyle(color: Colors.grey),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Icon(Icons.chevron_right),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 18),
-
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Profile Items',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-              ),
-
-              const SizedBox(height: 10),
-
-              infoCard(
-                icon: Icons.crop_square,
-                title: 'Frame',
-                value: 'Profile frame',
-              ),
-
-              infoCard(
-                icon: Icons.login,
-                title: 'Entry',
-                value: 'Entry effect',
-              ),
-
-              infoCard(
-                icon: Icons.card_giftcard,
-                title: 'Gifts',
-                value: 'Received gifts',
-              ),
-
-              const SizedBox(height: 8),
-
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Received Gifts',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-              ),
-
-              const SizedBox(height: 12),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(14),
-                        child: Column(
-                          children: [
-                            const Icon(
-                              Icons.card_giftcard,
-                              color: Colors.deepPurple,
-                              size: 34,
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              '${user['gift_count'] ?? 0}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 17,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(14),
-                        child: Column(
-                          children: [
-                            const Icon(
-                              Icons.redeem,
-                              color: Colors.deepPurple,
-                              size: 34,
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              '${user['gift_count_2'] ?? 0}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 17,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 8),
-
-              // Birthday and coins are intentionally NOT shown
-              // on another user's public profile.
-            ],
-          ),
-        ),
-      ),
+                Container(padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 5),
+                  decoration: BoxDecoration(gradient: const LinearGradient(colors: [_purple, Color(0xFFD16BEA)]), borderRadius: BorderRadius.circular(20)),
+                  child: Text('ID: $uid', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+                const SizedBox(height: 8),
+                Row(children: [
+                  _levelPill('W ${_text(['wealth_level'], '1')}', const Color(0xFFFFA21A)),
+                  const SizedBox(width: 8),
+                  _levelPill('C ${_text(['charm_level'], '1')}', const Color(0xFF21C5D7)),
+                ]),
+              ])),
+            ]),
+            if (signature.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 10),
+              child: Align(alignment: Alignment.centerLeft, child: Text(signature, style: const TextStyle(color: Colors.white70)))),
+            const SizedBox(height: 24),
+            Row(children: [
+              _stat('${_number(['following_count', 'follow_count'])}', 'Follow'),
+              _stat('${_number(['fans_count', 'follower_count'])}', 'Fans'),
+              _stat('${_number(['gift_received', 'gift_received_count', 'gift_count'])}', 'Gift Received'),
+              _stat('${_number(['gift_sent', 'gift_sent_count', 'gift_count_2'])}', 'Gift Sent'),
+              _stat('${_number(['visit_count', 'visits'])}', 'Visits'),
+            ]),
+          ])),
+          Padding(padding: const EdgeInsets.fromLTRB(18, 18, 18, 0), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [Container(width: 5, height: 34, decoration: BoxDecoration(gradient: const LinearGradient(colors: [_pink, _purple]), borderRadius: BorderRadius.circular(8))),
+              const SizedBox(width: 10), const Text('Agency', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: _ink))]),
+            const SizedBox(height: 12),
+            Container(padding: const EdgeInsets.all(14), decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [Color(0xFFD36BEA), Color(0xFFB77CF4)]), borderRadius: BorderRadius.circular(22),
+              boxShadow: [BoxShadow(color: _purple.withOpacity(.18), blurRadius: 12, offset: const Offset(0, 5))]),
+              child: Row(children: [
+                CircleAvatar(radius: 35, backgroundColor: Colors.white.withOpacity(.8),
+                  backgroundImage: agencyDp.isNotEmpty ? NetworkImage(agencyDp) : null,
+                  child: agencyDp.isEmpty ? const Icon(Icons.business, size: 35, color: _purple) : null),
+                const SizedBox(width: 12),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(agencyName, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 5),
+                  Text('Agency ID: $agencyId', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 5),
+                  Text('Total Members: $agencyMembers', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+                ])),
+                if (_isAgencyOwner) IconButton(tooltip: 'Manage agency', onPressed: () => _message(context, 'Agency management will open here'),
+                  icon: const Icon(Icons.settings, color: Colors.white)),
+              ])),
+            const SizedBox(height: 22),
+            Row(children: [
+              Expanded(child: _collectionButton(context, 'Gifts', Icons.card_giftcard_rounded, receivedGifts, _pink)),
+              Expanded(child: _collectionButton(context, 'VIP', Icons.workspace_premium_rounded, vips, _purple)),
+              Expanded(child: _collectionButton(context, 'Entry', Icons.auto_awesome_rounded, entries, _pink)),
+              Expanded(child: _collectionButton(context, 'Frames', Icons.crop_free_rounded, frames, _purple)),
+              Expanded(child: _collectionButton(context, 'Honor', Icons.military_tech_rounded, honors, const Color(0xFFD69B22))),
+            ]),
+          ])),
+        ]),
+        Positioned(left: 8, right: 8, bottom: 12, child: Row(children: [
+          _bottomAction(context, 'Track', Icons.home_filled, _purple, () => _message(context, 'Track selected')),
+          _bottomAction(context, 'Room', Icons.chat_bubble_rounded, const Color(0xFF8DDB00), () => _message(context, 'Room selected')),
+          _bottomAction(context, 'Follow', Icons.star_rounded, _pink, () => _message(context, 'Follow selected')),
+          _bottomAction(context, 'Chat', Icons.chat_bubble_outline, const Color(0xFF08BEDB), () => _message(context, 'Chat selected')),
+        ])),
+      ]),
     );
   }
+
+  Widget _levelPill(String text, Color color) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+    decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(18)),
+    child: Text(text, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12)),
+  );
 }
 
 // ============================================================
