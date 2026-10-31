@@ -4123,7 +4123,12 @@ LayoutBuilder(
             width: centerSize,
             height: centerSize,
             child: GestureDetector(
-              onTap: () => openComingSoon('VIP'),
+              onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => MindoVipCenterScreen(token: widget.token),
+              ),
+            ),
               child: Container(
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
@@ -8140,4 +8145,280 @@ class AgencyPublicDetailScreen extends StatelessWidget {
   final Map<String,dynamic> agency;
   const AgencyPublicDetailScreen({super.key,required this.agency});
   @override Widget build(BuildContext c)=>Scaffold(backgroundColor:_agencyBg,appBar:_agencyBar(c,'Agency'),body:Center(child:Container(margin:const EdgeInsets.all(24),padding:const EdgeInsets.all(24),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(22),boxShadow:const [BoxShadow(color:Color(0x22000000),blurRadius:12)]),child:Column(mainAxisSize:MainAxisSize.min,children:[CircleAvatar(radius: 60,backgroundColor:const Color(0xFFFCE3F1),backgroundImage:agency['dp'] is String?FileImage(File(agency['dp'])):null,child:agency['dp']==null?const Icon(Icons.business,size:55,color:_agencyPurple):null),const SizedBox(height:18),Text('${agency['name']}',style:const TextStyle(fontSize:24,fontWeight:FontWeight.bold)),const SizedBox(height:8),Text('${agency['flag']??'🌐'}  ${agency['country']}'),Text('Agency ID: ${agency['uid']}'),Text('Members: ${agency['members']}'),const SizedBox(height:24),SizedBox(width:double.infinity,child:_agencyBtn('Join',()=>_agencyToast(c,'Joining request sent to agency owner. Pending requests expire after the Main Admin configured duration (default 24 hours).'))),const SizedBox(height:8),const Text('One account can join only one agency.',style:TextStyle(color:Colors.grey))]))));
+}
+
+
+// ============================================================
+// MINDO VIP CENTER + VIP DETAILS
+// Flutter-rendered UI. VIP artwork/effects are intended to be
+// loaded from the Main Admin-managed asset API in the backend phase.
+// No bundled VIP PNG/GIF assets are required for these screens.
+// ============================================================
+
+const Color _mindoVipBg = Color(0xFF100B20);
+const Color _mindoVipPanel = Color(0xFF21152F);
+const Color _mindoVipGold = Color(0xFFFFD36A);
+const Color _mindoVipMuted = Color(0xFFB9AFC5);
+
+const List<List<Color>> _mindoVipGradients = [
+  [Color(0xFF16C9E8), Color(0xFF075A9D)],
+  [Color(0xFFFFB02E), Color(0xFF9D1B18)],
+  [Color(0xFF38D66B), Color(0xFF075D39)],
+  [Color(0xFF54A8FF), Color(0xFF1739A5)],
+  [Color(0xFFFFD36A), Color(0xFF9E4215)],
+  [Color(0xFFE45CFF), Color(0xFF651A9C)],
+  [Color(0xFFFF7542), Color(0xFF9C171D)],
+  [Color(0xFFFFD36A), Color(0xFF4A1724)],
+];
+
+class MindoVipCenterScreen extends StatelessWidget {
+  final String token;
+  const MindoVipCenterScreen({super.key, required this.token});
+
+  void _openVip(BuildContext context, int level) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MindoVipDetailsScreen(token: token, initialLevel: level),
+      ),
+    );
+  }
+
+  Widget _vipTile(BuildContext context, int level, {bool featured = false}) {
+    final colors = _mindoVipGradients[level - 1];
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(featured ? 28 : 20),
+        onTap: () => _openVip(context, level),
+        child: Container(
+          padding: EdgeInsets.all(featured ? 16 : 10),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [colors[0].withOpacity(.32), colors[1].withOpacity(.88)],
+            ),
+            borderRadius: BorderRadius.circular(featured ? 28 : 20),
+            border: Border.all(color: _mindoVipGold.withOpacity(featured ? .95 : .65), width: featured ? 2.2 : 1.2),
+            boxShadow: [
+              BoxShadow(color: colors[0].withOpacity(.25), blurRadius: featured ? 22 : 12, spreadRadius: 1),
+              BoxShadow(color: Colors.black.withOpacity(.25), blurRadius: 10, offset: const Offset(0, 5)),
+            ],
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.workspace_premium_rounded, size: featured ? 64 : 42, color: _mindoVipGold),
+              SizedBox(height: featured ? 8 : 5),
+              Text('VIP $level', style: TextStyle(color: Colors.white, fontSize: featured ? 23 : 16, fontWeight: FontWeight.w900, letterSpacing: 1)),
+              if (featured) ...[
+                const SizedBox(height: 5),
+                const Text('SELECT VIP LEVEL', style: TextStyle(color: Colors.white70, fontSize: 10, letterSpacing: 1.5, fontWeight: FontWeight.bold)),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: _mindoVipBg,
+      appBar: AppBar(
+        backgroundColor: _mindoVipBg,
+        foregroundColor: _mindoVipGold,
+        elevation: 0,
+        centerTitle: true,
+        title: const Text('VIP CENTER', style: TextStyle(color: _mindoVipGold, fontWeight: FontWeight.w900, letterSpacing: 2)),
+      ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFF291632), Color(0xFF100B20), Color(0xFF250D28)]),
+        ),
+        child: SafeArea(
+          top: false,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 26),
+            child: Column(
+              children: [
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  decoration: BoxDecoration(color: _mindoVipPanel.withOpacity(.8), borderRadius: BorderRadius.circular(18), border: Border.all(color: _mindoVipGold.withOpacity(.4))),
+                  child: const Text('CHOOSE YOUR VIP LEVEL', textAlign: TextAlign.center, style: TextStyle(color: _mindoVipGold, fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 2)),
+                ),
+                const SizedBox(height: 18),
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: 8,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, mainAxisSpacing: 13, crossAxisSpacing: 13, childAspectRatio: 1.08),
+                  itemBuilder: (context, index) => _vipTile(context, index + 1, featured: index == 4),
+                ),
+                const SizedBox(height: 20),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 17, horizontal: 12),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(colors: [Color(0xFF3A1A39), Color(0xFF170E25), Color(0xFF3A1A39)]),
+                    borderRadius: BorderRadius.circular(30),
+                    border: Border.all(color: _mindoVipGold, width: 1.5),
+                    boxShadow: [BoxShadow(color: _mindoVipGold.withOpacity(.18), blurRadius: 18)],
+                  ),
+                  child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Icon(Icons.diamond_rounded, color: _mindoVipGold),
+                    SizedBox(width: 9),
+                    Flexible(child: Text('VERY IMPORTANT PERSON', textAlign: TextAlign.center, style: TextStyle(color: _mindoVipGold, fontSize: 16, fontWeight: FontWeight.w900, letterSpacing: 1))),
+                    SizedBox(width: 9),
+                    Icon(Icons.diamond_rounded, color: _mindoVipGold),
+                  ]),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class MindoVipDetailsScreen extends StatefulWidget {
+  final String token;
+  final int initialLevel;
+  const MindoVipDetailsScreen({super.key, required this.token, this.initialLevel = 1});
+  @override
+  State<MindoVipDetailsScreen> createState() => _MindoVipDetailsScreenState();
+}
+
+class _MindoVipDetailsScreenState extends State<MindoVipDetailsScreen> {
+  late int selectedLevel;
+
+  static const List<Map<String, dynamic>> benefits = [
+    {'title': 'VIP Identity', 'subtitle': 'VIP exclusive badge', 'icon': Icons.workspace_premium_rounded},
+    {'title': 'Exclusive Headwear', 'subtitle': 'Exclusive headwear', 'icon': Icons.auto_awesome_rounded},
+    {'title': 'Entry Effects', 'subtitle': 'Member entry special effect', 'icon': Icons.login_rounded},
+    {'title': 'Mic Sound Wave', 'subtitle': 'Exclusive mic sound', 'icon': Icons.graphic_eq_rounded},
+    {'title': 'Exclusive Bubbles', 'subtitle': 'Cool speech bubbles', 'icon': Icons.chat_bubble_rounded},
+    {'title': 'Room Card', 'subtitle': 'Unique room information card', 'icon': Icons.badge_rounded},
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    selectedLevel = widget.initialLevel.clamp(1, 8).toInt();
+  }
+
+  void _message(String value) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(value)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = _mindoVipGradients[selectedLevel - 1];
+    return Scaffold(
+      backgroundColor: _mindoVipBg,
+      appBar: AppBar(backgroundColor: _mindoVipBg, foregroundColor: Colors.white, elevation: 0, centerTitle: true, title: const Text('VIP', style: TextStyle(fontWeight: FontWeight.w700))),
+      body: Column(
+        children: [
+          SizedBox(
+            height: 52,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              itemCount: 8,
+              separatorBuilder: (_, __) => const SizedBox(width: 22),
+              itemBuilder: (context, index) {
+                final level = index + 1;
+                final active = selectedLevel == level;
+                return GestureDetector(
+                  onTap: () => setState(() => selectedLevel = level),
+                  child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Text('VIP$level', style: TextStyle(color: active ? _mindoVipGold : _mindoVipMuted, fontSize: 15, fontWeight: active ? FontWeight.w900 : FontWeight.w600)),
+                    const SizedBox(height: 5),
+                    AnimatedContainer(duration: const Duration(milliseconds: 180), width: active ? 24 : 0, height: 3, decoration: BoxDecoration(color: _mindoVipGold, borderRadius: BorderRadius.circular(4))),
+                  ]),
+                );
+              },
+            ),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
+              child: Column(
+                children: [
+                  Container(
+                    width: 164,
+                    height: 164,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [colors[0].withOpacity(.9), colors[1]]),
+                      border: Border.all(color: _mindoVipGold, width: 3),
+                      boxShadow: [BoxShadow(color: colors[0].withOpacity(.35), blurRadius: 24, spreadRadius: 2)],
+                    ),
+                    child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                      Icon(Icons.shield_rounded, size: 78, color: _mindoVipGold),
+                      Text('VIP $selectedLevel', style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900)),
+                    ]),
+                  ),
+                  const SizedBox(height: 24),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    decoration: BoxDecoration(gradient: LinearGradient(colors: [colors[1], colors[0], colors[1]]), borderRadius: BorderRadius.circular(18), border: Border.all(color: _mindoVipGold, width: 1.2)),
+                    child: const Text('IDENTIFICATION (6/6)', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
+                  ),
+                  const SizedBox(height: 17),
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: benefits.length,
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3, mainAxisSpacing: 12, crossAxisSpacing: 10, childAspectRatio: .78),
+                    itemBuilder: (context, index) {
+                      final item = benefits[index];
+                      return Container(
+                        padding: const EdgeInsets.fromLTRB(7, 12, 7, 9),
+                        decoration: BoxDecoration(color: _mindoVipPanel, borderRadius: BorderRadius.circular(14), border: Border.all(color: _mindoVipGold.withOpacity(.22))),
+                        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                          Container(width: 58, height: 58, decoration: BoxDecoration(shape: BoxShape.circle, gradient: LinearGradient(colors: [colors[0].withOpacity(.8), colors[1]]), border: Border.all(color: _mindoVipGold.withOpacity(.8))), child: Icon(item['icon'] as IconData, color: Colors.white, size: 30)),
+                          const SizedBox(height: 9),
+                          Text(item['title'] as String, textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: _mindoVipGold, fontSize: 11, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 4),
+                          Text(item['subtitle'] as String, textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: _mindoVipMuted, fontSize: 9)),
+                        ]),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 18),
+                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    const Icon(Icons.auto_awesome, color: _mindoVipGold, size: 17),
+                    const SizedBox(width: 8),
+                    Text('Exclusive privilege', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
+                    const SizedBox(width: 8),
+                    const Icon(Icons.auto_awesome, color: _mindoVipGold, size: 17),
+                  ]),
+                  const SizedBox(height: 12),
+                  Container(width: double.infinity, padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: _mindoVipPanel, borderRadius: BorderRadius.circular(15), border: Border.all(color: _mindoVipGold.withOpacity(.35))), child: const Column(children: [Text('Price: Set by Main Admin', style: TextStyle(color: _mindoVipGold, fontWeight: FontWeight.bold)), SizedBox(height: 5), Text('Validity: Set by Main Admin', style: TextStyle(color: _mindoVipMuted, fontSize: 12))])),
+                ],
+              ),
+            ),
+          ),
+          SafeArea(
+            top: false,
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+              decoration: BoxDecoration(color: const Color(0xFF1A1126), border: Border(top: BorderSide(color: _mindoVipGold.withOpacity(.25)))),
+              child: SizedBox(width: double.infinity, height: 50, child: ElevatedButton(
+                onPressed: () => _message('VIP purchase will be enabled after Main Admin pricing and secure wallet integration are connected.'),
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF4C98D), foregroundColor: const Color(0xFF392017), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28))),
+                child: const Text('ACTIVATE', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1)),
+              )),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
