@@ -151,6 +151,39 @@ await pool.query(`
       UNIQUE (user_id)
     )
   `);
+
+  // Public profile social features and room presence (independent of seats).
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS room_presence (
+      user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      room_id UUID NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+      entered_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      last_seen TIMESTAMP NOT NULL DEFAULT NOW()
+    )
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS room_presence_room_idx ON room_presence(room_id, last_seen DESC)`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS user_follows (
+      follower_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      followed_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (follower_id, followed_id),
+      CHECK (follower_id <> followed_id)
+    )
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS user_follows_followed_idx ON user_follows(followed_id)`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS private_messages (
+      id UUID PRIMARY KEY,
+      sender_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      recipient_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      body TEXT NOT NULL CHECK (char_length(body) BETWEEN 1 AND 2000),
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      CHECK (sender_id <> recipient_id)
+    )
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS private_messages_pair_idx ON private_messages(sender_id, recipient_id, created_at DESC)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS private_messages_recipient_idx ON private_messages(recipient_id, created_at DESC)`);
   await pool.query(`
   CREATE TABLE IF NOT EXISTS room_moderators (
     id UUID PRIMARY KEY,
@@ -174,77 +207,136 @@ await pool.query(`
     UNIQUE (room_id, user_id)
   )
 `);
-    // Wallet balances
-  await pool.query(`
-    ALTER TABLE users
-    ADD COLUMN IF NOT EXISTS diamonds BIGINT NOT NULL DEFAULT 0
-    CHECK (diamonds >= 0)
-  `);
 
-  // Recharge packages configured by admin
+  // -------------------------
+  // Wallet, recharge packages, and transaction ledger
+  // -------------------------
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS diamonds BIGINT NOT NULL DEFAULT 0`);
+
   await pool.query(`
-    CREATE TABLE IF NOT EXISTS recharge_packages (
-      id UUID PRIMARY KEY,
+    CREATE TABLE IF NOT EXISTS wallet_recharge_packages (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      code VARCHAR(80) UNIQUE NOT NULL,
       title VARCHAR(100) NOT NULL,
-      product_id_android VARCHAR(200) NOT NULL UNIQUE,
-      product_id_ios VARCHAR(200) NOT NULL UNIQUE,
-      base_coins INTEGER NOT NULL CHECK (base_coins > 0),
+      coins INTEGER NOT NULL CHECK (coins > 0),
       bonus_coins INTEGER NOT NULL DEFAULT 0 CHECK (bonus_coins >= 0),
-      display_price VARCHAR(40),
-      currency VARCHAR(10),
-      active BOOLEAN NOT NULL DEFAULT TRUE,
+      google_product_id VARCHAR(200),
+      apple_product_id VARCHAR(200),
+      active BOOLEAN NOT NULL DEFAULT FALSE,
       sort_order INTEGER NOT NULL DEFAULT 0,
-      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-      updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
-  `);
-
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS wallet_settings (
-      setting_key VARCHAR(100) PRIMARY KEY,
-      setting_value JSONB NOT NULL,
-      updated_at TIMESTAMP NOT NULL DEFAULT NOW()
-    )
-  `);
-
-  await pool.query(`
-    INSERT INTO wallet_settings (setting_key, setting_value)
-    VALUES (
-      'diamond_exchange',
-      '{"enabled":false,"coins_per_diamond":0,"min_diamonds":1,"max_diamonds":100000}'::jsonb
-    )
-    ON CONFLICT (setting_key) DO NOTHING
   `);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS wallet_transactions (
-      id UUID PRIMARY KEY,
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      transaction_type VARCHAR(40) NOT NULL,
+      kind VARCHAR(40) NOT NULL,
+      currency VARCHAR(20) NOT NULL,
+      amount BIGINT NOT NULL,
+      balance_after BIGINT,
       status VARCHAR(20) NOT NULL DEFAULT 'success',
-      coins_delta BIGINT NOT NULL DEFAULT 0,
-      diamonds_delta BIGINT NOT NULL DEFAULT 0,
-      provider VARCHAR(30),
-      provider_transaction_id VARCHAR(255),
-      package_id UUID REFERENCES recharge_packages(id) ON DELETE SET NULL,
-      description VARCHAR(255),
-      metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
-      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-      CHECK (status IN ('pending','success','failed','refunded'))
+      source VARCHAR(40) NOT NULL,
+      external_transaction_id TEXT,
+      idempotency_key TEXT UNIQUE,
+      details JSONB NOT NULL DEFAULT '{}'::jsonb,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS wallet_transactions_user_created_idx ON wallet_transactions(user_id, created_at DESC)`);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS wallet_settings (
+      key VARCHAR(100) PRIMARY KEY,
+      value JSONB NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
 
+  // Wealth / Charm levels. Values are cumulative gift coins sent/received,
+  // never wallet recharge coins. Thresholds are controlled by the admin.
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT FALSE`);
   await pool.query(`
-    CREATE UNIQUE INDEX IF NOT EXISTS wallet_transactions_provider_tx_unique
-    ON wallet_transactions(provider, provider_transaction_id)
-    WHERE provider IS NOT NULL
-      AND provider_transaction_id IS NOT NULL
+    CREATE TABLE IF NOT EXISTS user_level_stats (
+      user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      wealth_value BIGINT NOT NULL DEFAULT 0 CHECK (wealth_value >= 0),
+      charm_value BIGINT NOT NULL DEFAULT 0 CHECK (charm_value >= 0),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS level_config (
+      level_type VARCHAR(10) NOT NULL CHECK (level_type IN ('wealth','charm')),
+      level_number INTEGER NOT NULL CHECK (level_number BETWEEN 1 AND 110),
+      min_coins BIGINT CHECK (min_coins IS NULL OR min_coins >= 0),
+      icon_url TEXT,
+      entry_effect_key VARCHAR(100),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_by UUID REFERENCES users(id) ON DELETE SET NULL,
+      PRIMARY KEY (level_type, level_number)
+    )
+  `);
+  await pool.query(`
+    INSERT INTO level_config(level_type, level_number, min_coins)
+    SELECT kind, level_no, CASE WHEN level_no = 1 THEN 0 ELSE NULL END
+    FROM (VALUES ('wealth'), ('charm')) AS kinds(kind)
+    CROSS JOIN generate_series(1, 110) AS levels(level_no)
+    ON CONFLICT (level_type, level_number) DO NOTHING
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS level_config_type_threshold_idx ON level_config(level_type, min_coins)`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS gift_transactions (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      sender_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      receiver_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      coin_amount BIGINT NOT NULL CHECK (coin_amount > 0),
+      status VARCHAR(20) NOT NULL DEFAULT 'success' CHECK (status IN ('pending','success','failed','refunded')),
+      idempotency_key TEXT UNIQUE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      CHECK (sender_id <> receiver_id)
+    )
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS gift_transactions_sender_created_idx ON gift_transactions(sender_id, created_at DESC)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS gift_transactions_receiver_created_idx ON gift_transactions(receiver_id, created_at DESC)`);
+  await pool.query(`
+    CREATE OR REPLACE FUNCTION update_user_level_stats_from_gift() RETURNS TRIGGER AS $$
+    DECLARE delta BIGINT := 0;
+    BEGIN
+      IF TG_OP = 'INSERT' THEN
+        IF NEW.status = 'success' THEN delta := NEW.coin_amount; END IF;
+      ELSE
+        IF OLD.status <> 'success' AND NEW.status = 'success' THEN delta := NEW.coin_amount;
+        ELSIF OLD.status = 'success' AND NEW.status <> 'success' THEN delta := -OLD.coin_amount;
+        ELSIF OLD.status = 'success' AND NEW.status = 'success' AND OLD.coin_amount <> NEW.coin_amount THEN delta := NEW.coin_amount - OLD.coin_amount;
+        END IF;
+      END IF;
+      IF delta <> 0 THEN
+        INSERT INTO user_level_stats(user_id, wealth_value, charm_value)
+        VALUES (NEW.sender_id, GREATEST(delta, 0), 0)
+        ON CONFLICT (user_id) DO UPDATE SET wealth_value = GREATEST(0, user_level_stats.wealth_value + delta), updated_at = NOW();
+        INSERT INTO user_level_stats(user_id, wealth_value, charm_value)
+        VALUES (NEW.receiver_id, 0, GREATEST(delta, 0))
+        ON CONFLICT (user_id) DO UPDATE SET charm_value = GREATEST(0, user_level_stats.charm_value + delta), updated_at = NOW();
+      END IF;
+      RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql
+  `);
+  await pool.query(`DROP TRIGGER IF EXISTS gift_level_progress_trigger ON gift_transactions`);
+  await pool.query(`
+    CREATE TRIGGER gift_level_progress_trigger
+    AFTER INSERT OR UPDATE ON gift_transactions
+    FOR EACH ROW EXECUTE FUNCTION update_user_level_stats_from_gift()
+  `);
+  // Deliberately disabled until an authorized admin configures a conversion rate.
+  await pool.query(`
+    INSERT INTO wallet_settings(key, value)
+    VALUES ('diamond_exchange', '{"enabled": false, "diamonds_per_exchange": 0, "coins_per_exchange": 0}'::jsonb)
+    ON CONFLICT (key) DO NOTHING
   `);
 
-  await pool.query(`
-    CREATE INDEX IF NOT EXISTS wallet_transactions_user_created_idx
-    ON wallet_transactions(user_id, created_at DESC)
-  `);
   console.log("Database initialized.");
 }
 
@@ -284,6 +376,20 @@ function authMiddleware(req, res, next) {
     return res.status(401).json({
       message: "Invalid or expired token",
     });
+  }
+}
+
+async function adminMiddleware(req, res, next) {
+  if (!pool) return res.status(503).json({ message: "Database is not configured" });
+  try {
+    const result = await pool.query(`SELECT is_admin FROM users WHERE id = $1`, [req.user.id]);
+    if (!result.rows[0]?.is_admin) {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+    next();
+  } catch (error) {
+    console.error("Admin authorization failed:", error);
+    res.status(500).json({ message: "Could not verify admin access" });
   }
 }
 
@@ -400,6 +506,7 @@ if (containsRestrictedMindoName(username)) {
         public_uid,
         avatar_url,
         coins,
+        diamonds,
         level,
         created_at
       `,
@@ -525,6 +632,23 @@ app.get("/api/me", authMiddleware, async (req, res) => {
 
     let user = result.rows[0];
 
+    await pool.query(`INSERT INTO user_level_stats(user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING`, [req.user.id]);
+    const levelStatsResult = await pool.query(`SELECT wealth_value, charm_value FROM user_level_stats WHERE user_id = $1`, [req.user.id]);
+    const levelStats = levelStatsResult.rows[0] || { wealth_value: 0, charm_value: 0 };
+    user.wealth_value = Number(levelStats.wealth_value);
+    user.charm_value = Number(levelStats.charm_value);
+    for (const type of ["wealth", "charm"]) {
+      const levelResult = await pool.query(`
+        SELECT level_number, icon_url
+        FROM level_config
+        WHERE level_type = $1 AND min_coins IS NOT NULL AND min_coins <= $2
+        ORDER BY level_number DESC LIMIT 1
+      `, [type, type === "wealth" ? user.wealth_value : user.charm_value]);
+      const selected = levelResult.rows[0] || { level_number: 1, icon_url: null };
+      user[`${type}_level`] = Number(selected.level_number);
+      user[`${type}_level_icon_url`] = selected.icon_url;
+    }
+
     // Generate a UID if this user does not have one
     if (!user.public_uid) {
       let newUid;
@@ -567,7 +691,7 @@ app.get("/api/me", authMiddleware, async (req, res) => {
         [newUid, req.user.id]
       );
 
-      user = result.rows[0];
+      user = { ...user, ...result.rows[0] };
     }
 
     res.json({
@@ -579,6 +703,146 @@ app.get("/api/me", authMiddleware, async (req, res) => {
     res.status(500).json({
       message: "Could not load profile",
     });
+  }
+});
+
+// -------------------------
+// Public Profile Actions: room presence, follow, and private chat
+// -------------------------
+
+// Called when a user enters a room. This is intentionally separate from room_seats.
+app.post("/api/rooms/:roomId/presence", authMiddleware, async (req, res) => {
+  if (!pool) return res.status(503).json({ message: "Database is not configured" });
+  try {
+    const room = await pool.query(`SELECT id, name FROM rooms WHERE id = $1`, [req.params.roomId]);
+    if (!room.rows.length) return res.status(404).json({ message: "Room not found" });
+    await pool.query(`
+      INSERT INTO room_presence(user_id, room_id, entered_at, last_seen)
+      VALUES ($1, $2, NOW(), NOW())
+      ON CONFLICT (user_id) DO UPDATE
+      SET room_id = EXCLUDED.room_id, entered_at = NOW(), last_seen = NOW()
+    `, [req.user.id, req.params.roomId]);
+    res.json({ message: "Room presence started", room: room.rows[0] });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Could not start room presence" });
+  }
+});
+
+app.post("/api/rooms/:roomId/presence/heartbeat", authMiddleware, async (req, res) => {
+  if (!pool) return res.status(503).json({ message: "Database is not configured" });
+  try {
+    const result = await pool.query(`UPDATE room_presence SET last_seen = NOW() WHERE user_id = $1 AND room_id = $2 RETURNING user_id`, [req.user.id, req.params.roomId]);
+    if (!result.rows.length) return res.status(404).json({ message: "Room presence not found" });
+    res.json({ ok: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Could not refresh room presence" });
+  }
+});
+
+app.delete("/api/rooms/:roomId/presence", authMiddleware, async (req, res) => {
+  if (!pool) return res.status(503).json({ message: "Database is not configured" });
+  try {
+    await pool.query(`DELETE FROM room_presence WHERE user_id = $1 AND room_id = $2`, [req.user.id, req.params.roomId]);
+    res.json({ message: "Room presence ended" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Could not end room presence" });
+  }
+});
+
+app.get("/api/users/:id/track-room", authMiddleware, async (req, res) => {
+  if (!pool) return res.status(503).json({ message: "Database is not configured" });
+  try {
+    const result = await pool.query(`
+      SELECT r.id, r.name, r.seat_count, r.cover_image_url, owner.public_uid AS owner_public_uid
+      FROM room_presence rp
+      JOIN rooms r ON r.id = rp.room_id
+      JOIN users owner ON owner.id = r.owner_id
+      WHERE rp.user_id = $1 AND rp.last_seen >= NOW() - INTERVAL '90 seconds'
+      LIMIT 1
+    `, [req.params.id]);
+    if (!result.rows.length) return res.status(404).json({ message: "User is not in a room right now" });
+    res.json({ room: result.rows[0] });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Could not find user's room" });
+  }
+});
+
+app.post("/api/users/:id/follow", authMiddleware, async (req, res) => {
+  if (!pool) return res.status(503).json({ message: "Database is not configured" });
+  if (req.params.id === req.user.id) return res.status(400).json({ message: "You cannot follow yourself" });
+  try {
+    const target = await pool.query(`SELECT id FROM users WHERE id = $1`, [req.params.id]);
+    if (!target.rows.length) return res.status(404).json({ message: "User not found" });
+    const existing = await pool.query(`SELECT 1 FROM user_follows WHERE follower_id = $1 AND followed_id = $2`, [req.user.id, req.params.id]);
+    let following;
+    if (existing.rows.length) {
+      await pool.query(`DELETE FROM user_follows WHERE follower_id = $1 AND followed_id = $2`, [req.user.id, req.params.id]);
+      following = false;
+    } else {
+      await pool.query(`INSERT INTO user_follows(follower_id, followed_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [req.user.id, req.params.id]);
+      following = true;
+    }
+    const counts = await pool.query(`SELECT (SELECT COUNT(*)::int FROM user_follows WHERE followed_id = $1) AS fans_count, (SELECT COUNT(*)::int FROM user_follows WHERE follower_id = $1) AS following_count`, [req.params.id]);
+    res.json({ following, ...counts.rows[0] });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Could not update follow" });
+  }
+});
+
+app.get("/api/users/:id/follow-status", authMiddleware, async (req, res) => {
+  if (!pool) return res.status(503).json({ message: "Database is not configured" });
+  try {
+    const result = await pool.query(`
+      SELECT
+        EXISTS(SELECT 1 FROM user_follows WHERE follower_id = $1 AND followed_id = $2) AS following,
+        (SELECT COUNT(*)::int FROM user_follows WHERE followed_id = $2) AS fans_count,
+        (SELECT COUNT(*)::int FROM user_follows WHERE follower_id = $2) AS following_count
+    `, [req.user.id, req.params.id]);
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Could not load follow status" });
+  }
+});
+
+app.get("/api/chat/:userId/messages", authMiddleware, async (req, res) => {
+  if (!pool) return res.status(503).json({ message: "Database is not configured" });
+  try {
+    const result = await pool.query(`
+      SELECT pm.id, pm.sender_id, pm.recipient_id, pm.body, pm.created_at,
+        sender.display_name AS sender_name, sender.avatar_url AS sender_avatar
+      FROM private_messages pm JOIN users sender ON sender.id = pm.sender_id
+      WHERE (pm.sender_id = $1 AND pm.recipient_id = $2) OR (pm.sender_id = $2 AND pm.recipient_id = $1)
+      ORDER BY pm.created_at ASC LIMIT 500
+    `, [req.user.id, req.params.userId]);
+    res.json({ messages: result.rows });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Could not load chat history" });
+  }
+});
+
+app.post("/api/chat/:userId/messages", authMiddleware, async (req, res) => {
+  if (!pool) return res.status(503).json({ message: "Database is not configured" });
+  const body = typeof req.body.body === "string" ? req.body.body.trim() : "";
+  if (!body || body.length > 2000) return res.status(400).json({ message: "Message must be between 1 and 2000 characters" });
+  if (req.params.userId === req.user.id) return res.status(400).json({ message: "Cannot message yourself" });
+  try {
+    const recipient = await pool.query(`SELECT id FROM users WHERE id = $1`, [req.params.userId]);
+    if (!recipient.rows.length) return res.status(404).json({ message: "User not found" });
+    const result = await pool.query(`
+      INSERT INTO private_messages(id, sender_id, recipient_id, body) VALUES ($1, $2, $3, $4)
+      RETURNING id, sender_id, recipient_id, body, created_at
+    `, [uuidv4(), req.user.id, req.params.userId, body]);
+    res.status(201).json({ message: result.rows[0] });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Could not send message" });
   }
 });
 
@@ -603,7 +867,13 @@ app.get("/api/users/:id/profile", async (req, res) => {
         avatar_url,
         display_name,
         signature,
-        level
+        level,
+        COALESCE((SELECT MAX(lc.level_number) FROM level_config lc JOIN user_level_stats uls ON uls.user_id = users.id WHERE lc.level_type = 'wealth' AND lc.min_coins IS NOT NULL AND lc.min_coins <= uls.wealth_value), 1) AS wealth_level,
+        COALESCE((SELECT MAX(lc.level_number) FROM level_config lc JOIN user_level_stats uls ON uls.user_id = users.id WHERE lc.level_type = 'charm' AND lc.min_coins IS NOT NULL AND lc.min_coins <= uls.charm_value), 1) AS charm_level,
+        (SELECT lc.icon_url FROM level_config lc JOIN user_level_stats uls ON uls.user_id = users.id WHERE lc.level_type = 'wealth' AND lc.min_coins IS NOT NULL AND lc.min_coins <= uls.wealth_value ORDER BY lc.level_number DESC LIMIT 1) AS wealth_level_icon_url,
+        (SELECT lc.icon_url FROM level_config lc JOIN user_level_stats uls ON uls.user_id = users.id WHERE lc.level_type = 'charm' AND lc.min_coins IS NOT NULL AND lc.min_coins <= uls.charm_value ORDER BY lc.level_number DESC LIMIT 1) AS charm_level_icon_url,
+        (SELECT COUNT(*)::int FROM user_follows WHERE followed_id = users.id) AS fans_count,
+        (SELECT COUNT(*)::int FROM user_follows WHERE follower_id = users.id) AS following_count
       FROM users
       WHERE id = $1
       `,
@@ -1010,7 +1280,11 @@ app.get("/api/rooms/:roomId/members", async (req, res) => {
         u.display_name,
         u.avatar_url,
         u.signature,
-        u.level
+        u.level,
+        COALESCE((SELECT MAX(lc.level_number) FROM level_config lc JOIN user_level_stats uls ON uls.user_id = u.id WHERE lc.level_type = 'wealth' AND lc.min_coins IS NOT NULL AND lc.min_coins <= uls.wealth_value), 1) AS wealth_level,
+        COALESCE((SELECT MAX(lc.level_number) FROM level_config lc JOIN user_level_stats uls ON uls.user_id = u.id WHERE lc.level_type = 'charm' AND lc.min_coins IS NOT NULL AND lc.min_coins <= uls.charm_value), 1) AS charm_level,
+        (SELECT lc.icon_url FROM level_config lc JOIN user_level_stats uls ON uls.user_id = u.id WHERE lc.level_type = 'wealth' AND lc.min_coins IS NOT NULL AND lc.min_coins <= uls.wealth_value ORDER BY lc.level_number DESC LIMIT 1) AS wealth_level_icon_url,
+        (SELECT lc.icon_url FROM level_config lc JOIN user_level_stats uls ON uls.user_id = u.id WHERE lc.level_type = 'charm' AND lc.min_coins IS NOT NULL AND lc.min_coins <= uls.charm_value ORDER BY lc.level_number DESC LIMIT 1) AS charm_level_icon_url
       FROM room_seats rs
       JOIN users u ON u.id = rs.user_id
       WHERE rs.room_id = $1
@@ -1030,6 +1304,10 @@ app.get("/api/rooms/:roomId/members", async (req, res) => {
         avatar_url: row.avatar_url,
         signature: row.signature,
         level: row.level,
+        wealth_level: Number(row.wealth_level || 1),
+        charm_level: Number(row.charm_level || 1),
+        wealth_level_icon_url: row.wealth_level_icon_url,
+        charm_level_icon_url: row.charm_level_icon_url,
       });
     }
 
@@ -1143,7 +1421,9 @@ if (currentSeat.rows.length > 0) {
         display_name,
         avatar_url,
         signature,
-        level
+        level,
+        (SELECT COUNT(*)::int FROM user_follows WHERE followed_id = users.id) AS fans_count,
+        (SELECT COUNT(*)::int FROM user_follows WHERE follower_id = users.id) AS following_count
       FROM users
       WHERE id = $1
       `,
@@ -1175,7 +1455,11 @@ if (currentSeat.rows.length > 0) {
           u.display_name,
           u.avatar_url,
           u.signature,
-          u.level
+          u.level,
+          COALESCE((SELECT MAX(lc.level_number) FROM level_config lc JOIN user_level_stats uls ON uls.user_id = u.id WHERE lc.level_type = 'wealth' AND lc.min_coins IS NOT NULL AND lc.min_coins <= uls.wealth_value), 1) AS wealth_level,
+          COALESCE((SELECT MAX(lc.level_number) FROM level_config lc JOIN user_level_stats uls ON uls.user_id = u.id WHERE lc.level_type = 'charm' AND lc.min_coins IS NOT NULL AND lc.min_coins <= uls.charm_value), 1) AS charm_level,
+        (SELECT lc.icon_url FROM level_config lc JOIN user_level_stats uls ON uls.user_id = u.id WHERE lc.level_type = 'wealth' AND lc.min_coins IS NOT NULL AND lc.min_coins <= uls.wealth_value ORDER BY lc.level_number DESC LIMIT 1) AS wealth_level_icon_url,
+        (SELECT lc.icon_url FROM level_config lc JOIN user_level_stats uls ON uls.user_id = u.id WHERE lc.level_type = 'charm' AND lc.min_coins IS NOT NULL AND lc.min_coins <= uls.charm_value ORDER BY lc.level_number DESC LIMIT 1) AS charm_level_icon_url
         FROM room_seats rs
         JOIN users u ON u.id = rs.user_id
         WHERE rs.room_id = $1
@@ -1362,285 +1646,335 @@ app.post(
 );
 
 // -------------------------
-// Demo Coins
+// Wealth and Charm level APIs
 // -------------------------
-
-
- // Demo Coins - disabled for production
-app.post("/api/coins/demo", authMiddleware, (req, res) => {
-  return res.status(410).json({
-    message: "Demo coins are disabled."
-  });
-});
-
-
-/* =========================================
-   MINDO VOICE CHAT - WALLET APIs
-   Store purchase verification is disabled
-   until Google/Apple verification is configured.
-========================================= */
-
-// Get current wallet balance
-app.get("/api/wallet/balance", authMiddleware, async (req, res) => {
+function levelDbRequired(req, res) {
   if (!pool) {
-    return res.status(500).json({ message: "Database is not configured" });
+    res.status(503).json({ message: "Database is not configured" });
+    return false;
   }
+  return true;
+}
 
+app.get("/api/levels/me", authMiddleware, async (req, res) => {
+  if (!levelDbRequired(req, res)) return;
   try {
-    const result = await pool.query(
-      `SELECT coins, diamonds FROM users WHERE id = $1`,
-      [req.user.id]
-    );
-
-    if (!result.rows.length) {
-      return res.status(404).json({ message: "User not found" });
+    await pool.query(`INSERT INTO user_level_stats(user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING`, [req.user.id]);
+    const statsResult = await pool.query(`SELECT wealth_value, charm_value FROM user_level_stats WHERE user_id = $1`, [req.user.id]);
+    const stats = statsResult.rows[0];
+    const output = {};
+    for (const type of ["wealth", "charm"]) {
+      const value = Number(type === "wealth" ? stats.wealth_value : stats.charm_value);
+      const currentResult = await pool.query(`
+        SELECT level_number, min_coins, icon_url, entry_effect_key
+        FROM level_config
+        WHERE level_type = $1 AND min_coins IS NOT NULL AND min_coins <= $2
+        ORDER BY level_number DESC LIMIT 1
+      `, [type, value]);
+      const nextResult = await pool.query(`
+        SELECT level_number, min_coins, icon_url, entry_effect_key
+        FROM level_config WHERE level_type = $1
+          AND level_number > $2 AND min_coins IS NOT NULL
+        ORDER BY level_number ASC LIMIT 1
+      `, [type, currentResult.rows[0]?.level_number || 1]);
+      const current = currentResult.rows[0] || { level_number: 1, min_coins: 0, icon_url: null, entry_effect_key: null };
+      const next = nextResult.rows[0] || null;
+      output[type] = {
+        value,
+        level: Number(current.level_number),
+        icon_url: current.icon_url,
+        entry_effect_key: current.entry_effect_key,
+        next_level: next ? Number(next.level_number) : null,
+        next_min_coins: next?.min_coins == null ? null : Number(next.min_coins),
+        remaining: next?.min_coins == null ? null : Math.max(0, Number(next.min_coins) - value),
+        progress: next?.min_coins == null ? 0 : Math.max(0, Math.min(1, (value - Number(current.min_coins || 0)) / Math.max(1, Number(next.min_coins) - Number(current.min_coins || 0))))
+      };
     }
-
-    return res.json({ wallet: result.rows[0] });
+    res.json({ levels: output });
   } catch (error) {
-    console.error("Wallet balance error:", error);
-    return res.status(500).json({ message: "Could not load wallet balance" });
+    console.error("Level progress lookup failed:", error);
+    res.status(500).json({ message: "Could not load level progress" });
   }
 });
 
-// Get active recharge packages
-app.get("/api/wallet/recharge-packages", authMiddleware, async (req, res) => {
-  if (!pool) {
-    return res.status(500).json({ message: "Database is not configured" });
-  }
-
+app.get("/api/levels/config", authMiddleware, async (req, res) => {
+  if (!levelDbRequired(req, res)) return;
   try {
     const result = await pool.query(`
-      SELECT id, title, base_coins, bonus_coins,
-             display_price, currency, product_id_android,
-             product_id_ios
-      FROM recharge_packages
+      SELECT level_type, level_number, min_coins, icon_url, entry_effect_key
+      FROM level_config ORDER BY level_type, level_number
+    `);
+    res.json({ levels: result.rows });
+  } catch (error) {
+    console.error("Level configuration lookup failed:", error);
+    res.status(500).json({ message: "Could not load level configuration" });
+  }
+});
+
+// Admin dashboard saves cumulative coin thresholds and optional badge/effect assets.
+// Set users.is_admin = TRUE for the authorized main-admin account in the database.
+app.put("/api/admin/levels/config", authMiddleware, adminMiddleware, async (req, res) => {
+  if (!levelDbRequired(req, res)) return;
+  const type = String(req.body?.type || "").toLowerCase();
+  const levels = req.body?.levels;
+  if (!["wealth", "charm"].includes(type) || !Array.isArray(levels) || levels.length < 1 || levels.length > 110) {
+    return res.status(400).json({ message: "type must be wealth or charm and levels must contain 1 to 110 entries" });
+  }
+  const seen = new Set();
+  for (const item of levels) {
+    const level = Number(item?.level_number);
+    const minCoins = item?.min_coins == null ? null : Number(item.min_coins);
+    if (!Number.isInteger(level) || level < 1 || level > 110 || seen.has(level) ||
+        (minCoins !== null && (!Number.isSafeInteger(minCoins) || minCoins < 0))) {
+      return res.status(400).json({ message: "Each level needs a unique level_number (1-110) and a non-negative integer min_coins" });
+    }
+    seen.add(level);
+  }
+  if (!levels.some(item => Number(item.level_number) === 1 && Number(item.min_coins) === 0)) {
+    return res.status(400).json({ message: "Level 1 must start at 0 coins" });
+  }
+  const configuredThresholds = levels
+    .filter(item => item.min_coins != null)
+    .sort((a, b) => Number(a.level_number) - Number(b.level_number));
+  for (let i = 1; i < configuredThresholds.length; i++) {
+    if (Number(configuredThresholds[i].min_coins) <= Number(configuredThresholds[i - 1].min_coins)) {
+      return res.status(400).json({ message: "Coin thresholds must increase with every higher level" });
+    }
+  }
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    for (const item of levels) {
+      await client.query(`
+        INSERT INTO level_config(level_type, level_number, min_coins, icon_url, entry_effect_key, updated_at, updated_by)
+        VALUES ($1,$2,$3,$4,$5,NOW(),$6)
+        ON CONFLICT (level_type, level_number) DO UPDATE SET
+          min_coins = EXCLUDED.min_coins,
+          icon_url = EXCLUDED.icon_url,
+          entry_effect_key = EXCLUDED.entry_effect_key,
+          updated_at = NOW(), updated_by = EXCLUDED.updated_by
+      `, [type, Number(item.level_number), item.min_coins == null ? null : Number(item.min_coins), item.icon_url || null, item.entry_effect_key || null, req.user.id]);
+    }
+    await client.query("COMMIT");
+    res.json({ message: `${type} level configuration saved`, updated: levels.length });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("Level configuration update failed:", error);
+    res.status(500).json({ message: "Could not save level configuration" });
+  } finally {
+    client.release();
+  }
+});
+
+// -------------------------
+// Wallet APIs (store purchase verification intentionally fail-closed)
+// -------------------------
+function walletDbRequired(req, res) {
+  if (!pool) {
+    res.status(503).json({ message: "Database is not configured" });
+    return false;
+  }
+  return true;
+}
+
+app.get("/api/wallet/recharge-packages", authMiddleware, async (req, res) => {
+  if (!walletDbRequired(req, res)) return;
+  try {
+    const result = await pool.query(`
+      SELECT code, title, coins, bonus_coins, google_product_id, apple_product_id
+      FROM wallet_recharge_packages
       WHERE active = TRUE
       ORDER BY sort_order ASC, created_at ASC
     `);
-
-    return res.json({ packages: result.rows });
+    res.json({ packages: result.rows });
   } catch (error) {
-    console.error("Recharge packages error:", error);
-    return res.status(500).json({ message: "Could not load recharge packages" });
+    console.error("Recharge package lookup failed:", error);
+    res.status(500).json({ message: "Could not load recharge packages" });
   }
 });
 
-// Secure purchase verification is NOT enabled yet.
-// Never credit coins from an unverified client receipt.
-app.post("/api/wallet/purchases/verify", authMiddleware, async (req, res) => {
+// Do NOT credit coins from client claims. Store verification must be implemented
+// with Google Play Developer API / Apple App Store Server API credentials first.
+app.post("/api/wallet/recharge/verify", authMiddleware, async (req, res) => {
+  if (!walletDbRequired(req, res)) return;
+  const { platform, productId, purchaseToken, transactionId, receipt } = req.body || {};
+  if (!["google_play", "app_store"].includes(platform) || !productId ||
+      !(purchaseToken || transactionId || receipt)) {
+    return res.status(400).json({
+      message: "platform, productId, and store purchase proof are required"
+    });
+  }
   return res.status(503).json({
-    verified: false,
-    message:
-      "Store purchase verification is not configured. No coins were added."
+    code: "STORE_VERIFICATION_NOT_CONFIGURED",
+    message: "Purchase verification is not configured yet. No coins were added. Configure and test Google Play / Apple server verification before enabling recharge."
   });
 });
 
-// Get coin transaction history
 app.get("/api/wallet/coin-history", authMiddleware, async (req, res) => {
-  if (!pool) {
-    return res.status(500).json({ message: "Database is not configured" });
-  }
-
+  if (!walletDbRequired(req, res)) return;
+  const limit = Math.min(Math.max(Number.parseInt(req.query.limit, 10) || 30, 1), 100);
+  const offset = Math.max(Number.parseInt(req.query.offset, 10) || 0, 0);
   try {
-    const limit = Math.min(
-      Math.max(parseInt(req.query.limit, 10) || 30, 1),
-      100
-    );
-    const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
-
-    const result = await pool.query(
-      `SELECT id, transaction_type, status, coins_delta,
-              description, provider, provider_transaction_id, created_at
-       FROM wallet_transactions
-       WHERE user_id = $1 AND coins_delta <> 0
-       ORDER BY created_at DESC
-       LIMIT $2 OFFSET $3`,
-      [req.user.id, limit, offset]
-    );
-
-    return res.json({ transactions: result.rows });
+    const result = await pool.query(`
+      SELECT id, kind, currency, amount, balance_after, status, source,
+             external_transaction_id, details, created_at
+      FROM wallet_transactions
+      WHERE user_id = $1 AND currency = 'coins'
+      ORDER BY created_at DESC
+      LIMIT $2 OFFSET $3
+    `, [req.user.id, limit, offset]);
+    res.json({ transactions: result.rows, limit, offset });
   } catch (error) {
-    console.error("Coin history error:", error);
-    return res.status(500).json({ message: "Could not load coin history" });
+    console.error("Coin history lookup failed:", error);
+    res.status(500).json({ message: "Could not load coin history" });
   }
 });
 
-// Get diamond transaction history
 app.get("/api/wallet/diamond-history", authMiddleware, async (req, res) => {
-  if (!pool) {
-    return res.status(500).json({ message: "Database is not configured" });
-  }
-
+  if (!walletDbRequired(req, res)) return;
+  const limit = Math.min(Math.max(Number.parseInt(req.query.limit, 10) || 30, 1), 100);
+  const offset = Math.max(Number.parseInt(req.query.offset, 10) || 0, 0);
   try {
-    const limit = Math.min(
-      Math.max(parseInt(req.query.limit, 10) || 30, 1),
-      100
-    );
-    const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
-
-    const result = await pool.query(
-      `SELECT id, transaction_type, status, diamonds_delta,
-              coins_delta, description, created_at
-       FROM wallet_transactions
-       WHERE user_id = $1 AND diamonds_delta <> 0
-       ORDER BY created_at DESC
-       LIMIT $2 OFFSET $3`,
-      [req.user.id, limit, offset]
-    );
-
-    return res.json({ transactions: result.rows });
+    const result = await pool.query(`
+      SELECT id, kind, currency, amount, balance_after, status, source,
+             external_transaction_id, details, created_at
+      FROM wallet_transactions
+      WHERE user_id = $1 AND currency = 'diamonds'
+      ORDER BY created_at DESC
+      LIMIT $2 OFFSET $3
+    `, [req.user.id, limit, offset]);
+    res.json({ transactions: result.rows, limit, offset });
   } catch (error) {
-    console.error("Diamond history error:", error);
-    return res.status(500).json({ message: "Could not load diamond history" });
+    console.error("Diamond history lookup failed:", error);
+    res.status(500).json({ message: "Could not load diamond history" });
   }
 });
 
-// Read diamond exchange settings
-app.get(
-  "/api/wallet/diamond-exchange-config",
-  authMiddleware,
-  async (req, res) => {
-    if (!pool) {
-      return res.status(500).json({ message: "Database is not configured" });
-    }
-
-    try {
-      const result = await pool.query(
-        `SELECT setting_value
-         FROM wallet_settings
-         WHERE setting_key = 'diamond_exchange'`
-      );
-
-      const config = result.rows[0]?.setting_value || {
-        enabled: false,
-        coins_per_diamond: 0,
-        min_diamonds: 1,
-        max_diamonds: 100000
-      };
-
-      return res.json({ config });
-    } catch (error) {
-      console.error("Exchange config error:", error);
-      return res.status(500).json({
-        message: "Could not load diamond exchange settings"
-      });
-    }
+app.get("/api/wallet/diamonds", authMiddleware, async (req, res) => {
+  if (!walletDbRequired(req, res)) return;
+  try {
+    const result = await pool.query(`SELECT diamonds, coins FROM users WHERE id = $1`, [req.user.id]);
+    if (!result.rows.length) return res.status(404).json({ message: "User not found" });
+    const setting = await pool.query(`SELECT value FROM wallet_settings WHERE key = 'diamond_exchange'`);
+    const config = setting.rows[0]?.value || { enabled: false, diamonds_per_exchange: 0, coins_per_exchange: 0 };
+    res.json({ diamonds: Number(result.rows[0].diamonds), coins: Number(result.rows[0].coins), exchange: config });
+  } catch (error) {
+    console.error("Diamond wallet lookup failed:", error);
+    res.status(500).json({ message: "Could not load diamond wallet" });
   }
-);
+});
 
-// Exchange diamonds for coins (disabled until admin configures a valid rate)
-app.post(
-  "/api/wallet/diamond-exchange",
-  authMiddleware,
-  async (req, res) => {
-    if (!pool) {
-      return res.status(500).json({ message: "Database is not configured" });
-    }
-
-    const diamonds = Number(req.body.diamonds);
-
-    if (!Number.isSafeInteger(diamonds) || diamonds <= 0) {
-      return res.status(400).json({
-        message: "Enter a valid whole number of diamonds"
-      });
-    }
-
-    const client = await pool.connect();
-
-    try {
-      await client.query("BEGIN");
-
-      const settingResult = await client.query(
-        `SELECT setting_value
-         FROM wallet_settings
-         WHERE setting_key = 'diamond_exchange'
-         FOR UPDATE`
-      );
-
-      const config = settingResult.rows[0]?.setting_value;
-
-      if (
-        !config ||
-        config.enabled !== true ||
-        !Number.isSafeInteger(config.coins_per_diamond) ||
-        config.coins_per_diamond <= 0
-      ) {
-        await client.query("ROLLBACK");
-        return res.status(503).json({
-          message: "Diamond exchange is not enabled by the administrator"
-        });
-      }
-
-      const min = Number(config.min_diamonds) || 1;
-      const max = Number(config.max_diamonds) || 100000;
-
-      if (diamonds < min || diamonds > max) {
-        await client.query("ROLLBACK");
-        return res.status(400).json({
-          message: `Exchange must be between ${min} and ${max} diamonds`
-        });
-      }
-
-      const coins = diamonds * config.coins_per_diamond;
-
-      if (!Number.isSafeInteger(coins) || coins <= 0) {
-        await client.query("ROLLBACK");
-        return res.status(400).json({ message: "Invalid exchange amount" });
-      }
-
-      const userResult = await client.query(
-        `UPDATE users
-         SET diamonds = diamonds - $1,
-             coins = coins + $2
-         WHERE id = $3 AND diamonds >= $1
-         RETURNING coins, diamonds`,
-        [diamonds, coins, req.user.id]
-      );
-
-      if (!userResult.rows.length) {
-        await client.query("ROLLBACK");
-        return res.status(409).json({
-          message: "Insufficient diamonds or user not found"
-        });
-      }
-
-      await client.query(
-        `INSERT INTO wallet_transactions
-         (id, user_id, transaction_type, status,
-          coins_delta, diamonds_delta, description)
-         VALUES
-         ($1, $2, 'diamond_exchange', 'success',
-          $3, $4, $5)`,
-        [
-          uuidv4(),
-          req.user.id,
-          coins,
-          -diamonds,
-          `Exchanged ${diamonds} diamonds for ${coins} coins`
-        ]
-      );
-
-      await client.query("COMMIT");
-
-      return res.json({
-        message: "Diamond exchange successful",
-        exchanged_diamonds: diamonds,
-        coins_received: coins,
-        wallet: userResult.rows[0]
-      });
-    } catch (error) {
-      try {
-        await client.query("ROLLBACK");
-      } catch (_) {}
-
-      console.error("Diamond exchange error:", error);
-      return res.status(500).json({ message: "Diamond exchange failed" });
-    } finally {
-      client.release();
-    }
+app.post("/api/wallet/diamonds/exchange", authMiddleware, async (req, res) => {
+  if (!walletDbRequired(req, res)) return;
+  const diamondsToExchange = Number(req.body?.diamonds);
+  if (!Number.isSafeInteger(diamondsToExchange) || diamondsToExchange <= 0) {
+    return res.status(400).json({ message: "diamonds must be a positive whole number" });
   }
-);
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const settingResult = await client.query(
+      `SELECT value FROM wallet_settings WHERE key = 'diamond_exchange' FOR UPDATE`
+    );
+    const config = settingResult.rows[0]?.value;
+    if (!config || config.enabled !== true ||
+        !Number.isSafeInteger(Number(config.diamonds_per_exchange)) ||
+        !Number.isSafeInteger(Number(config.coins_per_exchange)) ||
+        Number(config.diamonds_per_exchange) <= 0 || Number(config.coins_per_exchange) <= 0) {
+      await client.query("ROLLBACK");
+      return res.status(503).json({ message: "Diamond exchange is not enabled by admin yet" });
+    }
+    const unitDiamonds = Number(config.diamonds_per_exchange);
+    const unitCoins = Number(config.coins_per_exchange);
+    if (diamondsToExchange % unitDiamonds !== 0) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ message: `Exchange amount must be a multiple of ${unitDiamonds} diamonds` });
+    }
+    const coinsToCredit = (diamondsToExchange / unitDiamonds) * unitCoins;
+    if (!Number.isSafeInteger(coinsToCredit) || coinsToCredit <= 0) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ message: "Exchange amount is too large" });
+    }
+    const userResult = await client.query(
+      `UPDATE users SET diamonds = diamonds - $1, coins = coins + $2
+       WHERE id = $3 AND diamonds >= $1
+       RETURNING diamonds, coins`,
+      [diamondsToExchange, coinsToCredit, req.user.id]
+    );
+    if (!userResult.rows.length) {
+      await client.query("ROLLBACK");
+      return res.status(409).json({ message: "Insufficient diamonds or user not found" });
+    }
+    const user = userResult.rows[0];
+    const transactionId = uuidv4();
+    await client.query(`
+      INSERT INTO wallet_transactions
+        (id, user_id, kind, currency, amount, balance_after, status, source, external_transaction_id, idempotency_key, details)
+      VALUES
+        ($1, $2, 'diamond_exchange_out', 'diamonds', $3, $4, 'success', 'exchange', $5, $6, $7::jsonb),
+        ($8, $2, 'diamond_exchange_in', 'coins', $9, $10, 'success', 'exchange', $5, $11, $12::jsonb)
+    `, [
+      uuidv4(), req.user.id, -diamondsToExchange, user.diamonds, transactionId,
+      `diamond-exchange:${transactionId}:diamonds`, JSON.stringify({ coins_received: coinsToCredit }),
+      uuidv4(), coinsToCredit, user.coins, `diamond-exchange:${transactionId}:coins`,
+      JSON.stringify({ diamonds_exchanged: diamondsToExchange })
+    ]);
+    await client.query("COMMIT");
+    return res.json({
+      message: "Diamond exchange successful",
+      transactionId,
+      diamondsExchanged: diamondsToExchange,
+      coinsReceived: coinsToCredit,
+      diamondsBalance: Number(user.diamonds),
+      coinsBalance: Number(user.coins)
+    });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("Diamond exchange failed:", error);
+    return res.status(500).json({ message: "Could not exchange diamonds" });
+  } finally {
+    client.release();
+  }
+});
+
+// -------------------------
+// Demo Coins
+// -------------------------
+
+app.post("/api/coins/demo", authMiddleware, async (req, res) => {
+  if (process.env.WALLET_DEMO_ENABLED !== "true") {
+    return res.status(404).json({ message: "Not found" });
+  }
+  if (!pool) {
+    return res.status(500).json({
+      message: "Database is not configured",
+    });
+  }
+
+  try {
+    const result = await pool.query(
+      `
+      UPDATE users
+      SET coins = coins + 100
+      WHERE id = $1
+      RETURNING id, username, coins, level
+      `,
+      [req.user.id]
+    );
+
+    res.json({
+      message: "100 demo coins added",
+      user: result.rows[0],
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      message: "Could not add coins",
+    });
+  }
+});
 
 // -------------------------
 // Start Server
