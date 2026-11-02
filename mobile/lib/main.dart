@@ -270,6 +270,52 @@ Future<Map<String, dynamic>> createRoom(
     return _handleResponse(response);
   }
 
+  // PUBLIC PROFILE: profile, room tracking, follow and private chat
+  Future<Map<String, dynamic>> getPublicProfile(String userId) async {
+    final response = await http.get(Uri.parse('$apiBaseUrl/api/users/$userId/profile'));
+    return _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> startRoomPresence(String token, String roomId) async {
+    final response = await http.post(Uri.parse('$apiBaseUrl/api/rooms/$roomId/presence'), headers: {'Authorization': 'Bearer $token'});
+    return _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> heartbeatRoomPresence(String token, String roomId) async {
+    final response = await http.post(Uri.parse('$apiBaseUrl/api/rooms/$roomId/presence/heartbeat'), headers: {'Authorization': 'Bearer $token'});
+    return _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> endRoomPresence(String token, String roomId) async {
+    final response = await http.delete(Uri.parse('$apiBaseUrl/api/rooms/$roomId/presence'), headers: {'Authorization': 'Bearer $token'});
+    return _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> getTrackedRoom(String token, String userId) async {
+    final response = await http.get(Uri.parse('$apiBaseUrl/api/users/$userId/track-room'), headers: {'Authorization': 'Bearer $token'});
+    return _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> toggleFollow(String token, String userId) async {
+    final response = await http.post(Uri.parse('$apiBaseUrl/api/users/$userId/follow'), headers: {'Authorization': 'Bearer $token'});
+    return _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> getFollowStatus(String token, String userId) async {
+    final response = await http.get(Uri.parse('$apiBaseUrl/api/users/$userId/follow-status'), headers: {'Authorization': 'Bearer $token'});
+    return _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> getChatMessages(String token, String userId) async {
+    final response = await http.get(Uri.parse('$apiBaseUrl/api/chat/$userId/messages'), headers: {'Authorization': 'Bearer $token'});
+    return _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> sendChatMessage(String token, String userId, String body) async {
+    final response = await http.post(Uri.parse('$apiBaseUrl/api/chat/$userId/messages'), headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'}, body: jsonEncode({'body': body}));
+    return _handleResponse(response);
+  }
+
     
   Future<Map<String, dynamic>> getDiamondExchange(String token) async {
     final headers = {'Authorization': 'Bearer $token'};
@@ -5225,19 +5271,117 @@ class _MindoMallScreenState extends State<MindoMallScreen> {
 // PUBLIC PROFILE SCREEN
 // ============================================================
 
-class PublicProfileScreen extends StatelessWidget {
+class PublicProfileScreen extends StatefulWidget {
   final Map<String, dynamic> user;
+  final String token;
 
-  const PublicProfileScreen({super.key, required this.user});
+  const PublicProfileScreen({super.key, required this.user, required this.token});
+
+  @override
+  State<PublicProfileScreen> createState() => _PublicProfileScreenState();
+}
+
+class _PublicProfileScreenState extends State<PublicProfileScreen> {
 
   static const Color _pink = Color(0xFFF12D86);
   static const Color _purple = Color(0xFFB95BE8);
   static const Color _ink = Color(0xFF17151B);
   static const Color _page = Color(0xFFF5F3F8);
 
+  bool _loadingAction = false;
+  bool _following = false;
+  bool _followLoaded = false;
+  int _fansCount = 0;
+  int _followingCount = 0;
+  String get _targetId => (widget.user['id'] ?? widget.user['user_id'] ?? '').toString();
+
+  @override
+  void initState() {
+    super.initState();
+    _fansCount = int.tryParse((widget.user['fans_count'] ?? widget.user['follower_count'] ?? 0).toString()) ?? 0;
+    _followingCount = int.tryParse((widget.user['following_count'] ?? widget.user['follow_count'] ?? 0).toString()) ?? 0;
+    _loadFollowStatus();
+  }
+
+  Future<void> _loadFollowStatus() async {
+    if (_targetId.isEmpty) return;
+    try {
+      final result = await api.getFollowStatus(widget.token, _targetId);
+      if (mounted) setState(() {
+        _following = result['following'] == true; _followLoaded = true;
+        _fansCount = int.tryParse((result['fans_count'] ?? _fansCount).toString()) ?? _fansCount;
+        _followingCount = int.tryParse((result['following_count'] ?? _followingCount).toString()) ?? _followingCount;
+      });
+    } catch (_) { if (mounted) setState(() => _followLoaded = true); }
+  }
+
+  Future<void> _trackUser() async {
+    if (_loadingAction) return;
+    setState(() => _loadingAction = true);
+    try {
+      final result = await api.getTrackedRoom(widget.token, _targetId);
+      final room = Map<String, dynamic>.from(result['room'] ?? {});
+      if (room.isEmpty || room['id'] == null) { _message(context, 'User is not in a room right now.'); return; }
+      if (!mounted) return;
+      Navigator.push(context, MaterialPageRoute(builder: (_) => VoiceRoomScreen(
+        token: widget.token, roomId: room['id'].toString(),
+        roomName: (room['name'] ?? 'Voice Room').toString(),
+        seatCount: int.tryParse(room['seat_count']?.toString() ?? '') ?? 10,
+        ownerPublicUid: (room['owner_public_uid'] ?? '').toString(),
+        coverImageUrl: room['cover_image_url']?.toString(),
+      )));
+    } catch (e) { _message(context, e.toString().replaceFirst('Exception: ', '')); }
+    finally { if (mounted) setState(() => _loadingAction = false); }
+  }
+
+  Future<void> _openOwnerRoom() async {
+    if (_loadingAction) return;
+    setState(() => _loadingAction = true);
+    try {
+      final rooms = await api.getRooms(widget.token);
+      Map<String, dynamic>? room;
+      for (final rawRoom in rooms) {
+        if (rawRoom is Map && (rawRoom['owner_id'] ?? rawRoom['user_id'] ?? '').toString() == _targetId) {
+          room = Map<String, dynamic>.from(rawRoom);
+          break;
+        }
+      }
+      if (room == null) { _message(context, 'User has not created a room.'); return; }
+      if (!mounted) return;
+      Navigator.push(context, MaterialPageRoute(builder: (_) => VoiceRoomScreen(
+        token: widget.token, roomId: room!['id'].toString(),
+        roomName: (room['name'] ?? 'Voice Room').toString(),
+        seatCount: int.tryParse(room['seat_count']?.toString() ?? '') ?? 10,
+        ownerPublicUid: (room['owner_public_uid'] ?? '').toString(),
+        coverImageUrl: room['cover_image_url']?.toString(),
+      )));
+    } catch (e) { _message(context, e.toString().replaceFirst('Exception: ', '')); }
+    finally { if (mounted) setState(() => _loadingAction = false); }
+  }
+
+  Future<void> _toggleFollow() async {
+    try {
+      final result = await api.toggleFollow(widget.token, _targetId);
+      if (!mounted) return;
+      setState(() {
+        _following = result['following'] == true; _followLoaded = true;
+        _fansCount = int.tryParse((result['fans_count'] ?? _fansCount).toString()) ?? _fansCount;
+        _followingCount = int.tryParse((result['following_count'] ?? _followingCount).toString()) ?? _followingCount;
+      });
+      _message(context, _following ? 'Following' : 'Unfollowed');
+    } catch (e) { _message(context, e.toString().replaceFirst('Exception: ', '')); }
+  }
+
+  void _openChat() {
+    Navigator.push(context, MaterialPageRoute(builder: (_) => PrivateChatScreen(
+      token: widget.token, userId: _targetId, userName: _text(['display_name', 'username'], 'User'),
+      avatarUrl: _text(['avatar_url', 'avatar']),
+    )));
+  }
+
   String _text(List<String> keys, [String fallback = '']) {
     for (final key in keys) {
-      final value = user[key];
+      final value = widget.user[key];
       if (value != null && value.toString().trim().isNotEmpty) {
         return value.toString().trim();
       }
@@ -5247,7 +5391,7 @@ class PublicProfileScreen extends StatelessWidget {
 
   int _number(List<String> keys) {
     for (final key in keys) {
-      final value = user[key];
+      final value = widget.user[key];
       if (value is num) return value.toInt();
       final parsed = int.tryParse(value?.toString() ?? '');
       if (parsed != null) return parsed;
@@ -5257,14 +5401,14 @@ class PublicProfileScreen extends StatelessWidget {
 
   List<dynamic> _items(List<String> keys) {
     for (final key in keys) {
-      final value = user[key];
+      final value = widget.user[key];
       if (value is List) return value;
     }
     return const [];
   }
 
-  bool get _isAgencyOwner => user['is_current_user'] == true ||
-      user['is_me'] == true || user['is_agency_owner'] == true;
+  bool get _isAgencyOwner => widget.user['is_current_user'] == true ||
+      widget.user['is_me'] == true || widget.user['is_agency_owner'] == true;
 
   void _message(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
@@ -5432,8 +5576,8 @@ class PublicProfileScreen extends StatelessWidget {
               child: Align(alignment: Alignment.centerLeft, child: Text(signature, style: const TextStyle(color: Colors.white70)))),
             const SizedBox(height: 24),
             Row(children: [
-              _stat('${_number(['following_count', 'follow_count'])}', 'Follow'),
-              _stat('${_number(['fans_count', 'follower_count'])}', 'Fans'),
+              _stat('$_followingCount', 'Follow'),
+              _stat('$_fansCount', 'Fans'),
               _stat('${_number(['gift_received', 'gift_received_count', 'gift_count'])}', 'Gift Received'),
               _stat('${_number(['gift_sent', 'gift_sent_count', 'gift_count_2'])}', 'Gift Sent'),
               _stat('${_number(['visit_count', 'visits'])}', 'Visits'),
@@ -5472,10 +5616,10 @@ class PublicProfileScreen extends StatelessWidget {
           ])),
         ]),
         Positioned(left: 8, right: 8, bottom: 12, child: Row(children: [
-          _bottomAction(context, 'Track', Icons.home_filled, _purple, () => _message(context, 'Track selected')),
-          _bottomAction(context, 'Room', Icons.chat_bubble_rounded, const Color(0xFF8DDB00), () => _message(context, 'Room selected')),
-          _bottomAction(context, 'Follow', Icons.star_rounded, _pink, () => _message(context, 'Follow selected')),
-          _bottomAction(context, 'Chat', Icons.chat_bubble_outline, const Color(0xFF08BEDB), () => _message(context, 'Chat selected')),
+          _bottomAction(context, 'Track', Icons.home_filled, _purple, _trackUser),
+          _bottomAction(context, 'Room', Icons.chat_bubble_rounded, const Color(0xFF8DDB00), _openOwnerRoom),
+          _bottomAction(context, _followLoaded && _following ? 'Following' : 'Follow', Icons.star_rounded, _pink, _toggleFollow),
+          _bottomAction(context, 'Chat', Icons.chat_bubble_outline, const Color(0xFF08BEDB), _openChat),
         ])),
       ]),
     );
@@ -5486,6 +5630,47 @@ class PublicProfileScreen extends StatelessWidget {
     decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(18)),
     child: Text(text, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12)),
   );
+}
+
+// ============================================================
+// PRIVATE ONE-TO-ONE CHAT
+// ============================================================
+class PrivateChatScreen extends StatefulWidget {
+  final String token;
+  final String userId;
+  final String userName;
+  final String avatarUrl;
+  const PrivateChatScreen({super.key, required this.token, required this.userId, required this.userName, required this.avatarUrl});
+  @override State<PrivateChatScreen> createState() => _PrivateChatScreenState();
+}
+
+class _PrivateChatScreenState extends State<PrivateChatScreen> {
+  final TextEditingController _controller = TextEditingController();
+  final ScrollController _scroll = ScrollController();
+  List<Map<String, dynamic>> _messages = [];
+  bool _loading = true;
+  bool _sending = false;
+  @override void initState() { super.initState(); _load(); }
+  @override void dispose() { _controller.dispose(); _scroll.dispose(); super.dispose(); }
+  Future<void> _load() async {
+    try {
+      final data = await api.getChatMessages(widget.token, widget.userId);
+      final rows = (data['messages'] ?? data['history'] ?? []) as List;
+      if (!mounted) return;
+      setState(() { _messages = rows.map((e) => Map<String, dynamic>.from(e)).toList(); _loading = false; });
+      WidgetsBinding.instance.addPostFrameCallback((_) { if (_scroll.hasClients) _scroll.jumpTo(_scroll.position.maxScrollExtent); });
+    } catch (e) { if (mounted) setState(() => _loading = false); }
+  }
+  Future<void> _send() async {
+    final body = _controller.text.trim(); if (body.isEmpty || _sending) return;
+    setState(() => _sending = true);
+    try { await api.sendChatMessage(widget.token, widget.userId, body); _controller.clear(); await _load(); }
+    catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', '')))); }
+    finally { if (mounted) setState(() => _sending = false); }
+  }
+  @override Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: Row(children: [CircleAvatar(radius: 17, backgroundImage: widget.avatarUrl.isNotEmpty ? NetworkImage(widget.avatarUrl) : null, child: widget.avatarUrl.isEmpty ? const Icon(Icons.person) : null), const SizedBox(width: 10), Expanded(child: Text(widget.userName, overflow: TextOverflow.ellipsis))])),
+    body: Column(children: [Expanded(child: _loading ? const Center(child: CircularProgressIndicator()) : RefreshIndicator(onRefresh: _load, child: ListView.builder(controller: _scroll, padding: const EdgeInsets.all(12), itemCount: _messages.length, itemBuilder: (_, i) { final m = _messages[i]; final mine = m['sender_id']?.toString() != widget.userId; final text = (m['body'] ?? m['message'] ?? '').toString(); return Align(alignment: mine ? Alignment.centerRight : Alignment.centerLeft, child: Container(margin: const EdgeInsets.symmetric(vertical: 4), padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9), constraints: const BoxConstraints(maxWidth: 290), decoration: BoxDecoration(color: mine ? const Color(0xFF8C55C7) : const Color(0xFFEDE8F3), borderRadius: BorderRadius.circular(16)), child: Text(text, style: TextStyle(color: mine ? Colors.white : Colors.black87)))); }))), SafeArea(child: Padding(padding: const EdgeInsets.all(10), child: Row(children: [Expanded(child: TextField(controller: _controller, minLines: 1, maxLines: 4, decoration: const InputDecoration(hintText: 'Message...', border: OutlineInputBorder()))), const SizedBox(width: 8), IconButton(onPressed: _sending ? null : _send, icon: const Icon(Icons.send_rounded, color: Color(0xFF8C55C7)))]))) ]));
 }
 
 // ============================================================
@@ -6771,6 +6956,38 @@ class VoiceRoomScreen
 class _VoiceRoomScreenState
     extends State<VoiceRoomScreen> {
   bool microphoneOn = false;
+  Timer? _presenceHeartbeat;
+  bool _presenceStarted = false;
+
+  Future<void> _startPresence() async {
+    try {
+      await api.startRoomPresence(widget.token, widget.roomId);
+      if (!mounted) {
+        await api.endRoomPresence(widget.token, widget.roomId);
+        return;
+      }
+      _presenceStarted = true;
+      _presenceHeartbeat?.cancel();
+      _presenceHeartbeat = Timer.periodic(const Duration(seconds: 30), (_) async {
+        try { await api.heartbeatRoomPresence(widget.token, widget.roomId); } catch (e) { debugPrint('Presence heartbeat failed: $e'); }
+      });
+    } catch (e) { debugPrint('Room presence start failed: $e'); }
+  }
+
+  Future<void> _endPresence() async {
+    _presenceHeartbeat?.cancel();
+    if (_presenceStarted) {
+      _presenceStarted = false;
+      try { await api.endRoomPresence(widget.token, widget.roomId); } catch (e) { debugPrint('Room presence end failed: $e'); }
+    }
+  }
+
+  @override
+  void dispose() {
+    _presenceHeartbeat?.cancel();
+    if (_presenceStarted) { api.endRoomPresence(widget.token, widget.roomId).catchError((e) { debugPrint('Room presence cleanup failed: $e'); return <String, dynamic>{}; }); }
+    super.dispose();
+  }
 
   final List<String> speakers = List.generate(
     10,
@@ -6811,6 +7028,7 @@ Future<void> loadRoomMembers() async {
 void initState() {
   super.initState();
   loadRoomMembers();
+  _startPresence();
 }
   Widget _roomLevelBadge(String prefix, dynamic rawLevel, {String? iconUrl}) {
     final level = rawLevel is num ? rawLevel.toInt() : int.tryParse('$rawLevel') ?? 1;
@@ -7109,6 +7327,18 @@ actions: [
 final member = seatMembers[index + 1];
 return InkWell(
   onTap: () async {
+    if (member != null && (member['id'] ?? '').toString().isNotEmpty) {
+      final publicId = member['id'].toString();
+      try {
+        final profileResult = await api.getPublicProfile(publicId);
+        final profile = Map<String, dynamic>.from(profileResult['user'] ?? profileResult);
+        if (!mounted) return;
+        await Navigator.push(context, MaterialPageRoute(builder: (_) => PublicProfileScreen(user: profile, token: widget.token)));
+      } catch (e) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+      }
+      return;
+    }
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('token');
