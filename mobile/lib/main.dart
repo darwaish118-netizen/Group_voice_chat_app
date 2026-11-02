@@ -1777,7 +1777,7 @@ final pages = [
 
     return Scaffold(
       extendBodyBehindAppBar: selectedIndex == 3,
-      appBar: AppBar(
+      appBar: selectedIndex == 0 ? null : AppBar(
         toolbarHeight: selectedIndex == 3 ? 48 : null,
         backgroundColor: selectedIndex == 3
             ? Colors.transparent
@@ -2139,171 +2139,293 @@ try {
     );
   }
 
-  @override
-  Widget build(
-    BuildContext context,
-  ) {
-    return Scaffold(
-      body:
-          RefreshIndicator(
-        onRefresh: loadRooms,
-        child: loading
-            ? const Center(
-                child:
-                    CircularProgressIndicator(),
-              )
-            : rooms.isEmpty
-                ? ListView(
-                    physics:
-                        const AlwaysScrollableScrollPhysics(),
-                    children: const [
-                      SizedBox(
-                        height: 100,
-                      ),
-                      Icon(
-                        Icons.mic_none,
-                        size: 80,
-                        color:
-                            Colors.grey,
-                      ),
-                      SizedBox(
-                        height: 20,
-                      ),
-                      Center(
-                        child: Text(
-                          'No voice rooms yet',
-                          style:
-                              TextStyle(
-                            fontSize: 20,
-                            fontWeight:
-                                FontWeight
-                                    .bold,
-                          ),
-                        ),
-                      ),
-                      SizedBox(
-                        height: 8,
-                      ),
-                      Center(
-                        child: Text(
-                          'Create the first room',
-                        ),
-                      ),
-                    ],
-                  )
-                : ListView.builder(
-                    padding:
-                        const EdgeInsets
-                            .all(16),
-                    itemCount:
-                        rooms.length,
-                    itemBuilder:
-                        (context, index) {
-                      final room =
-                          rooms[index];
+  String _roomCountry(Map<String, dynamic> room) =>
+      (room['country'] ?? room['owner_country'] ?? '').toString();
 
-                            final ownerUid =
-    room['owner_public_uid']?.toString() ?? '';
-                      final id =
-                          
-                          room['id']
-                                  ?.toString() ??
-                              '';
+  int _roomMembers(Map<String, dynamic> room) {
+    for (final key in ['member_count', 'members_count', 'online_count', 'current_users']) {
+      final value = int.tryParse(room[key]?.toString() ?? '');
+      if (value != null) return value;
+    }
+    return 0;
+  }
 
-                      final name =
-                          room['name']
-                                  ?.toString() ??
-                              'Voice Room';
+  int _roomCoins(Map<String, dynamic> room) {
+    for (final key in ['total_coins', 'coins_sent', 'coin_count', 'today_coins']) {
+      final value = int.tryParse(room[key]?.toString() ?? '');
+      if (value != null) return value;
+    }
+    return 0;
+  }
 
-                      return Card(
-                        margin:
-                            const EdgeInsets
-                                .only(
-                          bottom: 12,
-                        ),
-                        child:
-                            ListTile(
-                          contentPadding:
-                              const EdgeInsets
-                                  .all(
-                            14,
-                          ),
-                          leading:
-CircleAvatar(
-  radius: 28,
-  backgroundColor: Colors.deepPurple.shade100,
-  backgroundImage:
-      (room['cover_image_url'] != null &&
-              room['cover_image_url'].toString().isNotEmpty)
-          ? NetworkImage(room['cover_image_url'].toString())
-          : null,
-  child:
-      (room['cover_image_url'] == null ||
-              room['cover_image_url'].toString().isEmpty)
-          ? const Icon(
-              Icons.mic,
-              color: Colors.deepPurple,
-            )
-          : null,
-),
-                          title: Text(
-                            name,
-                            style:
-                                const TextStyle(
-                              fontWeight:
-                                  FontWeight
-                                      .bold,
-                            ),
-                          ),
-                          subtitle:
-                              const Text(
-                            'Voice room',
-                          ),
-                          trailing:
-                              const Icon(
-                            Icons
-                                .arrow_forward_ios,
-                            size: 18,
-                          ),
-                          onTap: () async {
-                              final prefs = await SharedPreferences.getInstance();
-final token = prefs.getString('token') ?? '';
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder:
-                                    (_) =>
-                                        VoiceRoomScreen(
-                                            token: token,
-                                  roomId:
-                                      id,
-                                            ownerPublicUid: ownerUid,
-                                  roomName:
-                                      name,
-coverImageUrl: room['cover_image_url']?.toString(),
-                                            seatCount:
-    int.tryParse(
-          room['seat_count']?.toString() ?? '',
-        ) ??
-        10,
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      );
-                    },
-                  ),
+  String _flag(String country) {
+    const flags = {
+      'Pakistan': '🇵🇰', 'India': '🇮🇳', 'United Arab Emirates': '🇦🇪',
+      'United Kingdom': '🇬🇧', 'Saudi Arabia': '🇸🇦', 'Bangladesh': '🇧🇩',
+      'Nepal': '🇳🇵', 'Qatar': '🇶🇦', 'Kuwait': '🇰🇼', 'Oman': '🇴🇲',
+      'Bahrain': '🇧🇭', 'United States': '🇺🇸', 'Canada': '🇨🇦',
+      'Australia': '🇦🇺', 'Germany': '🇩🇪', 'France': '🇫🇷', 'Turkey': '🇹🇷',
+    };
+    return flags[country] ?? '🌍';
+  }
+
+  Future<void> _openSearch() async {
+    final controller = TextEditingController();
+    final query = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF211033),
+        title: const Text('Search rooms', style: TextStyle(color: Colors.white)),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          style: const TextStyle(color: Colors.white),
+          decoration: const InputDecoration(
+            hintText: 'Room name or ID',
+            hintStyle: TextStyle(color: Colors.white54),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context, controller.text.trim()), child: const Text('Search')),
+        ],
       ),
-      floatingActionButton:
-          FloatingActionButton(
-        onPressed:
-            createRoom,
-        child:
-            const Icon(Icons.add),
+    );
+    if (query != null && mounted) {
+      setState(() {
+        _searchQuery = query.toLowerCase();
+        _selectedTab = 0;
+      });
+    }
+  }
+
+  Future<void> _openRanking() async {
+    final ranked = [...rooms]..sort((a, b) => _roomCoins(b as Map<String, dynamic>).compareTo(_roomCoins(a as Map<String, dynamic>)));
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF211033),
+        title: const Text('Global Room Ranking', style: TextStyle(color: Color(0xFFFFD76A))),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ranked.isEmpty
+              ? const Text('No ranked rooms available yet.', style: TextStyle(color: Colors.white70))
+              : ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: math.min(10, ranked.length),
+                  itemBuilder: (context, index) {
+                    final room = Map<String, dynamic>.from(ranked[index] as Map);
+                    return ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: const Color(0xFF6D2BA5),
+                        child: Text('${index + 1}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      ),
+                      title: Text((room['name'] ?? 'Voice Room').toString(), style: const TextStyle(color: Colors.white)),
+                      subtitle: Text('${_roomCoins(room)} coins', style: const TextStyle(color: Colors.white60)),
+                    );
+                  },
+                ),
+        ),
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
       ),
     );
   }
+
+  int _selectedTab = 0;
+  String _selectedCountry = 'All';
+  String _searchQuery = '';
+  final PageController _bannerController = PageController();
+  int _bannerIndex = 0;
+
+  Widget _bannerCard(int index) {
+    const gradients = [
+      [Color(0xFF7A1DAB), Color(0xFFE83EAD)],
+      [Color(0xFF174D91), Color(0xFF8129B8)],
+      [Color(0xFF9A4A13), Color(0xFF7026A8)],
+    ];
+    final colors = gradients[index % gradients.length];
+    final titles = ['COUNTRY EVENT', 'MINDO SPECIAL EVENT', 'WEEKLY CHALLENGE'];
+    final subtitles = ['Meet friends • Join the celebration', 'Play together • Win rewards', 'New rankings every week'];
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 10),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(colors: colors, begin: Alignment.topLeft, end: Alignment.bottomRight),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFFFD76A), width: 1.2),
+        boxShadow: [BoxShadow(color: colors.first.withOpacity(.35), blurRadius: 14)],
+      ),
+      child: Stack(
+        children: [
+          Positioned(right: 12, top: 3, child: Icon(index == 0 ? Icons.public : Icons.celebration, size: 76, color: Colors.white.withOpacity(.15))),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 14, 90, 14),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
+              Text(titles[index % titles.length], style: const TextStyle(color: Color(0xFFFFE08A), fontWeight: FontWeight.w900, letterSpacing: 1.2, fontSize: 16)),
+              const SizedBox(height: 6),
+              Text(subtitles[index % subtitles.length], style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+            ]),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _roomCard(Map<String, dynamic> room, int rank) {
+    final cover = room['cover_image_url']?.toString() ?? '';
+    final name = (room['name'] ?? 'Voice Room').toString();
+    final country = _roomCountry(room);
+    final members = _roomMembers(room);
+    final id = room['id']?.toString() ?? '';
+    final ownerUid = room['owner_public_uid']?.toString() ?? '';
+    final isTop = rank >= 1 && rank <= 3;
+    final frameColor = rank == 1 ? const Color(0xFFFFD45C) : rank == 2 ? const Color(0xFF9EDBFF) : const Color(0xFFD99A68);
+    return GestureDetector(
+      onTap: () async {
+        Navigator.push(context, MaterialPageRoute(builder: (_) => VoiceRoomScreen(
+          token: widget.token,
+          roomId: id,
+          ownerPublicUid: ownerUid,
+          roomName: name,
+          coverImageUrl: cover.isEmpty ? null : cover,
+          seatCount: int.tryParse(room['seat_count']?.toString() ?? '') ?? 10,
+        )));
+      },
+      child: AspectRatio(
+        aspectRatio: 1,
+        child: Container(
+          margin: EdgeInsets.only(top: isTop ? 13 : 2),
+          padding: const EdgeInsets.all(3),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(17),
+            gradient: LinearGradient(colors: isTop ? [frameColor, const Color(0xFFFF4FD8), frameColor] : [const Color(0xFF9B54D5), const Color(0xFF392052), const Color(0xFFB84DEB)]),
+            boxShadow: [BoxShadow(color: (isTop ? frameColor : const Color(0xFF9B54D5)).withOpacity(.32), blurRadius: 11)],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: Stack(fit: StackFit.expand, children: [
+              if (cover.isNotEmpty)
+                Image.network(cover, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _roomCoverFallback())
+              else
+                _roomCoverFallback(),
+              DecoratedBox(decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.black.withOpacity(.38), Colors.transparent, Colors.black.withOpacity(.82)]))),
+              Positioned(left: 7, top: 7, child: Container(padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4), decoration: BoxDecoration(color: Colors.black.withOpacity(.58), borderRadius: BorderRadius.circular(9)), child: Text(_flag(country), style: const TextStyle(fontSize: 15)))),
+              Positioned(right: 7, top: 7, child: Container(padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4), decoration: BoxDecoration(color: Colors.black.withOpacity(.62), borderRadius: BorderRadius.circular(9)), child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.people_alt_rounded, size: 13, color: Colors.white), const SizedBox(width: 3), Text('$members', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold))]))),
+              Positioned(left: 7, right: 7, bottom: 8, child: Text(name, maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13, shadows: [Shadow(color: Colors.black, blurRadius: 5)]))),
+              if (isTop)
+                Positioned(top: -1, left: 0, right: 0, child: Center(child: Container(padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 3), decoration: BoxDecoration(color: frameColor, borderRadius: const BorderRadius.vertical(bottom: Radius.circular(9)), boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 5)]), child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.workspace_premium, size: 13, color: Color(0xFF32133F)), const SizedBox(width: 3), Text('TOP $rank', style: const TextStyle(color: Color(0xFF32133F), fontWeight: FontWeight.w900, fontSize: 10))]))),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _roomCoverFallback() => Container(
+    color: const Color(0xFF28103D),
+    child: const Center(child: Icon(Icons.mic_rounded, color: Color(0xFFFFD76A), size: 42)),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final sortedRooms = [...rooms];
+    sortedRooms.sort((a, b) => _roomCoins(Map<String, dynamic>.from(b as Map)).compareTo(_roomCoins(Map<String, dynamic>.from(a as Map))));
+    var visibleRooms = sortedRooms.map((r) => Map<String, dynamic>.from(r as Map)).toList();
+    if (_selectedTab == 2) visibleRooms = [];
+    if (_selectedCountry != 'All') visibleRooms = visibleRooms.where((r) => _roomCountry(r) == _selectedCountry).toList();
+    if (_searchQuery.isNotEmpty) visibleRooms = visibleRooms.where((r) => '${r['name']} ${r['id']}'.toLowerCase().contains(_searchQuery)).toList();
+
+    return Scaffold(
+      backgroundColor: const Color(0xFF10051F),
+      body: RefreshIndicator(
+        onRefresh: loadRooms,
+        color: const Color(0xFFFFD76A),
+        child: loading
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFFFFD76A)))
+          : CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                SliverToBoxAdapter(
+                  child: SafeArea(bottom: false, child: Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 7, 14, 0),
+                    child: Column(children: [
+                      Row(children: [
+                        Container(width: 43, height: 43, decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: const Color(0xFFFFD76A), width: 1.5), gradient: const LinearGradient(colors: [Color(0xFF8D32C7), Color(0xFF24103C)]), boxShadow: [BoxShadow(color: const Color(0xFFE83EAD).withOpacity(.35), blurRadius: 12)]), child: const Center(child: Text('M', style: TextStyle(color: Color(0xFFFFD76A), fontSize: 25, fontWeight: FontWeight.w900)))),
+                        const SizedBox(width: 8),
+                        const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('MINDO', style: TextStyle(color: Color(0xFFFFD76A), fontSize: 19, fontWeight: FontWeight.w900, letterSpacing: 2)), Text('VOICE CHAT', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 2.5))])),
+                        _headerAction(Icons.search_rounded, _openSearch, 'Search'),
+                        const SizedBox(width: 9),
+                        _headerAction(Icons.emoji_events_rounded, _openRanking, 'Ranking'),
+                      ]),
+                      const SizedBox(height: 13),
+                      Row(children: [
+                        for (int i = 0; i < 3; i++)
+                          Expanded(child: GestureDetector(
+                            onTap: () => setState(() => _selectedTab = i),
+                            child: Container(
+                              margin: EdgeInsets.only(right: i == 2 ? 0 : 7),
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(20),
+                                gradient: _selectedTab == i ? const LinearGradient(colors: [Color(0xFFE83EAD), Color(0xFF7927B5)]) : null,
+                                color: _selectedTab == i ? null : const Color(0xFF241332),
+                                border: Border.all(color: _selectedTab == i ? const Color(0xFFFFD76A) : Colors.white12),
+                              ),
+                              child: Center(child: Text(['Popular', 'Explore', 'Follow'][i], style: TextStyle(color: _selectedTab == i ? Colors.white : Colors.white70, fontWeight: FontWeight.w800))),
+                            ),
+                          )),
+                      ]),
+                      SizedBox(height: 150, child: PageView.builder(
+                        controller: _bannerController,
+                        itemCount: 3,
+                        onPageChanged: (index) => setState(() => _bannerIndex = index),
+                        itemBuilder: (_, index) => _bannerCard(index),
+                      )),
+                      Row(mainAxisAlignment: MainAxisAlignment.center, children: List.generate(3, (index) => AnimatedContainer(duration: const Duration(milliseconds: 180), margin: const EdgeInsets.symmetric(horizontal: 3), width: _bannerIndex == index ? 18 : 6, height: 6, decoration: BoxDecoration(color: _bannerIndex == index ? const Color(0xFFFFD76A) : Colors.white38, borderRadius: BorderRadius.circular(5))))),
+                      const SizedBox(height: 12),
+                      Row(children: [
+                        const Expanded(child: Text('Popular Rooms', style: TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w900))),
+                        PopupMenuButton<String>(
+                          color: const Color(0xFF28103D),
+                          initialValue: _selectedCountry,
+                          onSelected: (value) => setState(() { _selectedCountry = value; _selectedTab = 1; }),
+                          itemBuilder: (_) => ['All', 'Pakistan', 'India', 'United Arab Emirates', 'Saudi Arabia', 'Bangladesh', 'United Kingdom', 'United States', 'Germany'].map((c) => PopupMenuItem(value: c, child: Text(c, style: const TextStyle(color: Colors.white)))).toList(),
+                          child: Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7), decoration: BoxDecoration(color: const Color(0xFF28103D), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFFFD76A).withOpacity(.6))), child: Row(children: [const Icon(Icons.public, color: Color(0xFFFFD76A), size: 16), const SizedBox(width: 5), Text(_selectedCountry, style: const TextStyle(color: Colors.white, fontSize: 11)), const Icon(Icons.arrow_drop_down, color: Colors.white)])),
+                        ),
+                      ]),
+                      const SizedBox(height: 9),
+                    ]),
+                  )),
+                ),
+                if (visibleRooms.isEmpty)
+                  SliverFillRemaining(hasScrollBody: false, child: Center(child: Text(_selectedTab == 2 ? 'Followed rooms will appear here' : 'No rooms available', style: const TextStyle(color: Colors.white70))))
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 18),
+                    sliver: SliverGrid(
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 11, mainAxisSpacing: 11, childAspectRatio: 1),
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) => _roomCard(visibleRooms[index], sortedRooms.indexWhere((r) => (r as Map)['id']?.toString() == visibleRooms[index]['id']?.toString()) + 1),
+                        childCount: visibleRooms.length,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: const Color(0xFFE83EAD),
+        foregroundColor: Colors.white,
+        onPressed: createRoom,
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+
+  Widget _headerAction(IconData icon, VoidCallback onTap, String tooltip) => Container(
+    decoration: BoxDecoration(shape: BoxShape.circle, gradient: const LinearGradient(colors: [Color(0xFF8C2CC2), Color(0xFF32134C)]), border: Border.all(color: const Color(0xFFFFD76A), width: 1.2), boxShadow: [BoxShadow(color: const Color(0xFFE83EAD).withOpacity(.3), blurRadius: 9)]),
+    child: IconButton(tooltip: tooltip, onPressed: onTap, icon: Icon(icon, color: const Color(0xFFFFE08A), size: 22)),
+  );
+
 
   @override
   void didChangeDependencies() {
