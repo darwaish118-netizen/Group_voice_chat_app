@@ -163,6 +163,17 @@ await pool.query(`
   `);
   await pool.query(`CREATE INDEX IF NOT EXISTS room_presence_room_idx ON room_presence(room_id, last_seen DESC)`);
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS room_messages (
+      id UUID PRIMARY KEY,
+      room_id UUID NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      body VARCHAR(500) NOT NULL,
+      message_type VARCHAR(20) NOT NULL DEFAULT 'chat' CHECK (message_type IN ('chat', 'entry')),
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS room_messages_room_created_idx ON room_messages(room_id, created_at ASC)`);
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS user_follows (
       follower_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       followed_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -733,10 +744,71 @@ app.post("/api/rooms/:roomId/presence", authMiddleware, async (req, res) => {
       ON CONFLICT (user_id) DO UPDATE
       SET room_id = EXCLUDED.room_id, entered_at = NOW(), last_seen = NOW()
     `, [req.user.id, req.params.roomId]);
+    const enteringUser = await pool.query(
+      `SELECT COALESCE(NULLIF(display_name, ''), username) AS display_name, level FROM users WHERE id = $1`,
+      [req.user.id]
+    );
+    const displayName = enteringUser.rows[0]?.display_name || "A user";
+    const level = Number(enteringUser.rows[0]?.level || 1);
+    await pool.query(
+      `INSERT INTO room_messages(id, room_id, user_id, body, message_type) VALUES ($1, $2, $3, $4, 'entry')`,
+      [uuidv4(), req.params.roomId, req.user.id, 'Welcome to the room!']
+    );
     res.json({ message: "Room presence started", room: room.rows[0] });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Could not start room presence" });
+  }
+});
+
+// Room chat history is scoped to the current room visit. A user who rejoins
+// starts reading from their new entered_at timestamp, while users already in
+// the room keep their existing feed.
+app.get("/api/rooms/:roomId/messages", authMiddleware, async (req, res) => {
+  if (!pool) return res.status(503).json({ message: "Database is not configured" });
+  try {
+    const presence = await pool.query(
+      `SELECT entered_at FROM room_presence WHERE user_id = $1 AND room_id = $2 AND last_seen >= NOW() - INTERVAL '90 seconds'`,
+      [req.user.id, req.params.roomId]
+    );
+    if (!presence.rows.length) return res.status(403).json({ message: "Join the room before reading its chat" });
+    const result = await pool.query(`
+      SELECT m.id, m.body, m.message_type, m.created_at,
+             u.id AS user_id, u.username, u.display_name, u.avatar_url,
+             u.level, u.public_uid
+      FROM room_messages m
+      JOIN users u ON u.id = m.user_id
+      WHERE m.room_id = $1 AND m.created_at >= $2
+      ORDER BY m.created_at ASC
+      LIMIT 250
+    `, [req.params.roomId, presence.rows[0].entered_at]);
+    res.json({ messages: result.rows });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Could not load room chat" });
+  }
+});
+
+app.post("/api/rooms/:roomId/messages", authMiddleware, async (req, res) => {
+  if (!pool) return res.status(503).json({ message: "Database is not configured" });
+  const body = typeof req.body.body === "string" ? req.body.body.trim() : "";
+  if (!body || body.length > 500) return res.status(400).json({ message: "Message must contain 1 to 500 characters" });
+  try {
+    const presence = await pool.query(
+      `SELECT 1 FROM room_presence WHERE user_id = $1 AND room_id = $2 AND last_seen >= NOW() - INTERVAL '90 seconds'`,
+      [req.user.id, req.params.roomId]
+    );
+    if (!presence.rows.length) return res.status(403).json({ message: "Join the room before sending messages" });
+    const id = uuidv4();
+    const result = await pool.query(`
+      INSERT INTO room_messages(id, room_id, user_id, body, message_type)
+      VALUES ($1, $2, $3, $4, 'chat')
+      RETURNING id, body, message_type, created_at
+    `, [id, req.params.roomId, req.user.id, body]);
+    res.status(201).json({ message: result.rows[0] });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Could not send room message" });
   }
 });
 
