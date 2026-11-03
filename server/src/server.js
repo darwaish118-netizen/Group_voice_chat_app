@@ -163,16 +163,28 @@ await pool.query(`
   `);
   await pool.query(`CREATE INDEX IF NOT EXISTS room_presence_room_idx ON room_presence(room_id, last_seen DESC)`);
   await pool.query(`
-    CREATE TABLE IF NOT EXISTS room_messages (
-      id UUID PRIMARY KEY,
+    CREATE TABLE IF NOT EXISTS room_emoji_reactions (
+      id BIGSERIAL PRIMARY KEY,
       room_id UUID NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
       user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      body VARCHAR(500) NOT NULL,
-      message_type VARCHAR(20) NOT NULL DEFAULT 'chat' CHECK (message_type IN ('chat', 'entry')),
+      emoji VARCHAR(32) NOT NULL,
       created_at TIMESTAMP NOT NULL DEFAULT NOW()
     )
   `);
-  await pool.query(`CREATE INDEX IF NOT EXISTS room_messages_room_created_idx ON room_messages(room_id, created_at ASC)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS room_emoji_reactions_room_id_idx ON room_emoji_reactions(room_id, id)`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS room_seat_requests (
+      id UUID PRIMARY KEY,
+      room_id UUID NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      seat_number INTEGER NOT NULL CHECK (seat_number > 0),
+      status VARCHAR(16) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected')),
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      decided_at TIMESTAMP,
+      decided_by UUID REFERENCES users(id)
+    )
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS room_seat_requests_pending_idx ON room_seat_requests(room_id, status, created_at)`);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS user_follows (
       follower_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -744,71 +756,10 @@ app.post("/api/rooms/:roomId/presence", authMiddleware, async (req, res) => {
       ON CONFLICT (user_id) DO UPDATE
       SET room_id = EXCLUDED.room_id, entered_at = NOW(), last_seen = NOW()
     `, [req.user.id, req.params.roomId]);
-    const enteringUser = await pool.query(
-      `SELECT COALESCE(NULLIF(display_name, ''), username) AS display_name, level FROM users WHERE id = $1`,
-      [req.user.id]
-    );
-    const displayName = enteringUser.rows[0]?.display_name || "A user";
-    const level = Number(enteringUser.rows[0]?.level || 1);
-    await pool.query(
-      `INSERT INTO room_messages(id, room_id, user_id, body, message_type) VALUES ($1, $2, $3, $4, 'entry')`,
-      [uuidv4(), req.params.roomId, req.user.id, 'Welcome to the room!']
-    );
     res.json({ message: "Room presence started", room: room.rows[0] });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Could not start room presence" });
-  }
-});
-
-// Room chat history is scoped to the current room visit. A user who rejoins
-// starts reading from their new entered_at timestamp, while users already in
-// the room keep their existing feed.
-app.get("/api/rooms/:roomId/messages", authMiddleware, async (req, res) => {
-  if (!pool) return res.status(503).json({ message: "Database is not configured" });
-  try {
-    const presence = await pool.query(
-      `SELECT entered_at FROM room_presence WHERE user_id = $1 AND room_id = $2 AND last_seen >= NOW() - INTERVAL '90 seconds'`,
-      [req.user.id, req.params.roomId]
-    );
-    if (!presence.rows.length) return res.status(403).json({ message: "Join the room before reading its chat" });
-    const result = await pool.query(`
-      SELECT m.id, m.body, m.message_type, m.created_at,
-             u.id AS user_id, u.username, u.display_name, u.avatar_url,
-             u.level, u.public_uid
-      FROM room_messages m
-      JOIN users u ON u.id = m.user_id
-      WHERE m.room_id = $1 AND m.created_at >= $2
-      ORDER BY m.created_at ASC
-      LIMIT 250
-    `, [req.params.roomId, presence.rows[0].entered_at]);
-    res.json({ messages: result.rows });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Could not load room chat" });
-  }
-});
-
-app.post("/api/rooms/:roomId/messages", authMiddleware, async (req, res) => {
-  if (!pool) return res.status(503).json({ message: "Database is not configured" });
-  const body = typeof req.body.body === "string" ? req.body.body.trim() : "";
-  if (!body || body.length > 500) return res.status(400).json({ message: "Message must contain 1 to 500 characters" });
-  try {
-    const presence = await pool.query(
-      `SELECT 1 FROM room_presence WHERE user_id = $1 AND room_id = $2 AND last_seen >= NOW() - INTERVAL '90 seconds'`,
-      [req.user.id, req.params.roomId]
-    );
-    if (!presence.rows.length) return res.status(403).json({ message: "Join the room before sending messages" });
-    const id = uuidv4();
-    const result = await pool.query(`
-      INSERT INTO room_messages(id, room_id, user_id, body, message_type)
-      VALUES ($1, $2, $3, $4, 'chat')
-      RETURNING id, body, message_type, created_at
-    `, [id, req.params.roomId, req.user.id, body]);
-    res.status(201).json({ message: result.rows[0] });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Could not send room message" });
   }
 });
 
@@ -1327,6 +1278,90 @@ res.status(201).json({
 // -------------------------
 // Room Members / Seats
 // -------------------------
+
+// Room reactions are separate events and are never inserted into room chat.
+app.post("/api/rooms/:roomId/reactions", authMiddleware, async (req, res) => {
+  if (!pool) return res.status(503).json({ message: "Database is not configured" });
+  try {
+    const emoji = String(req.body?.emoji || '').trim();
+    if (!emoji || [...emoji].length > 8) return res.status(400).json({ message: "Choose a valid emoji" });
+    const room = await pool.query(`SELECT id FROM rooms WHERE id = $1`, [req.params.roomId]);
+    if (!room.rows.length) return res.status(404).json({ message: "Room not found" });
+    const present = await pool.query(`SELECT 1 FROM room_presence WHERE room_id = $1 AND user_id = $2 AND last_seen > NOW() - INTERVAL '2 minutes'`, [req.params.roomId, req.user.id]);
+    if (!present.rows.length) return res.status(403).json({ message: "Enter the room before sending a reaction" });
+    const result = await pool.query(`INSERT INTO room_emoji_reactions(room_id,user_id,emoji) VALUES($1,$2,$3) RETURNING id, user_id, emoji, created_at`, [req.params.roomId, req.user.id, emoji]);
+    res.status(201).json({ reaction: result.rows[0] });
+  } catch (error) { console.error('Room reaction create error:', error); res.status(500).json({ message: "Could not send room reaction" }); }
+});
+
+app.get("/api/rooms/:roomId/reactions", authMiddleware, async (req, res) => {
+  if (!pool) return res.status(503).json({ message: "Database is not configured" });
+  try {
+    const afterId = Math.max(0, Number.parseInt(req.query.afterId || '0', 10) || 0);
+    const result = await pool.query(`
+      SELECT r.id, r.user_id, r.emoji, r.created_at
+      FROM room_emoji_reactions r
+      JOIN room_presence p ON p.room_id = r.room_id AND p.user_id = $2 AND p.last_seen > NOW() - INTERVAL '2 minutes'
+      WHERE r.room_id = $1 AND r.id > $3 AND r.created_at > NOW() - INTERVAL '30 seconds'
+      ORDER BY r.id ASC LIMIT 100
+    `, [req.params.roomId, req.user.id, afterId]);
+    res.json({ reactions: result.rows });
+  } catch (error) { console.error('Room reaction read error:', error); res.status(500).json({ message: "Could not load room reactions" }); }
+});
+
+app.post("/api/rooms/:roomId/seat-requests", authMiddleware, async (req, res) => {
+  if (!pool) return res.status(503).json({ message: "Database is not configured" });
+  try {
+    const seatNumber = Number(req.body?.seatNumber);
+    const room = await pool.query(`SELECT id, seat_count FROM rooms WHERE id = $1`, [req.params.roomId]);
+    if (!room.rows.length) return res.status(404).json({ message: "Room not found" });
+    if (!Number.isInteger(seatNumber) || seatNumber < 1 || seatNumber > Number(room.rows[0].seat_count)) return res.status(400).json({ message: "Invalid seat number" });
+    const occupied = await pool.query(`SELECT 1 FROM room_seats WHERE room_id=$1 AND seat_number=$2`, [req.params.roomId, seatNumber]);
+    if (occupied.rows.length) return res.status(409).json({ message: "That seat is already occupied" });
+    const existing = await pool.query(`SELECT id FROM room_seat_requests WHERE room_id=$1 AND user_id=$2 AND status='pending'`, [req.params.roomId, req.user.id]);
+    if (existing.rows.length) return res.status(409).json({ message: "You already have a pending seat request" });
+    const created = await pool.query(`INSERT INTO room_seat_requests(id,room_id,user_id,seat_number) VALUES($1,$2,$3,$4) RETURNING id, seat_number, status, created_at`, [uuidv4(), req.params.roomId, req.user.id, seatNumber]);
+    res.status(201).json({ message: "Seat request sent", request: created.rows[0] });
+  } catch (error) { console.error('Seat request create error:', error); res.status(500).json({ message: "Could not create seat request" }); }
+});
+
+app.get("/api/rooms/:roomId/seat-requests", authMiddleware, async (req, res) => {
+  if (!pool) return res.status(503).json({ message: "Database is not configured" });
+  try {
+    const role = await pool.query(`SELECT CASE WHEN r.owner_id=$2 THEN 'owner' WHEN EXISTS(SELECT 1 FROM room_moderators m WHERE m.room_id=r.id AND m.user_id=$2) THEN 'moderator' ELSE 'member' END AS role FROM rooms r WHERE r.id=$1`, [req.params.roomId, req.user.id]);
+    if (!role.rows.length) return res.status(404).json({ message: "Room not found" });
+    if (!['owner','moderator'].includes(role.rows[0].role)) return res.status(403).json({ message: "Only owner or moderator can view seat requests" });
+    const result = await pool.query(`SELECT q.id,q.seat_number,q.created_at,u.id AS user_id,u.username,u.display_name,u.avatar_url FROM room_seat_requests q JOIN users u ON u.id=q.user_id WHERE q.room_id=$1 AND q.status='pending' ORDER BY q.created_at ASC`, [req.params.roomId]);
+    res.json({ requests: result.rows });
+  } catch (error) { console.error('Seat request list error:', error); res.status(500).json({ message: "Could not load seat requests" }); }
+});
+
+app.post("/api/rooms/:roomId/seat-requests/:requestId/decision", authMiddleware, async (req, res) => {
+  if (!pool) return res.status(503).json({ message: "Database is not configured" });
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const room = await client.query(`SELECT id,owner_id,seat_count FROM rooms WHERE id=$1 FOR UPDATE`, [req.params.roomId]);
+    if (!room.rows.length) { await client.query('ROLLBACK'); return res.status(404).json({ message: "Room not found" }); }
+    const role = await client.query(`SELECT CASE WHEN $1=owner_id THEN 'owner' WHEN EXISTS(SELECT 1 FROM room_moderators WHERE room_id=$2 AND user_id=$1) THEN 'moderator' ELSE 'member' END AS role FROM rooms WHERE id=$2`, [req.user.id, req.params.roomId]);
+    if (!['owner','moderator'].includes(role.rows[0].role)) { await client.query('ROLLBACK'); return res.status(403).json({ message: "Only owner or moderator can decide requests" }); }
+    const request = await client.query(`SELECT * FROM room_seat_requests WHERE id=$1 AND room_id=$2 AND status='pending' FOR UPDATE`, [req.params.requestId, req.params.roomId]);
+    if (!request.rows.length) { await client.query('ROLLBACK'); return res.status(404).json({ message: "Pending request not found" }); }
+    const approve = req.body?.approve === true;
+    if (approve) {
+      const seat = Number(request.rows[0].seat_number);
+      const occupied = await client.query(`SELECT 1 FROM room_seats WHERE room_id=$1 AND seat_number=$2 FOR UPDATE`, [req.params.roomId, seat]);
+      if (occupied.rows.length) { await client.query('ROLLBACK'); return res.status(409).json({ message: "Requested seat is no longer available" }); }
+      const alreadySeated = await client.query(`SELECT 1 FROM room_seats WHERE room_id=$1 AND user_id=$2`, [req.params.roomId, request.rows[0].user_id]);
+      if (alreadySeated.rows.length) { await client.query('ROLLBACK'); return res.status(409).json({ message: "User is already seated" }); }
+      await client.query(`INSERT INTO room_seats(id,room_id,seat_number,user_id) VALUES($1,$2,$3,$4)`, [uuidv4(), req.params.roomId, seat, request.rows[0].user_id]);
+    }
+    await client.query(`UPDATE room_seat_requests SET status=$1,decided_at=NOW(),decided_by=$2 WHERE id=$3`, [approve ? 'approved' : 'rejected', req.user.id, req.params.requestId]);
+    await client.query('COMMIT');
+    res.json({ message: approve ? "Seat request approved" : "Seat request rejected" });
+  } catch (error) { await client.query('ROLLBACK').catch(()=>{}); console.error('Seat request decision error:', error); res.status(500).json({ message: "Could not decide seat request" }); }
+  finally { client.release(); }
+});
 
 app.get("/api/rooms/:roomId/members", authMiddleware, async (req, res) => {
   if (!pool) {
