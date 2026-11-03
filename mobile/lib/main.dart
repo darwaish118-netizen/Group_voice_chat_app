@@ -220,6 +220,22 @@ Future<Map<String, dynamic>> createRoom(
     return _handleResponse(response);
   }
 
+  Future<Map<String, dynamic>> roomModerationAction(
+    String token,
+    String roomId,
+    Map<String, dynamic> payload,
+  ) async {
+    final response = await http.post(
+      Uri.parse('$apiBaseUrl/api/rooms/$roomId/moderation'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(payload),
+    );
+    return _handleResponse(response);
+  }
+
   Future<Map<String, dynamic>> joinRoomSeat(
     String token,
     String roomId,
@@ -7112,6 +7128,223 @@ class _VoiceRoomScreenState
   }
 
 final Map<int, Map<String, dynamic>> seatMembers = {};
+String currentRoomRole = 'member';
+String? currentUserId;
+
+bool get _isRoomOwner => currentRoomRole == 'owner';
+bool get _isRoomModerator => currentRoomRole == 'moderator';
+bool get _canModerate => _isRoomOwner || _isRoomModerator;
+
+void _roomMessage(String message) {
+  if (!mounted) return;
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text(message)),
+  );
+}
+
+Future<void> _openPublicProfile(Map<String, dynamic> member) async {
+  final publicId = (member['id'] ?? '').toString();
+  if (publicId.isEmpty) return;
+  try {
+    final profileResult = await api.getPublicProfile(publicId);
+    final profile = Map<String, dynamic>.from(
+      profileResult['user'] ?? profileResult,
+    );
+    if (!mounted) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PublicProfileScreen(
+          user: profile,
+          token: widget.token,
+        ),
+      ),
+    );
+  } catch (e) {
+    _roomMessage(e.toString().replaceFirst('Exception: ', ''));
+  }
+}
+
+Future<void> _leaveSeat(int seatNumber) async {
+  try {
+    await api.leaveRoomSeat(widget.token, widget.roomId, seatNumber);
+    await loadRoomMembers();
+    _roomMessage('You left the seat.');
+  } catch (e) {
+    _roomMessage(e.toString().replaceFirst('Exception: ', ''));
+  }
+}
+
+Future<void> _runRoomAction(
+  String action, {
+  int? seatNumber,
+  String? targetUserId,
+}) async {
+  try {
+    await api.roomModerationAction(
+      widget.token,
+      widget.roomId,
+      {
+        'action': action,
+        if (seatNumber != null) 'seatNumber': seatNumber,
+        if (targetUserId != null) 'targetUserId': targetUserId,
+      },
+    );
+    await loadRoomMembers();
+    _roomMessage('Action completed.');
+  } catch (e) {
+    _roomMessage(e.toString().replaceFirst('Exception: ', ''));
+  }
+}
+
+void _showSeatActionSheet({
+  required int seatNumber,
+  required Map<String, dynamic>? member,
+}) {
+  final isOccupied = member != null;
+  final isOwnSeat = isOccupied &&
+      currentUserId != null &&
+      member?['id']?.toString() == currentUserId;
+
+  final actions = <Map<String, dynamic>>[];
+
+  if (!isOccupied) {
+    if (_canModerate) {
+      actions.addAll([
+        {'label': 'Move to this Mic', 'icon': Icons.swap_horiz_rounded, 'action': 'move_to_mic'},
+        {'label': 'Invite him/her to take mic', 'icon': Icons.record_voice_over_rounded, 'action': 'invite_to_mic'},
+        {'label': 'Mute Mic', 'icon': Icons.mic_off_rounded, 'action': 'mute_mic'},
+        {'label': 'Block Seat', 'icon': Icons.lock_rounded, 'action': 'block_seat'},
+      ]);
+    } else {
+      _joinEmptySeat(seatNumber);
+      return;
+    }
+  } else if (isOwnSeat) {
+    _openOwnSeatSheet(seatNumber, member!);
+    return;
+  } else if (_canModerate) {
+    if (_isRoomOwner) {
+      actions.add({'label': 'Set Admin', 'icon': Icons.workspace_premium_rounded, 'action': 'set_admin'});
+    }
+    actions.addAll([
+      {'label': 'Kick Out User', 'icon': Icons.logout_rounded, 'action': 'kick_user'},
+      {'label': 'Mute Mic', 'icon': Icons.mic_off_rounded, 'action': 'mute_mic'},
+      {'label': 'Remove from Seat', 'icon': Icons.event_seat_rounded, 'action': 'remove_from_seat'},
+    ]);
+  } else {
+    _openPublicProfile(member!);
+    return;
+  }
+
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: const Color(0xFF171225),
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    builder: (sheetContext) => SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 14, 18, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 44, height: 5,
+              decoration: BoxDecoration(
+                color: Colors.white30,
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              isOccupied
+                  ? (member?['display_name'] ?? member?['username'] ?? 'Room User').toString()
+                  : 'Seat $seatNumber',
+              style: const TextStyle(
+                color: Color(0xFFFFD36A),
+                fontSize: 17,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            ...actions.map((item) => ListTile(
+              leading: Icon(item['icon'] as IconData, color: const Color(0xFFFFD36A)),
+              title: Text(
+                item['label'] as String,
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+              ),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                final action = item['action'] as String;
+                if (action == 'mute_mic') {
+                  _roomMessage('Actual voice mute needs RTC voice integration; it is not enabled yet.');
+                  return;
+                }
+                if (action == 'invite_to_mic') {
+                  _roomMessage('Mic invitations need the room notification flow; not connected yet.');
+                  return;
+                }
+                if (action == 'move_to_mic') {
+                  _roomMessage('Choose a member first to move them to this mic; move flow is not connected yet.');
+                  return;
+                }
+                _runRoomAction(
+                  action,
+                  seatNumber: seatNumber,
+                  targetUserId: member?['id']?.toString(),
+                );
+              },
+            )),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+void _openOwnSeatSheet(int seatNumber, Map<String, dynamic> member) {
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: const Color(0xFF171225),
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    builder: (sheetContext) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.person_rounded, color: Color(0xFFFFD36A)),
+            title: const Text('My Room Profile', style: TextStyle(color: Colors.white)),
+            onTap: () {
+              Navigator.pop(sheetContext);
+              _openPublicProfile(member);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.event_seat_rounded, color: Colors.redAccent),
+            title: const Text('Leave Seat', style: TextStyle(color: Colors.redAccent)),
+            onTap: () {
+              Navigator.pop(sheetContext);
+              _leaveSeat(seatNumber);
+            },
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+Future<void> _joinEmptySeat(int seatNumber) async {
+  try {
+    final result = await api.joinRoomSeat(widget.token, widget.roomId, seatNumber);
+    await loadRoomMembers();
+    _roomMessage(result['message']?.toString() ?? 'Seat joined.');
+  } catch (e) {
+    _roomMessage(e.toString().replaceFirst('Exception: ', ''));
+  }
+}
 
 Future<void> loadRoomMembers() async {
   try {
@@ -7121,6 +7354,11 @@ Future<void> loadRoomMembers() async {
     );
 
     final List<dynamic> seats = result['seats'] ?? [];
+    final currentUser = result['currentUser'] ?? result['current_user'];
+    if (currentUser is Map) {
+      currentRoomRole = (currentUser['role'] ?? 'member').toString().toLowerCase();
+      currentUserId = currentUser['id']?.toString();
+    }
     final Map<int, Map<String, dynamic>> updated = {};
 
     for (final seat in seats) {
@@ -7486,59 +7724,10 @@ actions: [
 
 final member = seatMembers[index + 1];
 return InkWell(
-  onTap: () async {
-    if (member != null && (member['id'] ?? '').toString().isNotEmpty) {
-      final publicId = member['id'].toString();
-      try {
-        final profileResult = await api.getPublicProfile(publicId);
-        final profile = Map<String, dynamic>.from(profileResult['user'] ?? profileResult);
-        if (!mounted) return;
-        await Navigator.push(context, MaterialPageRoute(builder: (_) => PublicProfileScreen(user: profile, token: widget.token)));
-      } catch (e) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
-      }
-      return;
-    }
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
-
-      if (token == null || token.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please log in again')),
-        );
-        return;
-      }
-
-      final result = await api.joinRoomSeat(
-        token,
-        widget.roomId,
-        index + 1,
-      );
-
-      if (!mounted) return;
-
-        await loadRoomMembers();
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            result['message']?.toString() ?? 'Seat request completed',
-          ),
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            e.toString().replaceFirst('Exception: ', ''),
-          ),
-        ),
-      );
-    }
-  },
+  onTap: () => _showSeatActionSheet(
+    seatNumber: index + 1,
+    member: member,
+  ),
 child: Column(
   children: [
     Builder(
