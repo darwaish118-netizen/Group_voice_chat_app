@@ -208,6 +208,17 @@ await pool.query(`
   )
 `);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS room_seat_blocks (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      room_id UUID NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+      seat_number INTEGER NOT NULL CHECK (seat_number > 0),
+      blocked_by UUID NOT NULL REFERENCES users(id),
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      UNIQUE (room_id, seat_number)
+    )
+  `);
+
   // -------------------------
   // Wallet, recharge packages, and transaction ledger
   // -------------------------
@@ -1245,7 +1256,7 @@ res.status(201).json({
 // Room Members / Seats
 // -------------------------
 
-app.get("/api/rooms/:roomId/members", async (req, res) => {
+app.get("/api/rooms/:roomId/members", authMiddleware, async (req, res) => {
   if (!pool) {
     return res.status(500).json({
       message: "Database is not configured",
@@ -1269,6 +1280,15 @@ app.get("/api/rooms/:roomId/members", async (req, res) => {
     }
 
     const room = roomResult.rows[0];
+
+    const roleResult = await pool.query(
+      `SELECT CASE
+        WHEN r.owner_id = $2 THEN 'owner'
+        WHEN EXISTS (SELECT 1 FROM room_moderators rm WHERE rm.room_id = r.id AND rm.user_id = $2) THEN 'moderator'
+        ELSE 'member'
+      END AS role FROM rooms r WHERE r.id = $1`,
+      [req.params.roomId, req.user.id]
+    );
 
     const result = await pool.query(
       `
@@ -1332,6 +1352,7 @@ app.get("/api/rooms/:roomId/members", async (req, res) => {
         seat_count: Number(room.seat_count),
       },
       seats,
+      currentUser: { id: req.user.id, role: roleResult.rows[0]?.role || "member" },
     });
   } catch (error) {
     console.error(error);
@@ -1341,6 +1362,123 @@ app.get("/api/rooms/:roomId/members", async (req, res) => {
     });
   }
 });
+
+app.post(
+  "/api/rooms/:roomId/moderation",
+  authMiddleware,
+  async (req, res) => {
+    if (!pool) return res.status(503).json({ message: "Database is not configured" });
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const roomResult = await client.query(
+        `SELECT id, owner_id, seat_count FROM rooms WHERE id = $1 FOR UPDATE`,
+        [req.params.roomId]
+      );
+      if (!roomResult.rows.length) {
+        await client.query("ROLLBACK");
+        return res.status(404).json({ message: "Room not found" });
+      }
+      const room = roomResult.rows[0];
+      const isOwner = room.owner_id === req.user.id;
+      const mod = await client.query(
+        `SELECT 1 FROM room_moderators WHERE room_id = $1 AND user_id = $2`,
+        [room.id, req.user.id]
+      );
+      const isModerator = mod.rows.length > 0;
+      if (!isOwner && !isModerator) {
+        await client.query("ROLLBACK");
+        return res.status(403).json({ message: "Only the room owner or moderator can perform this action" });
+      }
+      const action = String(req.body?.action || "");
+      const seatNumber = Number(req.body?.seatNumber);
+      const targetUserId = req.body?.targetUserId ? String(req.body.targetUserId) : null;
+      if (!Number.isInteger(seatNumber) || seatNumber < 1 || seatNumber > Number(room.seat_count)) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({ message: "Invalid seat number" });
+      }
+      if (action === "block_seat") {
+        const occupied = await client.query(
+          `SELECT 1 FROM room_seats WHERE room_id = $1 AND seat_number = $2 FOR UPDATE`,
+          [room.id, seatNumber]
+        );
+        if (occupied.rows.length) {
+          await client.query("ROLLBACK");
+          return res.status(409).json({ message: "An occupied seat cannot be blocked" });
+        }
+        await client.query(
+          `INSERT INTO room_seat_blocks(room_id, seat_number, blocked_by)
+           VALUES ($1, $2, $3) ON CONFLICT (room_id, seat_number)
+           DO UPDATE SET blocked_by = EXCLUDED.blocked_by, created_at = NOW()`,
+          [room.id, seatNumber, req.user.id]
+        );
+        await client.query("COMMIT");
+        return res.json({ message: "Seat blocked", seatNumber });
+      }
+      if (action === "set_admin") {
+        if (!isOwner) {
+          await client.query("ROLLBACK");
+          return res.status(403).json({ message: "Only the room owner can assign a moderator" });
+        }
+        if (!targetUserId || targetUserId === room.owner_id) {
+          await client.query("ROLLBACK");
+          return res.status(400).json({ message: "Choose a valid room member" });
+        }
+        const target = await client.query(
+          `SELECT 1 FROM room_seats WHERE room_id = $1 AND user_id = $2`,
+          [room.id, targetUserId]
+        );
+        if (!target.rows.length) {
+          await client.query("ROLLBACK");
+          return res.status(404).json({ message: "That user is not sitting in this room" });
+        }
+        await client.query(
+          `INSERT INTO room_moderators(id, room_id, user_id, assigned_by)
+           VALUES ($1, $2, $3, $4) ON CONFLICT (room_id, user_id) DO NOTHING`,
+          [uuidv4(), room.id, targetUserId, req.user.id]
+        );
+        await client.query("COMMIT");
+        return res.json({ message: "Room moderator assigned" });
+      }
+      if (action === "kick_user" || action === "remove_from_seat") {
+        if (!targetUserId || targetUserId === room.owner_id) {
+          await client.query("ROLLBACK");
+          return res.status(403).json({ message: "A valid non-owner room member is required" });
+        }
+        const targetSeat = await client.query(
+          `SELECT user_id FROM room_seats WHERE room_id = $1 AND seat_number = $2 FOR UPDATE`,
+          [room.id, seatNumber]
+        );
+        if (!targetSeat.rows.length || targetSeat.rows[0].user_id !== targetUserId) {
+          await client.query("ROLLBACK");
+          return res.status(409).json({ message: "Seat occupant changed. Refresh and try again." });
+        }
+        const targetMod = await client.query(
+          `SELECT 1 FROM room_moderators WHERE room_id = $1 AND user_id = $2`,
+          [room.id, targetUserId]
+        );
+        if (!isOwner && targetMod.rows.length) {
+          await client.query("ROLLBACK");
+          return res.status(403).json({ message: "A moderator cannot remove another moderator" });
+        }
+        await client.query(
+          `DELETE FROM room_seats WHERE room_id = $1 AND seat_number = $2 AND user_id = $3`,
+          [room.id, seatNumber, targetUserId]
+        );
+        await client.query("COMMIT");
+        return res.json({ message: action === "kick_user" ? "User kicked from the mic" : "User removed from the seat" });
+      }
+      await client.query("ROLLBACK");
+      return res.status(400).json({ message: "Unsupported moderation action. Mute, invite and move require voice-room services." });
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => {});
+      console.error("Room moderation error:", error);
+      return res.status(500).json({ message: "Could not complete room moderation action" });
+    } finally {
+      client.release();
+    }
+  }
+);
 
 app.post(
   "/api/rooms/:roomId/seats/:seatNumber/join",
@@ -1388,6 +1526,15 @@ app.post(
         return res.status(400).json({
           message: "Invalid seat number",
         });
+      }
+
+      const blockedSeat = await client.query(
+        `SELECT 1 FROM room_seat_blocks WHERE room_id = $1 AND seat_number = $2`,
+        [req.params.roomId, seatNumber]
+      );
+      if (blockedSeat.rows.length) {
+        await client.query("ROLLBACK");
+        return res.status(403).json({ message: "This seat is blocked by room management" });
       }
 
       const currentSeat = await client.query(
