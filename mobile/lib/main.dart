@@ -7481,7 +7481,7 @@ void initState() {
           GridView.builder(shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), itemCount: _roomEmojis.length,
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 5, mainAxisSpacing: 10, crossAxisSpacing: 10),
             itemBuilder: (_, index) => InkWell(onTap: () { final e = _roomEmojis[index]; Navigator.pop(sheetContext); _sendRoomReaction(e); }, child: Center(child: Text(_roomEmojis[index], style: const TextStyle(fontSize: 30))))),
-        ]))));
+        ])))));
   }
 
   void _manageRoomEmojis() {
@@ -7501,7 +7501,7 @@ void initState() {
             itemBuilder: (_, index) => Stack(alignment: Alignment.topRight, children: [Center(child: Text(_roomEmojis[index], style: const TextStyle(fontSize: 27))),
               GestureDetector(onTap: () { setState(() => _roomEmojis.removeAt(index)); refreshSheet(() {}); _saveRoomEmojis(); }, child: const Icon(Icons.cancel, color: Colors.redAccent, size: 17))]))),
           const SizedBox(height: 8), Text('No emoji limit • Saved on this device', style: TextStyle(color: Colors.white60, fontSize: 12)),
-        ]))));
+        ])))));
   }
 
   Future<void> _showSeatRequests() async {
