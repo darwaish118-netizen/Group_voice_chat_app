@@ -220,6 +220,18 @@ Future<Map<String, dynamic>> createRoom(
     return _handleResponse(response);
   }
 
+  Future<Map<String, dynamic>> getRoomRanking(
+    String token,
+    String roomId,
+    String category,
+    String period,
+  ) async {
+    final uri = Uri.parse('$apiBaseUrl/api/rooms/$roomId/rankings')
+        .replace(queryParameters: {'category': category, 'period': period});
+    final response = await http.get(uri, headers: {'Authorization': 'Bearer $token'});
+    return _handleResponse(response);
+  }
+
   Future<Map<String, dynamic>> roomModerationAction(
     String token,
     String roomId,
@@ -7696,13 +7708,51 @@ actions: [
       ),
       body: Column(
         children: [
-
-          const SizedBox(
-            height: 20,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(18),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => RoomRankingScreen(
+                        token: widget.token,
+                        roomId: widget.roomId,
+                        roomName: widget.roomName,
+                      ),
+                    ),
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFFFD76A), Color(0xFFB87925)],
+                    ),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: const Color(0xFFFFF0B5), width: 1.2),
+                    boxShadow: [
+                      BoxShadow(color: const Color(0xFFFFC857).withOpacity(.28), blurRadius: 14, spreadRadius: 1),
+                    ],
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.emoji_events_rounded, color: Color(0xFF4A260D), size: 25),
+                      SizedBox(width: 8),
+                      Text('ROOM RANKING', style: TextStyle(color: Color(0xFF4A260D), fontWeight: FontWeight.w900, letterSpacing: 1)),
+                      SizedBox(width: 5),
+                      Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFF4A260D), size: 13),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
-          const SizedBox(
-            height: 25,
-          ),
+          const SizedBox(height: 12),
           Expanded(
             child:
                 GridView.builder(
@@ -9045,6 +9095,366 @@ class _RoomMembersScreenState extends State<RoomMembersScreen> {
                           ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+
+// ============================================================
+// MINDO ROOM WEALTH & CHARM RANKING
+// Ranking data is loaded from the room-scoped backend endpoint.
+// ============================================================
+
+class RoomRankingScreen extends StatefulWidget {
+  final String token;
+  final String roomId;
+  final String roomName;
+
+  const RoomRankingScreen({
+    super.key,
+    required this.token,
+    required this.roomId,
+    required this.roomName,
+  });
+
+  @override
+  State<RoomRankingScreen> createState() => _RoomRankingScreenState();
+}
+
+class _RoomRankingScreenState extends State<RoomRankingScreen> {
+  String _category = 'wealth';
+  String _period = 'daily';
+  bool _loading = true;
+  String? _error;
+  List<Map<String, dynamic>> _ranking = [];
+
+  static const Color _gold = Color(0xFFFFD76A);
+  static const Color _deep = Color(0xFF190B23);
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRanking();
+  }
+
+  Future<void> _loadRanking() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final result = await api.getRoomRanking(
+        widget.token, widget.roomId, _category, _period,
+      );
+      final raw = result['ranking'] ?? result['users'] ?? result['items'] ?? [];
+      final list = raw is List
+          ? raw.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList()
+          : <Map<String, dynamic>>[];
+      list.sort((a, b) => _coins(b).compareTo(_coins(a)));
+      if (!mounted) return;
+      setState(() {
+        _ranking = list.take(30).toList();
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString().replaceFirst('Exception: ', '');
+        _loading = false;
+      });
+    }
+  }
+
+  int _coins(Map<String, dynamic> user) {
+    final raw = user['total_coins'] ?? user['coins'] ?? user['coin_amount'] ?? 0;
+    return raw is num ? raw.toInt() : int.tryParse(raw.toString()) ?? 0;
+  }
+
+  String _name(Map<String, dynamic> user) {
+    final display = user['display_name']?.toString().trim() ?? '';
+    if (display.isNotEmpty) return display;
+    final username = user['username']?.toString().trim() ?? '';
+    return username.isNotEmpty ? username : 'MINDO User';
+  }
+
+  String _avatar(Map<String, dynamic> user) =>
+      (user['avatar_url'] ?? '').toString();
+
+  String _uid(Map<String, dynamic> user) =>
+      (user['public_uid'] ?? user['uid'] ?? user['id'] ?? '—').toString();
+
+  void _openProfile(Map<String, dynamic> user) {
+    final id = (user['id'] ?? user['user_id'] ?? '').toString();
+    if (id.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('User profile ID is unavailable.')),
+      );
+      return;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PublicProfileScreen(
+          user: {
+            ...user,
+            'id': id,
+            'username': user['username'] ?? _name(user),
+            'public_uid': user['public_uid'] ?? user['uid'],
+          },
+          token: widget.token,
+        ),
+      ),
+    );
+  }
+
+  Widget _periodButton(String label, String value) {
+    final selected = _period == value;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          if (_period == value) return;
+          setState(() => _period = value);
+          _loadRanking();
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          padding: const EdgeInsets.symmetric(vertical: 11),
+          decoration: BoxDecoration(
+            gradient: selected
+                ? const LinearGradient(colors: [Color(0xFFFFB52E), Color(0xFFE66B19)])
+                : null,
+            color: selected ? null : const Color(0xFF38233E),
+            borderRadius: BorderRadius.circular(13),
+            border: Border.all(color: selected ? const Color(0xFFFFE4A0) : Colors.white24),
+            boxShadow: selected
+                ? [BoxShadow(color: const Color(0xFFFFA52B).withOpacity(.3), blurRadius: 12)]
+                : [],
+          ),
+          child: Text(label, textAlign: TextAlign.center,
+            style: TextStyle(color: selected ? const Color(0xFF401C0B) : Colors.white70,
+              fontWeight: FontWeight.w900, letterSpacing: .5)),
+        ),
+      ),
+    );
+  }
+
+  Widget _categoryButton(String title, String value, IconData icon) {
+    final selected = _category == value;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          if (_category == value) return;
+          setState(() => _category = value);
+          _loadRanking();
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 8),
+          decoration: BoxDecoration(
+            gradient: selected
+                ? const LinearGradient(colors: [Color(0xFF9D3C86), Color(0xFF4A286D)])
+                : const LinearGradient(colors: [Color(0xFF30203A), Color(0xFF211629)]),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: selected ? _gold : Colors.white12, width: selected ? 1.4 : 1),
+          ),
+          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Icon(icon, color: _gold, size: 22),
+            const SizedBox(width: 7),
+            Text(title, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900,
+              letterSpacing: 1, fontSize: 13)),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  Widget _avatarTap(Map<String, dynamic> user, {double radius = 29}) {
+    final url = _avatar(user);
+    return GestureDetector(
+      onTap: () => _openProfile(user),
+      child: Container(
+        padding: const EdgeInsets.all(2.5),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: const LinearGradient(colors: [_gold, Color(0xFFFF65B7), Color(0xFF9D70FF)]),
+          boxShadow: [BoxShadow(color: _gold.withOpacity(.25), blurRadius: 10)],
+        ),
+        child: CircleAvatar(
+          radius: radius,
+          backgroundColor: const Color(0xFF50345D),
+          backgroundImage: url.isNotEmpty ? NetworkImage(url) : null,
+          child: url.isEmpty ? const Icon(Icons.person, color: Colors.white, size: 27) : null,
+        ),
+      ),
+    );
+  }
+
+  Widget _podiumCard(int index, Map<String, dynamic> user) {
+    final isFirst = index == 0;
+    final colors = index == 0
+        ? [const Color(0xFFEF3D9B), const Color(0xFF9A267E)]
+        : index == 1
+            ? [const Color(0xFF9C56D9), const Color(0xFF54318C)]
+            : [const Color(0xFF19B9CF), const Color(0xFF176C9B)];
+    final height = isFirst ? 205.0 : 174.0;
+    return Expanded(
+      child: Padding(
+        padding: EdgeInsets.only(top: isFirst ? 0 : 30),
+        child: Container(
+          height: height,
+          padding: const EdgeInsets.fromLTRB(7, 10, 7, 9),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: colors),
+            borderRadius: BorderRadius.circular(19),
+            border: Border.all(color: _gold.withOpacity(.9), width: isFirst ? 1.8 : 1),
+            boxShadow: [BoxShadow(color: colors.first.withOpacity(.32), blurRadius: 16, offset: const Offset(0, 6))],
+          ),
+          child: Column(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            Icon(isFirst ? Icons.workspace_premium_rounded : Icons.military_tech_rounded,
+              color: const Color(0xFFFFE28A), size: isFirst ? 29 : 23),
+            _avatarTap(user, radius: isFirst ? 34 : 28),
+            Text(_name(user), maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900)),
+            Text('ID ${_uid(user)}', maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Colors.white70, fontSize: 9)),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
+              decoration: BoxDecoration(color: const Color(0xFF4A251C).withOpacity(.8),
+                borderRadius: BorderRadius.circular(20), border: Border.all(color: _gold.withOpacity(.7))),
+              child: Text(_coins(user).toString(),
+                style: const TextStyle(color: Color(0xFFFFE49B), fontSize: 11, fontWeight: FontWeight.w900)),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  Widget _rankingRow(int index, Map<String, dynamic> user) {
+    final rank = index + 4;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 9),
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(colors: [Color(0xFF56331F), Color(0xFF2D1B24)]),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: const Color(0xFFFFD36A).withOpacity(.45)),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(.18), blurRadius: 7, offset: const Offset(0, 3))],
+      ),
+      child: Row(children: [
+        SizedBox(width: 29, child: Text('$rank',
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: Color(0xFFFFD36A), fontWeight: FontWeight.w900, fontSize: 17))),
+        const SizedBox(width: 9),
+        _avatarTap(user, radius: 23),
+        const SizedBox(width: 10),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(_name(user), maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13)),
+          Text('ID: ${_uid(user)}', style: const TextStyle(color: Colors.white60, fontSize: 10)),
+        ])),
+        const Icon(Icons.monetization_on_rounded, color: Color(0xFFFFD36A), size: 17),
+        const SizedBox(width: 4),
+        Text(_coins(user).toString(), style: const TextStyle(color: Color(0xFFFFE39A), fontWeight: FontWeight.w900, fontSize: 12)),
+      ]),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final topThree = _ranking.take(3).toList();
+    final rest = _ranking.length > 3 ? _ranking.skip(3).toList() : <Map<String, dynamic>>[];
+    return Scaffold(
+      backgroundColor: _deep,
+      appBar: AppBar(
+        backgroundColor: _deep,
+        foregroundColor: _gold,
+        elevation: 0,
+        title: const Text('ROOM RANKING', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.2, fontSize: 17)),
+        centerTitle: true,
+      ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
+            colors: [Color(0xFF32152D), Color(0xFF1A0C22), Color(0xFF100A19)]),
+        ),
+        child: Column(children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 9, 14, 5),
+            child: Text(widget.roomName.toUpperCase(), maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Color(0xFFFFD98A), fontWeight: FontWeight.w900, letterSpacing: 1.4)),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            child: Row(children: [
+              _categoryButton('WEALTH', 'wealth', Icons.workspace_premium_rounded),
+              const SizedBox(width: 10),
+              _categoryButton('CHARM', 'charm', Icons.diamond_rounded),
+            ]),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+            child: Row(children: [
+              _periodButton('DAILY', 'daily'),
+              const SizedBox(width: 8),
+              _periodButton('WEEKLY', 'weekly'),
+              const SizedBox(width: 8),
+              _periodButton('MONTHLY', 'monthly'),
+            ]),
+          ),
+          Expanded(
+            child: _loading
+                ? const Center(child: CircularProgressIndicator(color: _gold))
+                : _error != null
+                    ? Center(child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(mainAxisSize: MainAxisSize.min, children: [
+                          const Icon(Icons.emoji_events_rounded, color: _gold, size: 54),
+                          const SizedBox(height: 12),
+                          const Text('Ranking data is not available yet.',
+                            textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 8),
+                          Text(_error!, textAlign: TextAlign.center,
+                            style: const TextStyle(color: Colors.white60, fontSize: 11)),
+                          const SizedBox(height: 14),
+                          OutlinedButton.icon(onPressed: _loadRanking, icon: const Icon(Icons.refresh), label: const Text('Retry')),
+                        ]),
+                      ))
+                    : _ranking.isEmpty
+                        ? const Center(child: Text('No gift activity in this room for this period yet.',
+                            style: TextStyle(color: Colors.white70), textAlign: TextAlign.center))
+                        : RefreshIndicator(
+                            onRefresh: _loadRanking,
+                            child: ListView(
+                              padding: const EdgeInsets.fromLTRB(13, 12, 13, 22),
+                              children: [
+                                if (topThree.isNotEmpty) ...[
+                                  Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                                    if (topThree.length > 1) _podiumCard(1, topThree[1]),
+                                    const SizedBox(width: 7),
+                                    _podiumCard(0, topThree[0]),
+                                    const SizedBox(width: 7),
+                                    if (topThree.length > 2) _podiumCard(2, topThree[2]),
+                                  ]),
+                                  const SizedBox(height: 20),
+                                ],
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(colors: [Color(0xFFFFD66B), Color(0xFFB9792D)]),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text('TOP ${_ranking.length} CHAMPIONS',
+                                    style: const TextStyle(color: Color(0xFF44220C), fontWeight: FontWeight.w900, letterSpacing: 1)),
+                                ),
+                                const SizedBox(height: 11),
+                                ...rest.asMap().entries.map((entry) => _rankingRow(entry.key, entry.value)),
+                              ],
+                            ),
+                          ),
+          ),
+        ]),
       ),
     );
   }
