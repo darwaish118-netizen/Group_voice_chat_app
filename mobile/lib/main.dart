@@ -7111,10 +7111,6 @@ class _VoiceRoomScreenState
     super.dispose();
   }
 
-  final List<String> speakers = List.generate(
-    10,
-    (index) => 'Seat ${index + 1}',
-  );
 final Map<int, Map<String, dynamic>> seatMembers = {};
 
 Future<void> loadRoomMembers() async {
@@ -7260,6 +7256,50 @@ actions: [
     onPressed: () {},
     icon: const Icon(
       Icons.share,
+    ),
+  ),
+
+  // Room members count and member list.
+  IconButton(
+    tooltip: 'Room Members',
+    onPressed: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => RoomMembersScreen(
+            token: widget.token,
+            roomId: widget.roomId,
+            roomName: widget.roomName,
+          ),
+        ),
+      );
+    },
+    icon: Stack(
+      clipBehavior: Clip.none,
+      children: [
+        const Icon(Icons.groups_rounded),
+        Positioned(
+          right: -9,
+          top: -7,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFD36A),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            constraints: const BoxConstraints(minWidth: 17),
+            child: Text(
+              '${seatMembers.length}',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Color(0xFF211A35),
+                fontSize: 9,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+        ),
+      ],
     ),
   ),
 
@@ -7439,12 +7479,10 @@ actions: [
                 mainAxisSpacing:
                     25,
               ),
-              itemCount:
-                  speakers.length,
+              itemCount: widget.seatCount,
               itemBuilder:
                   (context, index) {
-                final speaker =
-                    speakers[index];
+                final speaker = 'Seat ${index + 1}';
 
 final member = seatMembers[index + 1];
 return InkWell(
@@ -8583,6 +8621,239 @@ class _MindoVipDetailsScreenState extends State<MindoVipDetailsScreen> {
                 child: const Text('ACTIVATE', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1)),
               )),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
+// ============================================================
+// ROOM MEMBERS SCREEN
+// Shows the currently occupied seats using the existing members API.
+// ============================================================
+
+class RoomMembersScreen extends StatefulWidget {
+  final String token;
+  final String roomId;
+  final String roomName;
+
+  const RoomMembersScreen({
+    super.key,
+    required this.token,
+    required this.roomId,
+    required this.roomName,
+  });
+
+  @override
+  State<RoomMembersScreen> createState() => _RoomMembersScreenState();
+}
+
+class _RoomMembersScreenState extends State<RoomMembersScreen> {
+  bool _loading = true;
+  String? _error;
+  List<Map<String, dynamic>> _members = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMembers();
+  }
+
+  Future<void> _loadMembers() async {
+    if (mounted) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
+
+    try {
+      final result = await api.getRoomMembers(widget.token, widget.roomId);
+      final rawSeats = result['seats'];
+      final members = <Map<String, dynamic>>[];
+
+      if (rawSeats is List) {
+        for (final rawSeat in rawSeats) {
+          if (rawSeat is! Map) continue;
+          final user = rawSeat['user'];
+          if (user is Map) {
+            members.add({
+              ...Map<String, dynamic>.from(user),
+              'seat_number': rawSeat['seatNumber'],
+            });
+          }
+        }
+      }
+
+      members.sort((a, b) {
+        final aSeat = int.tryParse('${a['seat_number']}') ?? 0;
+        final bSeat = int.tryParse('${b['seat_number']}') ?? 0;
+        return aSeat.compareTo(bSeat);
+      });
+
+      if (!mounted) return;
+      setState(() {
+        _members = members;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString().replaceFirst('Exception: ', '');
+        _loading = false;
+      });
+    }
+  }
+
+  String _displayName(Map<String, dynamic> user) {
+    final displayName = user['display_name']?.toString().trim() ?? '';
+    if (displayName.isNotEmpty) return displayName;
+    final username = user['username']?.toString().trim() ?? '';
+    if (username.isNotEmpty) return username;
+    return 'MINDO Member';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const background = Color(0xFF211A35);
+    const gold = Color(0xFFFFD36A);
+
+    return Scaffold(
+      backgroundColor: background,
+      appBar: AppBar(
+        backgroundColor: background,
+        foregroundColor: Colors.white,
+        title: Text(
+          '${widget.roomName} Members',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+        ),
+        actions: [
+          IconButton(
+            tooltip: 'Refresh members',
+            onPressed: _loadMembers,
+            icon: const Icon(Icons.refresh_rounded),
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+            padding: const EdgeInsets.all(15),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF4B286E), Color(0xFF291B43)],
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: gold.withOpacity(.7)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.groups_rounded, color: gold, size: 30),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    'Currently Sitting in Room',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                Text(
+                  '${_members.length}',
+                  style: const TextStyle(
+                    color: gold,
+                    fontSize: 23,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: _loading
+                ? const Center(
+                    child: CircularProgressIndicator(color: gold),
+                  )
+                : _error != null
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.wifi_off_rounded, color: gold, size: 42),
+                              const SizedBox(height: 12),
+                              Text(
+                                _error!,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(color: Colors.white70),
+                              ),
+                              const SizedBox(height: 12),
+                              OutlinedButton.icon(
+                                onPressed: _loadMembers,
+                                icon: const Icon(Icons.refresh_rounded),
+                                label: const Text('Try Again'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : _members.isEmpty
+                        ? const Center(
+                            child: Text(
+                              'No members are sitting in this room yet.',
+                              style: TextStyle(color: Colors.white70),
+                            ),
+                          )
+                        : RefreshIndicator(
+                            onRefresh: _loadMembers,
+                            child: ListView.separated(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              padding: const EdgeInsets.fromLTRB(14, 4, 14, 20),
+                              itemCount: _members.length,
+                              separatorBuilder: (_, __) => Divider(
+                                color: Colors.white.withOpacity(.10),
+                                height: 1,
+                              ),
+                              itemBuilder: (context, index) {
+                                final member = _members[index];
+                                final avatar = member['avatar_url']?.toString() ?? '';
+                                final seat = member['seat_number']?.toString() ?? '-';
+                                final publicUid = member['public_uid']?.toString() ?? '';
+
+                                return ListTile(
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                                  leading: CircleAvatar(
+                                    radius: 25,
+                                    backgroundColor: const Color(0xFF694A91),
+                                    backgroundImage: avatar.isNotEmpty ? NetworkImage(avatar) : null,
+                                    child: avatar.isEmpty
+                                        ? const Icon(Icons.person, color: Colors.white)
+                                        : null,
+                                  ),
+                                  title: Text(
+                                    _displayName(member),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  subtitle: Text(
+                                    publicUid.isEmpty ? 'Seat $seat' : 'ID: $publicUid  •  Seat $seat',
+                                    style: const TextStyle(color: Colors.white60, fontSize: 12),
+                                  ),
+                                  trailing: const Icon(Icons.mic_rounded, color: gold),
+                                );
+                              },
+                            ),
+                          ),
           ),
         ],
       ),
