@@ -220,6 +220,38 @@ Future<Map<String, dynamic>> createRoom(
     return _handleResponse(response);
   }
 
+  Future<Map<String, dynamic>> sendRoomReaction(String token, String roomId, String emoji) async {
+    final response = await http.post(Uri.parse('$apiBaseUrl/api/rooms/$roomId/reactions'),
+      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+      body: jsonEncode({'emoji': emoji}));
+    return _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> getRoomReactions(String token, String roomId, int afterId) async {
+    final uri = Uri.parse('$apiBaseUrl/api/rooms/$roomId/reactions').replace(queryParameters: {'afterId': '$afterId'});
+    final response = await http.get(uri, headers: {'Authorization': 'Bearer $token'});
+    return _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> createSeatRequest(String token, String roomId, int seatNumber) async {
+    final response = await http.post(Uri.parse('$apiBaseUrl/api/rooms/$roomId/seat-requests'),
+      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+      body: jsonEncode({'seatNumber': seatNumber}));
+    return _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> getSeatRequests(String token, String roomId) async {
+    final response = await http.get(Uri.parse('$apiBaseUrl/api/rooms/$roomId/seat-requests'), headers: {'Authorization': 'Bearer $token'});
+    return _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> decideSeatRequest(String token, String roomId, String requestId, bool approve) async {
+    final response = await http.post(Uri.parse('$apiBaseUrl/api/rooms/$roomId/seat-requests/$requestId/decision'),
+      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+      body: jsonEncode({'approve': approve}));
+    return _handleResponse(response);
+  }
+
   Future<Map<String, dynamic>> getRoomRanking(
     String token,
     String roomId,
@@ -316,23 +348,6 @@ Future<Map<String, dynamic>> createRoom(
 
   Future<Map<String, dynamic>> endRoomPresence(String token, String roomId) async {
     final response = await http.delete(Uri.parse('$apiBaseUrl/api/rooms/$roomId/presence'), headers: {'Authorization': 'Bearer $token'});
-    return _handleResponse(response);
-  }
-
-  Future<Map<String, dynamic>> getRoomMessages(String token, String roomId) async {
-    final response = await http.get(
-      Uri.parse('$apiBaseUrl/api/rooms/$roomId/messages'),
-      headers: {'Authorization': 'Bearer $token'},
-    );
-    return _handleResponse(response);
-  }
-
-  Future<Map<String, dynamic>> sendRoomMessage(String token, String roomId, String body) async {
-    final response = await http.post(
-      Uri.parse('$apiBaseUrl/api/rooms/$roomId/messages'),
-      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
-      body: jsonEncode({'body': body}),
-    );
     return _handleResponse(response);
   }
 
@@ -7021,7 +7036,7 @@ _selectedRoomImage = image;
                       builder: (sheetContext) => SafeArea(
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
-                          children: [5, 10, 15, 20, 25, 30]
+                          children: [5, 10, 15, 20, 25]
                               .map((count) => ListTile(
                                     title: Text(
                                       '$count Seats',
@@ -7049,18 +7064,6 @@ _selectedRoomImage = image;
                   },
                 ),
                 const Divider(color: Colors.white12, height: 1),
-                settingRow(
-                  icon: Icons.waving_hand_outlined,
-                  title: 'Greetings',
-                  value: greetingController.text.isEmpty
-                      ? 'Add message'
-                      : 'Edit message',
-                  onTap: () => editText(
-                    title: 'Greetings Message',
-                    controller: greetingController,
-                    maxLength: 100,
-                  ),
-                ),
               ],
             ),
           ),
@@ -7075,7 +7078,6 @@ _selectedRoomImage = image;
               Navigator.pop(context, {
                 'roomName': nameController.text.trim(),
                 'seatCount': selectedSeats,
-                'greeting': greetingController.text.trim(),
                 'roomPassword': passwordEnabled
                     ? passwordController.text
                     : '',
@@ -7123,151 +7125,15 @@ class VoiceRoomScreen
 class _VoiceRoomScreenState
     extends State<VoiceRoomScreen> {
   bool microphoneOn = false;
+  bool speakerOn = true;
   Timer? _presenceHeartbeat;
+  Timer? _reactionPoll;
   bool _presenceStarted = false;
-  Timer? _roomChatRefresh;
-  final TextEditingController _roomChatController = TextEditingController();
-  final ScrollController _roomChatScroll = ScrollController();
-  List<Map<String, dynamic>> _roomMessages = [];
-  bool _roomChatSending = false;
-  bool _roomChatReady = false;
-
-  Future<void> _loadRoomMessages({bool scrollToBottom = false}) async {
-    try {
-      final result = await api.getRoomMessages(widget.token, widget.roomId);
-      final raw = result['messages'];
-      final messages = raw is List
-          ? raw.whereType<Map>().map((item) => Map<String, dynamic>.from(item)).toList()
-          : <Map<String, dynamic>>[];
-      if (!mounted) return;
-      final changed = messages.length != _roomMessages.length ||
-          (messages.isNotEmpty && _roomMessages.isNotEmpty &&
-              messages.last['id']?.toString() != _roomMessages.last['id']?.toString());
-      final wasNearBottom = !_roomChatScroll.hasClients ||
-          (_roomChatScroll.position.maxScrollExtent - _roomChatScroll.position.pixels < 80);
-      setState(() {
-        _roomMessages = messages;
-        _roomChatReady = true;
-      });
-      if ((scrollToBottom || (changed && wasNearBottom)) && _roomChatScroll.hasClients) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (_roomChatScroll.hasClients) {
-            _roomChatScroll.animateTo(
-              _roomChatScroll.position.maxScrollExtent,
-              duration: const Duration(milliseconds: 220),
-              curve: Curves.easeOut,
-            );
-          }
-        });
-      }
-    } catch (e) {
-      debugPrint('Room chat load failed: $e');
-    }
-  }
-
-  Future<void> _sendRoomMessage() async {
-    final body = _roomChatController.text.trim();
-    if (body.isEmpty || _roomChatSending) return;
-    setState(() => _roomChatSending = true);
-    try {
-      await api.sendRoomMessage(widget.token, widget.roomId, body);
-      _roomChatController.clear();
-      await _loadRoomMessages(scrollToBottom: true);
-    } catch (e) {
-      _roomMessage(e.toString().replaceFirst('Exception: ', ''));
-    } finally {
-      if (mounted) setState(() => _roomChatSending = false);
-    }
-  }
-
-  Widget _roomChatFeed() {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(12, 4, 12, 6),
-      padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
-      decoration: BoxDecoration(
-        color: const Color(0xCC160D27),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0x55FFD36A)),
-      ),
-      child: Column(
-        children: [
-          Row(children: [
-            const Icon(Icons.forum_rounded, color: Color(0xFFFFD36A), size: 16),
-            const SizedBox(width: 6),
-            const Text('Room Chat', style: TextStyle(color: Color(0xFFFFD36A), fontWeight: FontWeight.w800, fontSize: 12)),
-            const Spacer(),
-            Text('${_roomMessages.length} messages', style: const TextStyle(color: Colors.white54, fontSize: 10)),
-          ]),
-          const SizedBox(height: 5),
-          Expanded(
-            child: !_roomChatReady
-                ? const Center(child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFFFD36A)))
-                : _roomMessages.isEmpty
-                    ? const Center(child: Text('Be the first to say hello!', style: TextStyle(color: Colors.white60, fontSize: 12)))
-                    : ListView.builder(
-                        controller: _roomChatScroll,
-                        itemCount: _roomMessages.length,
-                        itemBuilder: (context, index) {
-                          final message = _roomMessages[index];
-                          final isEntry = message['message_type']?.toString() == 'entry';
-                          final avatar = message['avatar_url']?.toString() ?? '';
-                          final name = (message['display_name'] ?? message['username'] ?? 'MINDO User').toString();
-                          final level = message['level'] ?? 1;
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 4),
-                            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              CircleAvatar(
-                                radius: 15,
-                                backgroundColor: const Color(0xFF563477),
-                                backgroundImage: avatar.isNotEmpty ? NetworkImage(avatar) : null,
-                                child: avatar.isEmpty ? const Icon(Icons.person, color: Colors.white, size: 16) : null,
-                              ),
-                              const SizedBox(width: 7),
-                              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                Row(children: [
-                                  Flexible(child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: isEntry ? const Color(0xFFFFD36A) : Colors.white, fontSize: 11, fontWeight: FontWeight.w800))),
-                                  const SizedBox(width: 5),
-                                  Container(padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1), decoration: BoxDecoration(color: const Color(0xFF57327A), borderRadius: BorderRadius.circular(5)), child: Text('Lv.$level', style: const TextStyle(color: Color(0xFFFFD36A), fontSize: 9))),
-                                ]),
-                                const SizedBox(height: 2),
-                                Text(message['body']?.toString() ?? '', style: TextStyle(color: isEntry ? const Color(0xFFFFD36A) : Colors.white, fontSize: 12, fontWeight: isEntry ? FontWeight.w700 : FontWeight.normal)),
-                              ])),
-                            ]),
-                          );
-                        },
-                      ),
-          ),
-          const SizedBox(height: 6),
-          Row(children: [
-            Expanded(child: TextField(
-              controller: _roomChatController,
-              maxLength: 500,
-              minLines: 1,
-              maxLines: 2,
-              style: const TextStyle(color: Colors.white, fontSize: 12),
-              decoration: InputDecoration(
-                counterText: '',
-                hintText: 'Write a message...',
-                hintStyle: const TextStyle(color: Colors.white54, fontSize: 12),
-                filled: true,
-                fillColor: const Color(0xFF2B1B40),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
-              ),
-              onSubmitted: (_) => _sendRoomMessage(),
-            )),
-            const SizedBox(width: 7),
-            IconButton(
-              onPressed: _roomChatSending ? null : _sendRoomMessage,
-              icon: _roomChatSending ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.send_rounded),
-              color: const Color(0xFFFFD36A),
-              tooltip: 'Send message',
-            ),
-          ]),
-        ],
-      ),
-    );
-  }
+  int _lastReactionId = 0;
+  final Map<String, String> _activeReactions = {};
+  final Map<String, Timer> _reactionTimers = {};
+  List<String> _roomEmojis = ['😀','😍','😂','🥰','😎','😭','😘','🤗','👏','❤️','🔥','👍','🎉','🥳','😜','💖'];
+  bool _loadingSeatRequests = false;
 
   Future<void> _startPresence() async {
     try {
@@ -7277,11 +7143,6 @@ class _VoiceRoomScreenState
         return;
       }
       _presenceStarted = true;
-      await _loadRoomMessages(scrollToBottom: true);
-      _roomChatRefresh?.cancel();
-      _roomChatRefresh = Timer.periodic(const Duration(seconds: 2), (_) {
-        _loadRoomMessages();
-      });
       _presenceHeartbeat?.cancel();
       _presenceHeartbeat = Timer.periodic(const Duration(seconds: 30), (_) async {
         try { await api.heartbeatRoomPresence(widget.token, widget.roomId); } catch (e) { debugPrint('Presence heartbeat failed: $e'); }
@@ -7291,6 +7152,8 @@ class _VoiceRoomScreenState
 
   Future<void> _endPresence() async {
     _presenceHeartbeat?.cancel();
+    _reactionPoll?.cancel();
+    for (final timer in _reactionTimers.values) { timer.cancel(); }
     if (_presenceStarted) {
       _presenceStarted = false;
       try { await api.endRoomPresence(widget.token, widget.roomId); } catch (e) { debugPrint('Room presence end failed: $e'); }
@@ -7299,9 +7162,6 @@ class _VoiceRoomScreenState
 
   @override
   void dispose() {
-    _roomChatRefresh?.cancel();
-    _roomChatController.dispose();
-    _roomChatScroll.dispose();
     _presenceHeartbeat?.cancel();
     if (_presenceStarted) { api.endRoomPresence(widget.token, widget.roomId).catchError((e) { debugPrint('Room presence cleanup failed: $e'); return <String, dynamic>{}; }); }
     super.dispose();
@@ -7565,7 +7425,109 @@ void initState() {
   super.initState();
   loadRoomMembers();
   _startPresence();
+  _loadRoomEmojis();
+  _pollRoomReactions();
+  _reactionPoll = Timer.periodic(const Duration(seconds: 2), (_) => _pollRoomReactions());
 }
+  Future<void> _loadRoomEmojis() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getStringList('mindo_room_emojis_${widget.roomId}');
+    if (saved != null && mounted) setState(() => _roomEmojis = saved);
+  }
+
+  Future<void> _saveRoomEmojis() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('mindo_room_emojis_${widget.roomId}', _roomEmojis);
+  }
+
+  Future<void> _pollRoomReactions() async {
+    try {
+      final result = await api.getRoomReactions(widget.token, widget.roomId, _lastReactionId);
+      final events = result['reactions'];
+      if (events is! List) return;
+      for (final event in events) {
+        if (event is! Map) continue;
+        final id = int.tryParse('${event['id']}') ?? 0;
+        if (id > _lastReactionId) _lastReactionId = id;
+        final userId = event['user_id']?.toString() ?? '';
+        final emoji = event['emoji']?.toString() ?? '';
+        if (userId.isEmpty || emoji.isEmpty || !mounted) continue;
+        _reactionTimers[userId]?.cancel();
+        setState(() => _activeReactions[userId] = emoji);
+        _reactionTimers[userId] = Timer(const Duration(seconds: 3), () {
+          if (mounted) setState(() => _activeReactions.remove(userId));
+          _reactionTimers.remove(userId);
+        });
+      }
+    } catch (e) { debugPrint('Room reaction polling failed: $e'); }
+  }
+
+  Future<void> _sendRoomReaction(String emoji) async {
+    try {
+      await api.sendRoomReaction(widget.token, widget.roomId, emoji);
+      await _pollRoomReactions();
+    } catch (e) { _roomMessage(e.toString().replaceFirst('Exception: ', '')); }
+  }
+
+  void _openEmojiPicker() {
+    showModalBottomSheet(context: context, backgroundColor: const Color(0xFF171225),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (sheetContext) => StatefulBuilder(builder: (context, refreshSheet) => SafeArea(
+        child: Padding(padding: const EdgeInsets.all(18), child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Row(children: [const Expanded(child: Text('Room Reactions', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold))),
+            TextButton.icon(onPressed: () { Navigator.pop(sheetContext); _manageRoomEmojis(); }, icon: const Icon(Icons.edit, color: Color(0xFFFFD36A)), label: const Text('Manage', style: TextStyle(color: Color(0xFFFFD36A))))]),
+          const SizedBox(height: 10),
+          GridView.builder(shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), itemCount: _roomEmojis.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 5, mainAxisSpacing: 10, crossAxisSpacing: 10),
+            itemBuilder: (_, index) => InkWell(onTap: () { final e = _roomEmojis[index]; Navigator.pop(sheetContext); _sendRoomReaction(e); }, child: Center(child: Text(_roomEmojis[index], style: const TextStyle(fontSize: 30))))),
+        ]))));
+  }
+
+  void _manageRoomEmojis() {
+    final controller = TextEditingController();
+    showModalBottomSheet(context: context, backgroundColor: const Color(0xFF171225), isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (sheetContext) => StatefulBuilder(builder: (context, refreshSheet) => Padding(
+        padding: EdgeInsets.fromLTRB(18, 18, 18, MediaQuery.of(context).viewInsets.bottom + 18),
+        child: SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const Text('Manage My Emojis', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          Row(children: [Expanded(child: TextField(controller: controller, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(hintText: 'Add one emoji', hintStyle: TextStyle(color: Colors.white54)))),
+            IconButton(onPressed: () { final value = controller.text.trim(); if (value.isNotEmpty && !_roomEmojis.contains(value)) { setState(() => _roomEmojis.add(value)); refreshSheet(() {}); controller.clear(); _saveRoomEmojis(); } }, icon: const Icon(Icons.add_circle, color: Color(0xFFFFD36A), size: 30))]),
+          const SizedBox(height: 10),
+          ConstrainedBox(constraints: const BoxConstraints(maxHeight: 260), child: GridView.builder(shrinkWrap: true, itemCount: _roomEmojis.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 5),
+            itemBuilder: (_, index) => Stack(alignment: Alignment.topRight, children: [Center(child: Text(_roomEmojis[index], style: const TextStyle(fontSize: 27))),
+              GestureDetector(onTap: () { setState(() => _roomEmojis.removeAt(index)); refreshSheet(() {}); _saveRoomEmojis(); }, child: const Icon(Icons.cancel, color: Colors.redAccent, size: 17))]))),
+          const SizedBox(height: 8), Text('No emoji limit • Saved on this device', style: TextStyle(color: Colors.white60, fontSize: 12)),
+        ]))));
+  }
+
+  Future<void> _showSeatRequests() async {
+    if (currentRoomRole != 'owner' && currentRoomRole != 'moderator') {
+      final freeSeat = List<int>.generate(widget.seatCount, (i) => i + 1).firstWhere((n) => !seatMembers.containsKey(n), orElse: () => 0);
+      if (freeSeat == 0) { _roomMessage('No available seat right now.'); return; }
+      try { await api.createSeatRequest(widget.token, widget.roomId, freeSeat); _roomMessage('Seat request sent to room owner/moderator.'); }
+      catch (e) { _roomMessage(e.toString().replaceFirst('Exception: ', '')); }
+      return;
+    }
+    setState(() => _loadingSeatRequests = true);
+    try {
+      final result = await api.getSeatRequests(widget.token, widget.roomId);
+      final requests = (result['requests'] as List? ?? []).whereType<Map>().map((e) => Map<String,dynamic>.from(e)).toList();
+      if (!mounted) return;
+      showDialog(context: context, builder: (dialogContext) => StatefulBuilder(builder: (context, refreshDialog) => AlertDialog(
+        backgroundColor: const Color(0xFF171225), title: const Text('Seat Apply Requests', style: TextStyle(color: Colors.white)),
+        content: requests.isEmpty ? const Text('No pending seat requests.', style: TextStyle(color: Colors.white70)) : SizedBox(width: double.maxFinite, child: ListView(shrinkWrap: true, children: requests.map((r) => ListTile(
+          title: Text(r['display_name']?.toString() ?? r['username']?.toString() ?? 'User', style: const TextStyle(color: Colors.white)),
+          subtitle: Text('Seat ${r['seat_number']}', style: const TextStyle(color: Colors.white60)),
+          trailing: Wrap(children: [IconButton(icon: const Icon(Icons.check, color: Colors.greenAccent), onPressed: () async { try { await api.decideSeatRequest(widget.token, widget.roomId, '${r['id']}', true); requests.remove(r); await loadRoomMembers(); refreshDialog(() {}); } catch (e) { _roomMessage(e.toString()); } }), IconButton(icon: const Icon(Icons.close, color: Colors.redAccent), onPressed: () async { try { await api.decideSeatRequest(widget.token, widget.roomId, '${r['id']}', false); requests.remove(r); refreshDialog(() {}); } catch (e) { _roomMessage(e.toString()); } })]),
+        )).toList())), actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Close'))])));
+    } catch (e) { _roomMessage(e.toString().replaceFirst('Exception: ', '')); }
+    finally { if (mounted) setState(() => _loadingSeatRequests = false); }
+  }
+
   Widget _roomLevelBadge(String prefix, dynamic rawLevel, {String? iconUrl}) {
     final level = rawLevel is num ? rawLevel.toInt() : int.tryParse('$rawLevel') ?? 1;
     return Container(
@@ -7921,9 +7883,9 @@ actions: [
             ),
           ),
           const SizedBox(height: 12),
-          SizedBox(
-            height: MediaQuery.of(context).size.height * 0.34,
-            child: GridView.builder(
+          Expanded(
+            child:
+                GridView.builder(
               padding:
                   const EdgeInsets.all(
                       20),
@@ -7962,20 +7924,16 @@ child: Column(
                 ? username
                 : speaker;
 
-        return CircleAvatar(
-          radius: 32,
-          backgroundColor: Colors.deepPurple.shade300,
-          backgroundImage: avatarUrl.isNotEmpty
-              ? NetworkImage(avatarUrl)
-              : null,
-          child: avatarUrl.isEmpty
-              ? const Icon(
-                  Icons.person,
-                  color: Colors.white,
-                  size: 32,
-                )
-              : null,
-        );
+        final memberId = member?['id']?.toString() ?? '';
+        return Stack(clipBehavior: Clip.none, alignment: Alignment.center, children: [
+          CircleAvatar(radius: 32, backgroundColor: Colors.deepPurple.shade300,
+            backgroundImage: avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
+            child: avatarUrl.isEmpty ? const Icon(Icons.person, color: Colors.white, size: 32) : null),
+          if (memberId.isNotEmpty && _activeReactions[memberId] != null)
+            Positioned(top: -34, child: TweenAnimationBuilder<double>(tween: Tween(begin: .5, end: 1), duration: const Duration(milliseconds: 350),
+              builder: (_, scale, child) => Transform.scale(scale: scale, child: child),
+              child: Text(_activeReactions[memberId]!, style: const TextStyle(fontSize: 30, shadows: [Shadow(color: Colors.black54, blurRadius: 8)])))),
+        ]);
       },
     ),
     const SizedBox(height: 7),
@@ -8015,7 +7973,6 @@ child: Column(
               },
             ),
           ),
-          Expanded(child: _roomChatFeed()),
 
 Container(
     transform: Matrix4.translationValues(0, -20, 0),
@@ -8037,9 +7994,10 @@ Container(
               onTap: () {},
             ),
             _roomButton(
-              icon: Icons.volume_up_outlined,
+              icon: speakerOn ? Icons.volume_up_outlined : Icons.volume_off_outlined,
               label: '',
-              onTap: () {},
+              active: !speakerOn,
+              onTap: () { setState(() => speakerOn = !speakerOn); _roomMessage('Speaker output control requires the room voice/RTC audio service.'); },
             ),
             _roomButton(
               icon: microphoneOn ? Icons.mic : Icons.mic_off,
@@ -8053,110 +8011,12 @@ Container(
             _roomButton(
               icon: Icons.emoji_emotions_outlined,
               label: '',
-              onTap: () {
-                showModalBottomSheet(
-                  context: context,
-                  backgroundColor: const Color(0xFF171225),
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(24),
-                    ),
-                  ),
-                  builder: (sheetContext) {
-                    final emojis = [
-                      '😀', '😍', '😂', '🥰',
-                      '😎', '😭', '😘', '🤗',
-                      '👏', '❤️', '🔥', '👍',
-                      '🎉', '🥳', '😜', '💖',
-                    ];
-
-                    return SafeArea(
-                      child: Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text(
-                              'Choose Emoji',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 18),
-                            GridView.builder(
-                              shrinkWrap: true,
-                              physics:
-                                  const NeverScrollableScrollPhysics(),
-                              itemCount: emojis.length,
-                              gridDelegate:
-                                  const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 4,
-                                mainAxisSpacing: 12,
-                                crossAxisSpacing: 12,
-                              ),
-                              itemBuilder: (context, index) {
-                                return InkWell(
-                                  onTap: () {
-                                    final selected = emojis[index];
-                                    Navigator.pop(sheetContext);
-                                    ScaffoldMessenger.of(this.context)
-                                        .showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          'Selected $selected',
-                                        ),
-                                        duration:
-                                            const Duration(seconds: 1),
-                                      ),
-                                    );
-                                  },
-                                  child: Center(
-                                    child: Text(
-                                      emojis[index],
-                                      style: const TextStyle(
-                                        fontSize: 30,
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
+              onTap: _openEmojiPicker,
             ),
             _roomButton(
               icon: Icons.weekend,
               label: '',
-              onTap: () {
-                showDialog(
-                  context: context,
-                  builder: (dialogContext) => AlertDialog(
-                    backgroundColor: const Color(0xFF171225),
-                    title: const Text(
-                      'Seat Apply Requests',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                    content: const Text(
-                      'No seat requests yet.',
-                      style: TextStyle(color: Colors.white70),
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () =>
-                            Navigator.pop(dialogContext),
-                        child: const Text('Close'),
-                      ),
-                    ],
-                  ),
-                );
-              },
+              onTap: _showSeatRequests,
             ),
             _roomButton(
               icon: Icons.settings,
