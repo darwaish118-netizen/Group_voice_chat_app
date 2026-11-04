@@ -10,7 +10,6 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 const String apiBaseUrl =
-    const String apiBaseUrl =
     'https://mindo-voice-chat-server.onrender.com';
 
 void main() {
