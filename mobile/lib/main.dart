@@ -22,7 +22,7 @@ class VoiceChatApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Group Voice Chat',
+      title: 'MINDO VOICE CHAT',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
@@ -249,6 +249,16 @@ Future<Map<String, dynamic>> createRoom(
     final response = await http.post(Uri.parse('$apiBaseUrl/api/rooms/$roomId/seat-requests/$requestId/decision'),
       headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
       body: jsonEncode({'approve': approve}));
+    return _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> getGlobalRoomRanking(
+    String token,
+    String period,
+  ) async {
+    final uri = Uri.parse('$apiBaseUrl/api/rankings/rooms')
+        .replace(queryParameters: {'period': period});
+    final response = await http.get(uri, headers: {'Authorization': 'Bearer $token'});
     return _handleResponse(response);
   }
 
@@ -2260,33 +2270,11 @@ try {
   }
 
   Future<void> _openRanking() async {
-    final ranked = [...rooms]..sort((a, b) => _roomCoins(b as Map<String, dynamic>).compareTo(_roomCoins(a as Map<String, dynamic>)));
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF211033),
-        title: const Text('Global Room Ranking', style: TextStyle(color: Color(0xFFFFD76A))),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: ranked.isEmpty
-              ? const Text('No ranked rooms available yet.', style: TextStyle(color: Colors.white70))
-              : ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: math.min(10, ranked.length),
-                  itemBuilder: (context, index) {
-                    final room = Map<String, dynamic>.from(ranked[index] as Map);
-                    return ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: const Color(0xFF6D2BA5),
-                        child: Text('${index + 1}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                      ),
-                      title: Text((room['name'] ?? 'Voice Room').toString(), style: const TextStyle(color: Colors.white)),
-                      subtitle: Text('${_roomCoins(room)} coins', style: const TextStyle(color: Colors.white60)),
-                    );
-                  },
-                ),
-        ),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
+    if (!mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => GlobalRoomRankingScreen(token: widget.token),
       ),
     );
   }
@@ -9129,6 +9117,196 @@ class _RoomMembersScreenState extends State<RoomMembersScreen> {
   }
 }
 
+
+// ============================================================
+// MINDO GLOBAL ROOM RANKING
+// Uses successful gift transactions recorded against each room.
+// ============================================================
+class GlobalRoomRankingScreen extends StatefulWidget {
+  final String token;
+  const GlobalRoomRankingScreen({super.key, required this.token});
+
+  @override
+  State<GlobalRoomRankingScreen> createState() => _GlobalRoomRankingScreenState();
+}
+
+class _GlobalRoomRankingScreenState extends State<GlobalRoomRankingScreen> {
+  static const Color _gold = Color(0xFFFFD76A);
+  static const Color _deep = Color(0xFF190B23);
+  String _period = 'daily';
+  bool _loading = true;
+  String? _error;
+  List<Map<String, dynamic>> _ranking = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() { _loading = true; _error = null; });
+    try {
+      final result = await api.getGlobalRoomRanking(widget.token, _period);
+      final raw = result['ranking'] ?? result['rooms'] ?? [];
+      final list = raw is List
+          ? raw.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList()
+          : <Map<String, dynamic>>[];
+      list.sort((a, b) => _coins(b).compareTo(_coins(a)));
+      if (!mounted) return;
+      setState(() { _ranking = list.take(100).toList(); _loading = false; });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() { _error = e.toString().replaceFirst('Exception: ', ''); _loading = false; });
+    }
+  }
+
+  int _coins(Map<String, dynamic> room) {
+    final value = room['total_coins'] ?? room['coins_sent'] ?? 0;
+    return value is num ? value.toInt() : int.tryParse(value.toString()) ?? 0;
+  }
+
+  String _compact(int value) {
+    if (value >= 1000000) return '${(value / 1000000).toStringAsFixed(value % 1000000 == 0 ? 0 : 1)}M';
+    if (value >= 1000) return '${(value / 1000).toStringAsFixed(value % 1000 == 0 ? 0 : 1)}K';
+    return value.toString();
+  }
+
+  Widget _periodButton(String label, String value) {
+    final selected = _period == value;
+    return Expanded(child: GestureDetector(
+      onTap: () { if (_period == value) return; setState(() => _period = value); _load(); },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 11),
+        decoration: BoxDecoration(
+          gradient: selected ? const LinearGradient(colors: [Color(0xFFFFB52E), Color(0xFFE66B19)]) : null,
+          color: selected ? null : const Color(0xFF38233E),
+          borderRadius: BorderRadius.circular(13),
+          border: Border.all(color: selected ? const Color(0xFFFFE4A0) : Colors.white24),
+        ),
+        child: Text(label, textAlign: TextAlign.center,
+          style: TextStyle(color: selected ? const Color(0xFF401C0B) : Colors.white70, fontWeight: FontWeight.w900)),
+      ),
+    ));
+  }
+
+  Widget _roomCover(Map<String, dynamic> room, {double radius = 29}) {
+    final url = (room['cover_image_url'] ?? '').toString();
+    return Container(
+      padding: const EdgeInsets.all(2.5),
+      decoration: const BoxDecoration(shape: BoxShape.circle,
+        gradient: LinearGradient(colors: [_gold, Color(0xFFFF65B7), Color(0xFF9D70FF)])),
+      child: CircleAvatar(radius: radius, backgroundColor: const Color(0xFF50345D),
+        backgroundImage: url.isNotEmpty ? NetworkImage(url) : null,
+        child: url.isEmpty ? const Icon(Icons.mic_rounded, color: Colors.white, size: 25) : null),
+    );
+  }
+
+  void _openRoom(Map<String, dynamic> room) {
+    final id = (room['id'] ?? '').toString();
+    if (id.isEmpty) return;
+    Navigator.push(context, MaterialPageRoute(builder: (_) => VoiceRoomScreen(
+      token: widget.token,
+      roomId: id,
+      ownerPublicUid: (room['owner_public_uid'] ?? '').toString(),
+      roomName: (room['name'] ?? 'Voice Room').toString(),
+      coverImageUrl: (room['cover_image_url'] ?? '').toString().isEmpty ? null : room['cover_image_url'].toString(),
+      seatCount: int.tryParse(room['seat_count']?.toString() ?? '') ?? 10,
+    )));
+  }
+
+  Widget _podium(int rank, Map<String, dynamic> room) {
+    final first = rank == 1;
+    final colors = rank == 1 ? [const Color(0xFFEF3D9B), const Color(0xFF9A267E)]
+      : rank == 2 ? [const Color(0xFF9C56D9), const Color(0xFF54318C)]
+      : [const Color(0xFF19B9CF), const Color(0xFF176C9B)];
+    return Expanded(child: Padding(
+      padding: EdgeInsets.only(top: first ? 0 : 27),
+      child: GestureDetector(onTap: () => _openRoom(room), child: Container(
+        height: first ? 196 : 166,
+        padding: const EdgeInsets.fromLTRB(7, 10, 7, 9),
+        decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: colors),
+          borderRadius: BorderRadius.circular(19), border: Border.all(color: _gold.withOpacity(.9), width: first ? 1.8 : 1),
+          boxShadow: [BoxShadow(color: colors.first.withOpacity(.3), blurRadius: 15, offset: const Offset(0, 5))]),
+        child: Column(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Icon(first ? Icons.workspace_premium_rounded : Icons.military_tech_rounded, color: const Color(0xFFFFE28A), size: first ? 27 : 22),
+          _roomCover(room, radius: first ? 32 : 27),
+          Text((room['name'] ?? 'Voice Room').toString(), maxLines: 1, overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900)),
+          Text('Room ID: ${(room['id'] ?? '').toString().length > 8 ? (room['id'] as String).substring(0, 8) : room['id'] ?? '—'}',
+            maxLines: 1, style: const TextStyle(color: Colors.white70, fontSize: 8)),
+          Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+            decoration: BoxDecoration(color: const Color(0xFF4A251C).withOpacity(.8), borderRadius: BorderRadius.circular(20), border: Border.all(color: _gold.withOpacity(.7))),
+            child: Text('${_compact(_coins(room))} coins', style: const TextStyle(color: Color(0xFFFFE49B), fontSize: 10, fontWeight: FontWeight.w900))),
+        ]),
+      )),
+    ));
+  }
+
+  Widget _roomRow(int index, Map<String, dynamic> room) {
+    final rank = index + 4;
+    return GestureDetector(onTap: () => _openRoom(room), child: Container(
+      margin: const EdgeInsets.only(bottom: 9), padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
+      decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFF56331F), Color(0xFF2D1B24)]),
+        borderRadius: BorderRadius.circular(15), border: Border.all(color: _gold.withOpacity(.45)),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(.18), blurRadius: 7, offset: const Offset(0, 3))]),
+      child: Row(children: [
+        SizedBox(width: 29, child: Text('$rank', textAlign: TextAlign.center,
+          style: const TextStyle(color: _gold, fontWeight: FontWeight.w900, fontSize: 17))),
+        const SizedBox(width: 9), _roomCover(room, radius: 22), const SizedBox(width: 10),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text((room['name'] ?? 'Voice Room').toString(), maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13)),
+          Text('Room ID: ${(room['id'] ?? '—').toString()}', maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.white60, fontSize: 9)),
+        ])),
+        const Icon(Icons.monetization_on_rounded, color: _gold, size: 17), const SizedBox(width: 4),
+        Text(_compact(_coins(room)), style: const TextStyle(color: Color(0xFFFFE39A), fontWeight: FontWeight.w900, fontSize: 12)),
+      ]),
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final top = _ranking.take(3).toList();
+    final rest = _ranking.length > 3 ? _ranking.skip(3).toList() : <Map<String, dynamic>>[];
+    return Scaffold(
+      backgroundColor: _deep,
+      appBar: AppBar(backgroundColor: _deep, foregroundColor: _gold, elevation: 0,
+        title: const Text('GLOBAL ROOM RANKING', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1, fontSize: 16)), centerTitle: true),
+      body: Container(decoration: const BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
+        colors: [Color(0xFF32152D), Color(0xFF1A0C22), Color(0xFF100A19)])),
+        child: Column(children: [
+          const Padding(padding: EdgeInsets.fromLTRB(14, 10, 14, 5), child: Text('TOP ROOMS BY GIFT COINS SENT',
+            style: TextStyle(color: Color(0xFFFFD98A), fontWeight: FontWeight.w900, letterSpacing: 1.2))),
+          Padding(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8), child: Row(children: [
+            _periodButton('DAILY', 'daily'), const SizedBox(width: 8), _periodButton('WEEKLY', 'weekly'), const SizedBox(width: 8), _periodButton('MONTHLY', 'monthly'),
+          ])),
+          Expanded(child: _loading ? const Center(child: CircularProgressIndicator(color: _gold))
+            : _error != null ? Center(child: Padding(padding: const EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, children: [
+                const Icon(Icons.emoji_events_rounded, color: _gold, size: 54), const SizedBox(height: 12),
+                const Text('Global ranking could not be loaded.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8), Text(_error!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white60, fontSize: 11)),
+                const SizedBox(height: 14), OutlinedButton.icon(onPressed: _load, icon: const Icon(Icons.refresh), label: const Text('Retry')),
+              ])))
+            : _ranking.isEmpty ? const Center(child: Text('No gift activity recorded for this period yet.', style: TextStyle(color: Colors.white70)))
+            : RefreshIndicator(color: _gold, onRefresh: _load, child: ListView(padding: const EdgeInsets.fromLTRB(13, 12, 13, 22), children: [
+                if (top.isNotEmpty) ...[
+                  Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                    if (top.length > 1) _podium(2, top[1]), const SizedBox(width: 7), _podium(1, top[0]), const SizedBox(width: 7), if (top.length > 2) _podium(3, top[2]),
+                  ]), const SizedBox(height: 20),
+                ],
+                Container(padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
+                  decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFFFFD66B), Color(0xFFB9792D)]), borderRadius: BorderRadius.circular(12)),
+                  child: Text('TOP ${_ranking.length} ROOMS', style: const TextStyle(color: Color(0xFF44220C), fontWeight: FontWeight.w900, letterSpacing: 1))),
+                const SizedBox(height: 11), ...rest.asMap().entries.map((e) => _roomRow(e.key, e.value)),
+              ]))),
+        ]),
+      ),
+    );
+  }
+}
 
 // ============================================================
 // MINDO ROOM WEALTH & CHARM RANKING
