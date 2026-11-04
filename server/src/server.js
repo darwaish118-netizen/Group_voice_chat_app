@@ -325,6 +325,7 @@ await pool.query(`
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       sender_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       receiver_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      room_id UUID REFERENCES rooms(id) ON DELETE SET NULL,
       coin_amount BIGINT NOT NULL CHECK (coin_amount > 0),
       status VARCHAR(20) NOT NULL DEFAULT 'success' CHECK (status IN ('pending','success','failed','refunded')),
       idempotency_key TEXT UNIQUE,
@@ -332,6 +333,8 @@ await pool.query(`
       CHECK (sender_id <> receiver_id)
     )
   `);
+  await pool.query(`ALTER TABLE gift_transactions ADD COLUMN IF NOT EXISTS room_id UUID REFERENCES rooms(id) ON DELETE SET NULL`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS gift_transactions_room_created_idx ON gift_transactions(room_id, created_at DESC) WHERE room_id IS NOT NULL`);
   await pool.query(`CREATE INDEX IF NOT EXISTS gift_transactions_sender_created_idx ON gift_transactions(sender_id, created_at DESC)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS gift_transactions_receiver_created_idx ON gift_transactions(receiver_id, created_at DESC)`);
   await pool.query(`
@@ -1157,10 +1160,22 @@ app.get("/api/rooms", async (req, res) => {
     rooms.cover_image_url,
     rooms.created_at,
     users.username AS owner_username,
-    users.public_uid AS owner_public_uid
+    users.public_uid AS owner_public_uid,
+    COALESCE(gifts.total_coins, 0)::BIGINT AS total_coins,
+    COALESCE(members.member_count, 0)::INTEGER AS member_count
 FROM rooms
 JOIN users ON users.id = rooms.owner_id
-ORDER BY rooms.created_at DESC
+LEFT JOIN (
+  SELECT room_id, SUM(coin_amount) AS total_coins
+  FROM gift_transactions WHERE status = 'success' AND room_id IS NOT NULL
+  GROUP BY room_id
+) gifts ON gifts.room_id = rooms.id
+LEFT JOIN (
+  SELECT room_id, COUNT(DISTINCT user_id) AS member_count
+  FROM room_presence WHERE last_seen >= NOW() - INTERVAL '2 minutes'
+  GROUP BY room_id
+) members ON members.room_id = rooms.id
+ORDER BY total_coins DESC, rooms.created_at DESC
     `);
 
     res.json({
@@ -1272,6 +1287,83 @@ res.status(201).json({
     res.status(500).json({
       message: "Could not create room",
     });
+  }
+});
+
+// -------------------------
+// Global room rankings (gift coins sent in each room)
+// -------------------------
+app.get("/api/rankings/rooms", authMiddleware, async (req, res) => {
+  if (!pool) return res.status(503).json({ message: "Database is not configured" });
+  const period = String(req.query.period || "daily").toLowerCase();
+  if (!["daily", "weekly", "monthly"].includes(period)) {
+    return res.status(400).json({ message: "period must be daily, weekly or monthly" });
+  }
+  const dateFilter = period === "daily"
+    ? "date_trunc('day', NOW())"
+    : period === "weekly"
+      ? "date_trunc('week', NOW())"
+      : "date_trunc('month', NOW())";
+  try {
+    const result = await pool.query(`
+      SELECT r.id, r.name, r.owner_id, r.seat_count, r.cover_image_url,
+        u.public_uid AS owner_public_uid,
+        COALESCE(SUM(gt.coin_amount), 0)::BIGINT AS total_coins,
+        COUNT(DISTINCT rp.user_id)::INTEGER AS member_count
+      FROM rooms r
+      JOIN users u ON u.id = r.owner_id
+      LEFT JOIN gift_transactions gt ON gt.room_id = r.id
+        AND gt.status = 'success' AND gt.created_at >= ${dateFilter}
+      LEFT JOIN room_presence rp ON rp.room_id = r.id AND rp.last_seen >= NOW() - INTERVAL '2 minutes'
+      GROUP BY r.id, u.public_uid
+      ORDER BY total_coins DESC, r.created_at ASC
+      LIMIT 100
+    `);
+    res.json({ period, ranking: result.rows });
+  } catch (error) {
+    console.error("Global room ranking failed:", error);
+    res.status(500).json({ message: "Could not load global room ranking" });
+  }
+});
+
+// -------------------------
+// Room Wealth / Charm rankings
+// -------------------------
+app.get("/api/rooms/:roomId/rankings", authMiddleware, async (req, res) => {
+  if (!pool) return res.status(503).json({ message: "Database is not configured" });
+  const { roomId } = req.params;
+  const category = String(req.query.category || "wealth").toLowerCase();
+  const period = String(req.query.period || "daily").toLowerCase();
+  if (!["wealth", "charm"].includes(category)) {
+    return res.status(400).json({ message: "category must be wealth or charm" });
+  }
+  if (!["daily", "weekly", "monthly"].includes(period)) {
+    return res.status(400).json({ message: "period must be daily, weekly or monthly" });
+  }
+  const dateFilter = period === "daily"
+    ? "date_trunc('day', NOW())"
+    : period === "weekly"
+      ? "date_trunc('week', NOW())"
+      : "date_trunc('month', NOW())";
+  const userColumn = category === "wealth" ? "gt.sender_id" : "gt.receiver_id";
+  try {
+    const room = await pool.query("SELECT id FROM rooms WHERE id = $1", [roomId]);
+    if (room.rows.length === 0) return res.status(404).json({ message: "Room not found" });
+    const result = await pool.query(`
+      SELECT u.id, u.username, u.display_name, u.avatar_url, u.public_uid,
+        COALESCE(SUM(gt.coin_amount), 0)::BIGINT AS total_coins
+      FROM gift_transactions gt
+      JOIN users u ON u.id = ${userColumn}
+      WHERE gt.room_id = $1 AND gt.status = 'success'
+        AND gt.created_at >= ${dateFilter}
+      GROUP BY u.id
+      ORDER BY total_coins DESC, u.created_at ASC
+      LIMIT 100
+    `, [roomId]);
+    res.json({ room_id: roomId, category, period, ranking: result.rows });
+  } catch (error) {
+    console.error("Room ranking failed:", error);
+    res.status(500).json({ message: "Could not load room ranking" });
   }
 });
 
