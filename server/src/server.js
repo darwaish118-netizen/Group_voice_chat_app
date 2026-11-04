@@ -6,6 +6,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { Pool } = require("pg");
 const { v4: uuidv4 } = require("uuid");
+const crypto = require("crypto");
 
 function containsRestrictedMindoName(value) {
   if (typeof value !== "string") return false;
@@ -248,6 +249,22 @@ await pool.query(`
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS diamonds BIGINT NOT NULL DEFAULT 0`);
 
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS gift_catalog (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      code VARCHAR(80) UNIQUE NOT NULL,
+      name VARCHAR(100) NOT NULL,
+      image_url TEXT,
+      coin_price BIGINT NOT NULL CHECK (coin_price > 0),
+      active BOOLEAN NOT NULL DEFAULT TRUE,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS gift_catalog_active_sort_idx ON gift_catalog(active, sort_order)`);
+  await pool.query("ALTER TABLE gift_catalog ADD COLUMN IF NOT EXISTS category VARCHAR(60) NOT NULL DEFAULT 'Popular'");
+
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS wallet_recharge_packages (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       code VARCHAR(80) UNIQUE NOT NULL,
@@ -334,6 +351,9 @@ await pool.query(`
     )
   `);
   await pool.query(`ALTER TABLE gift_transactions ADD COLUMN IF NOT EXISTS room_id UUID REFERENCES rooms(id) ON DELETE SET NULL`);
+  await pool.query(`ALTER TABLE gift_transactions ADD COLUMN IF NOT EXISTS gift_id UUID REFERENCES gift_catalog(id) ON DELETE SET NULL`);
+  await pool.query(`ALTER TABLE gift_transactions ADD COLUMN IF NOT EXISTS gift_name VARCHAR(100)`);
+  await pool.query(`ALTER TABLE gift_transactions ADD COLUMN IF NOT EXISTS quantity INTEGER NOT NULL DEFAULT 1 CHECK (quantity > 0)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS gift_transactions_room_created_idx ON gift_transactions(room_id, created_at DESC) WHERE room_id IS NOT NULL`);
   await pool.query(`CREATE INDEX IF NOT EXISTS gift_transactions_sender_created_idx ON gift_transactions(sender_id, created_at DESC)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS gift_transactions_receiver_created_idx ON gift_transactions(receiver_id, created_at DESC)`);
@@ -367,6 +387,45 @@ await pool.query(`
     AFTER INSERT OR UPDATE ON gift_transactions
     FOR EACH ROW EXECUTE FUNCTION update_user_level_stats_from_gift()
   `);
+  // Agency identity and membership foundation. Only approved agencies appear in rankings.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS agencies (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      owner_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+      agency_uid VARCHAR(20) NOT NULL UNIQUE,
+      name VARCHAR(20) NOT NULL,
+      avatar_url TEXT,
+      cover_image_url TEXT,
+      country VARCHAR(100) NOT NULL,
+      status VARCHAR(20) NOT NULL DEFAULT 'pending'
+        CHECK (status IN ('pending','approved','rejected','suspended')),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      reviewed_at TIMESTAMPTZ,
+      reviewed_by UUID REFERENCES users(id) ON DELETE SET NULL
+    )
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS agency_members (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      agency_id UUID NOT NULL REFERENCES agencies(id) ON DELETE CASCADE,
+      user_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+      role VARCHAR(20) NOT NULL DEFAULT 'host' CHECK (role IN ('owner','host')),
+      status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active','left','removed')),
+      joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (agency_id, user_id)
+    )
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS agency_members_agency_idx ON agency_members(agency_id, status)`);
+  // Agency application documents are stored as private upload URLs, never device-local paths.
+  await pool.query(`ALTER TABLE agencies ADD COLUMN IF NOT EXISTS phone VARCHAR(40)`);
+  await pool.query(`ALTER TABLE agencies ADD COLUMN IF NOT EXISTS address TEXT`);
+  await pool.query(`ALTER TABLE agencies ADD COLUMN IF NOT EXISTS admin_public_uid VARCHAR(20)`);
+  await pool.query(`ALTER TABLE agencies ADD COLUMN IF NOT EXISTS id_front_url TEXT`);
+  await pool.query(`ALTER TABLE agencies ADD COLUMN IF NOT EXISTS id_back_url TEXT`);
+  await pool.query(`ALTER TABLE agencies ADD COLUMN IF NOT EXISTS id_front_public_id TEXT`);
+  await pool.query(`ALTER TABLE agencies ADD COLUMN IF NOT EXISTS id_back_public_id TEXT`);
+
+
   // Deliberately disabled until an authorized admin configures a conversion rate.
   await pool.query(`
     INSERT INTO wallet_settings(key, value)
@@ -569,6 +628,56 @@ if (containsRestrictedMindoName(username)) {
     });
   }
 });
+// One-time Main Admin bootstrap. Requires MAIN_ADMIN_SETUP_KEY in Render env.
+// Refuses to run after the first admin exists; public registration never grants admin.
+app.post("/api/auth/bootstrap-admin", async (req, res) => {
+  if (!pool) return res.status(500).json({ message: "Database is not configured" });
+  const configuredKey = process.env.MAIN_ADMIN_SETUP_KEY || "";
+  const suppliedKey = String(req.body?.setup_key || "");
+  const username = String(req.body?.username || "").trim();
+  const password = String(req.body?.password || "");
+  if (configuredKey.length < 24) return res.status(503).json({ message: "Main Admin setup is not configured. Set MAIN_ADMIN_SETUP_KEY in Render first." });
+  if (suppliedKey.length !== configuredKey.length || !require("crypto").timingSafeEqual(Buffer.from(suppliedKey), Buffer.from(configuredKey))) {
+    return res.status(403).json({ message: "Invalid one-time setup key" });
+  }
+  if (!username || username.length < 3 || username.length > 50 || password.length < 10) {
+    return res.status(400).json({ message: "Username must be 3-50 characters and password at least 10 characters" });
+  }
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("LOCK TABLE users IN SHARE ROW EXCLUSIVE MODE");
+    const admins = await client.query("SELECT id FROM users WHERE is_admin = TRUE LIMIT 1");
+    if (admins.rows.length) {
+      await client.query("ROLLBACK");
+      return res.status(409).json({ message: "A Main Admin already exists. Ask that admin to authorize additional accounts." });
+    }
+    const exists = await client.query("SELECT id FROM users WHERE username = $1", [username]);
+    if (exists.rows.length) {
+      await client.query("ROLLBACK");
+      return res.status(409).json({ message: "Username already exists" });
+    }
+    let publicUid;
+    do { publicUid = Math.floor(100000 + Math.random() * 900000); }
+    while ((await client.query("SELECT id FROM users WHERE public_uid = $1", [publicUid])).rows.length);
+    const id = uuidv4();
+    const passwordHash = await bcrypt.hash(password, 12);
+    const created = await client.query(
+      `INSERT INTO users (id, username, public_uid, password_hash, is_admin)
+       VALUES ($1, $2, $3, $4, TRUE)
+       RETURNING id, username, public_uid, avatar_url, coins, diamonds, level, is_admin, created_at`,
+      [id, username, publicUid, passwordHash]
+    );
+    await client.query("COMMIT");
+    const user = created.rows[0];
+    return res.status(201).json({ message: "Main Admin account created", user, token: createToken(user) });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("Main Admin bootstrap failed:", error);
+    return res.status(500).json({ message: "Could not create Main Admin account" });
+  } finally { client.release(); }
+});
+
 // -------------------------
 // Login
 // -------------------------
@@ -1290,6 +1399,430 @@ res.status(201).json({
   }
 });
 
+
+// -------------------------
+// Secure room gifts and wallet debit
+// -------------------------
+app.get("/api/gifts/catalog", authMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, code, name, image_url, coin_price, category
+       FROM gift_catalog WHERE active = TRUE ORDER BY sort_order, name`
+    );
+    res.json({ gifts: result.rows });
+  } catch (error) {
+    console.error("Gift catalog failed:", error);
+    res.status(500).json({ message: "Could not load gift catalog" });
+  }
+});
+
+app.post("/api/admin/gifts", authMiddleware, adminMiddleware, async (req, res) => {
+  const code = String(req.body.code || "").trim();
+  const name = String(req.body.name || "").trim();
+  const imageUrl = String(req.body.image_url || "").trim() || null;
+  const category = String(req.body.category || "Popular").trim().slice(0, 60) || "Popular";
+  const coinPrice = Number(req.body.coin_price);
+  if (!code || !name || !Number.isSafeInteger(coinPrice) || coinPrice <= 0) {
+    return res.status(400).json({ message: "Valid code, name and positive coin_price are required" });
+  }
+  try {
+    const result = await pool.query(
+      `INSERT INTO gift_catalog(code,name,image_url,coin_price,category,active,sort_order)
+       VALUES($1,$2,$3,$4,$5,TRUE,$6)
+       ON CONFLICT(code) DO UPDATE SET name=EXCLUDED.name,image_url=EXCLUDED.image_url,
+         coin_price=EXCLUDED.coin_price,category=EXCLUDED.category,active=TRUE,sort_order=EXCLUDED.sort_order,updated_at=NOW()
+       RETURNING id,code,name,image_url,coin_price,category`,
+      [code, name, imageUrl, coinPrice, category, Number(req.body.sort_order) || 0]
+    );
+    res.status(201).json({ gift: result.rows[0] });
+  } catch (error) {
+    console.error("Gift upsert failed:", error);
+    res.status(500).json({ message: "Could not save gift" });
+  }
+});
+
+// Admin gift catalogue management: list, edit and safely deactivate gifts.
+app.get("/api/admin/gifts", authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, code, name, image_url, coin_price, category, active, sort_order, created_at, updated_at
+       FROM gift_catalog ORDER BY category, sort_order, name`
+    );
+    const categories = [...new Set(result.rows.map(row => row.category).filter(Boolean))];
+    res.json({ gifts: result.rows, categories });
+  } catch (error) {
+    console.error("Admin gift list failed:", error);
+    res.status(500).json({ message: "Could not load admin gift catalogue" });
+  }
+});
+
+app.patch("/api/admin/gifts/:giftId", authMiddleware, adminMiddleware, async (req, res) => {
+  const { giftId } = req.params;
+  const allowed = ["code", "name", "image_url", "coin_price", "category", "active", "sort_order"];
+  const updates = Object.entries(req.body || {}).filter(([key]) => allowed.includes(key));
+  if (!updates.length) return res.status(400).json({ message: "No supported gift fields supplied" });
+  if (req.body.coin_price !== undefined && (!Number.isSafeInteger(Number(req.body.coin_price)) || Number(req.body.coin_price) <= 0)) {
+    return res.status(400).json({ message: "coin_price must be a positive integer" });
+  }
+  if (req.body.name !== undefined && !String(req.body.name).trim()) {
+    return res.status(400).json({ message: "Gift name cannot be empty" });
+  }
+  try {
+    const values = updates.map(([key, value]) => key === "name" || key === "code" || key === "category"
+      ? String(value).trim() : key === "coin_price" || key === "sort_order" ? Number(value) : value);
+    const setSql = updates.map(([key], index) => `${key}=$${index + 1}`).join(", ");
+    const result = await pool.query(
+      `UPDATE gift_catalog SET ${setSql}, updated_at=NOW() WHERE id=$${values.length + 1}
+       RETURNING id, code, name, image_url, coin_price, category, active, sort_order`,
+      [...values, giftId]
+    );
+    if (!result.rowCount) return res.status(404).json({ message: "Gift not found" });
+    res.json({ gift: result.rows[0] });
+  } catch (error) {
+    if (error.code === "23505") return res.status(409).json({ message: "Gift code already exists" });
+    console.error("Admin gift update failed:", error);
+    res.status(500).json({ message: "Could not update gift" });
+  }
+});
+
+app.delete("/api/admin/gifts/:giftId", authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `UPDATE gift_catalog SET active=FALSE, updated_at=NOW() WHERE id=$1
+       RETURNING id, code, name, active`, [req.params.giftId]
+    );
+    if (!result.rowCount) return res.status(404).json({ message: "Gift not found" });
+    res.json({ gift: result.rows[0], message: "Gift deactivated; transaction history is preserved" });
+  } catch (error) {
+    console.error("Admin gift deactivation failed:", error);
+    res.status(500).json({ message: "Could not deactivate gift" });
+  }
+});
+
+app.post("/api/gifts/send", authMiddleware, async (req, res) => {
+  const giftId = String(req.body.gift_id || "").trim();
+  const roomId = String(req.body.room_id || "").trim();
+  const idempotencyKey = String(req.body.idempotency_key || "").trim();
+  const quantity = Number.parseInt(req.body.quantity ?? "1", 10);
+  const receiverUids = Array.isArray(req.body.receiver_uids)
+    ? [...new Set(req.body.receiver_uids.map(value => String(value).trim()).filter(Boolean))]
+    : [String(req.body.receiver_uid || "").trim()].filter(Boolean);
+
+  if (!giftId || !roomId || !idempotencyKey || idempotencyKey.length > 100 ||
+      !receiverUids.length || receiverUids.length > 25 ||
+      !Number.isInteger(quantity) || quantity < 1 || quantity > 177) {
+    return res.status(400).json({ message: "A gift, room, 1-25 recipients, quantity (1-177) and idempotency key are required" });
+  }
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const giftResult = await client.query(
+      `SELECT id, coin_price, name FROM gift_catalog WHERE id=$1 AND active=TRUE`, [giftId]
+    );
+    if (!giftResult.rowCount) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ message: "Gift is unavailable" });
+    }
+    const receivers = await client.query(
+      `SELECT id, public_uid FROM users WHERE public_uid::text = ANY($1::text[]) FOR UPDATE`,
+      [receiverUids]
+    );
+    if (receivers.rowCount !== receiverUids.length) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ message: "One or more recipients were not found" });
+    }
+    if (receivers.rows.some(row => row.id === req.user.id)) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ message: "You cannot send a gift to yourself" });
+    }
+    const receiverIds = receivers.rows.map(row => row.id);
+    const presence = await client.query(
+      `SELECT user_id FROM room_presence
+       WHERE room_id=$1 AND user_id = ANY($2::uuid[])
+         AND last_seen > NOW()-INTERVAL '2 minutes'`,
+      [roomId, [req.user.id, ...receiverIds]]
+    );
+    const presentIds = new Set(presence.rows.map(row => row.user_id));
+    if (!presentIds.has(req.user.id) || receiverIds.some(id => !presentIds.has(id))) {
+      await client.query("ROLLBACK");
+      return res.status(403).json({ message: "Sender and all selected recipients must be present in this room" });
+    }
+    const price = Number(giftResult.rows[0].coin_price);
+    const perRecipient = price * quantity;
+    const totalDebit = perRecipient * receiverIds.length;
+    if (!Number.isSafeInteger(totalDebit) || totalDebit <= 0) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ message: "Gift total is outside the supported range" });
+    }
+    // Match the exact per-recipient keys; LIKE would treat '%' and '_' in a
+    // caller-supplied idempotency key as wildcards.
+    const recipientKeys = receiverIds.map(id => `${idempotencyKey}:${id}`);
+    const existing = await client.query(
+      `SELECT id, sender_id, receiver_id, coin_amount, status, gift_id, gift_name, quantity, created_at
+       FROM gift_transactions WHERE idempotency_key = ANY($1::text[])`,
+      [recipientKeys]
+    );
+    if (existing.rowCount) {
+      if (existing.rows.some(row =>
+            row.sender_id !== req.user.id ||
+            row.gift_id !== giftId ||
+            Number(row.quantity) !== quantity) ||
+          existing.rowCount !== receiverIds.length ||
+          new Set(existing.rows.map(row => row.receiver_id)).size !== receiverIds.length) {
+        await client.query("ROLLBACK");
+        return res.status(409).json({ message: "Idempotency key already used or incomplete" });
+      }
+      const replayDebit = existing.rows.reduce((sum, row) => sum + Number(row.coin_amount), 0);
+      await client.query("COMMIT");
+      return res.json({
+        duplicate: true,
+        transactions: existing.rows,
+        quantity,
+        recipient_count: existing.rowCount,
+        total_debit: replayDebit,
+        animation_mode: quantity === 1 ? "individual" : "combined"
+      });
+    }
+    const debit = await client.query(
+      `UPDATE users SET coins=coins-$1 WHERE id=$2 AND coins >= $1 RETURNING coins`,
+      [totalDebit, req.user.id]
+    );
+    if (!debit.rowCount) {
+      await client.query("ROLLBACK");
+      return res.status(402).json({ message: "Insufficient coin balance" });
+    }
+    const transactions = [];
+    for (const receiver of receivers.rows) {
+      const transaction = await client.query(
+        `INSERT INTO gift_transactions
+         (sender_id,receiver_id,room_id,coin_amount,status,idempotency_key,gift_id,gift_name,quantity)
+         VALUES($1,$2,$3,$4,'success',$5,$6,$7,$8)
+         RETURNING id,sender_id,receiver_id,room_id,coin_amount,status,gift_id,gift_name,quantity,created_at`,
+        [req.user.id, receiver.id, roomId, perRecipient, `${idempotencyKey}:${receiver.id}`,
+         giftId, giftResult.rows[0].name, quantity]
+      );
+      transactions.push(transaction.rows[0]);
+    }
+    await client.query(
+      `INSERT INTO wallet_transactions(user_id,kind,currency,amount,balance_after,status,source,idempotency_key,details)
+       VALUES($1,'gift_spend','coin',$2,$3,'success','gift',$4,$5::jsonb)`,
+      [req.user.id, -totalDebit, debit.rows[0].coins, `gift:${idempotencyKey}`,
+       JSON.stringify({ gift_id: giftId, gift_name: giftResult.rows[0].name, receiver_ids: receiverIds, room_id: roomId, quantity, recipient_count: receiverIds.length })]
+    );
+    await client.query("COMMIT");
+    res.status(201).json({ transactions, balance: debit.rows[0].coins, quantity, recipient_count: receiverIds.length, total_debit: totalDebit, animation_mode: quantity === 1 ? "individual" : "combined" });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    if (error.code === "23505") return res.status(409).json({ message: "Duplicate gift request" });
+    console.error("Gift send failed:", error);
+    res.status(500).json({ message: "Could not send gift" });
+  } finally {
+    client.release();
+  }
+});
+
+
+app.get("/api/rooms/:roomId/gifts/events", authMiddleware, async (req, res) => {
+  const roomId = String(req.params.roomId || "").trim();
+  try {
+    const presence = await pool.query(
+      `SELECT 1 FROM room_presence
+       WHERE room_id=$1 AND user_id=$2
+         AND last_seen > NOW()-INTERVAL '2 minutes' LIMIT 1`,
+      [roomId, req.user.id]
+    );
+    if (!presence.rowCount) {
+      return res.status(403).json({ message: "You must be present in this room to view gift events" });
+    }
+    const result = await pool.query(
+      `SELECT gt.id, gt.sender_id, gt.receiver_id, gt.coin_amount,
+              gt.gift_name, gt.quantity, gt.created_at,
+              su.display_name AS sender_name, su.username AS sender_username,
+              su.public_uid AS sender_uid, su.avatar_url AS sender_avatar,
+              ru.display_name AS receiver_name, ru.username AS receiver_username,
+              ru.public_uid AS receiver_uid, ru.avatar_url AS receiver_avatar,
+              gc.image_url AS gift_image, gc.coin_price
+       FROM gift_transactions gt
+       JOIN users su ON su.id=gt.sender_id
+       JOIN users ru ON ru.id=gt.receiver_id
+       LEFT JOIN gift_catalog gc ON gc.id=gt.gift_id
+       WHERE gt.room_id=$1 AND gt.status='success'
+         AND gt.created_at > NOW()-INTERVAL '60 seconds'
+       ORDER BY gt.created_at DESC
+       LIMIT 30`,
+      [roomId]
+    );
+    res.json({ events: result.rows });
+  } catch (error) {
+    console.error("Room gift events failed:", error);
+    res.status(500).json({ message: "Could not load room gift events" });
+  }
+});
+
+// Signed Cloudinary uploads. Agency identity documents use authenticated delivery.
+
+
+app.post("/api/cloudinary/agency-upload-signature", authMiddleware, async (req, res) => {
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+  const apiKey = process.env.CLOUDINARY_API_KEY;
+  const apiSecret = process.env.CLOUDINARY_API_SECRET;
+  if (!cloudName || !apiKey || !apiSecret) {
+    return res.status(503).json({ message: "Cloudinary is not configured" });
+  }
+  const kind = String(req.body.kind || "");
+  if (!["agency_avatar", "agency_id_front", "agency_id_back"].includes(kind)) {
+    return res.status(400).json({ message: "Invalid agency upload type" });
+  }
+  const timestamp = Math.floor(Date.now() / 1000);
+  const folder = kind === "agency_avatar"
+    ? `mindo-voice-chat/agencies/${req.user.id}`
+    : `mindo-voice-chat/private-agency-ids/${req.user.id}`;
+  const type = kind === "agency_avatar" ? "upload" : "authenticated";
+  const params = { folder, timestamp, type };
+  const toSign = Object.keys(params).sort().map(key => `${key}=${params[key]}`).join("&");
+  const signature = crypto.createHash("sha1").update(toSign + apiSecret).digest("hex");
+  res.json({ cloud_name: cloudName, api_key: apiKey, timestamp, folder, type, signature });
+});
+
+// -------------------------
+// Agency applications and main-admin review
+// -------------------------
+app.post("/api/agencies", authMiddleware, async (req, res) => {
+  if (!pool) return res.status(503).json({ message: "Database is not configured" });
+  const name = String(req.body.name || "").trim();
+  const country = String(req.body.country || "").trim();
+  const phone = String(req.body.phone || "").trim();
+  const address = String(req.body.address || "").trim();
+  const avatarUrl = String(req.body.avatar_url || "").trim();
+  const idFrontPublicId = String(req.body.id_front_public_id || "").trim();
+  const idBackPublicId = String(req.body.id_back_public_id || "").trim();
+  const adminPublicUid = String(req.body.admin_public_uid || "").trim() || null;
+  const isHttpUrl = value => /^https?:\/\//i.test(value);
+  const privateAgencyFolder = `mindo-voice-chat/private-agency-ids/${req.user.id}/`;
+  const isPrivateAgencyDocument = value =>
+    value.startsWith(privateAgencyFolder) &&
+    !value.includes("..") && !value.includes("\\");
+  if (!name || name.length > 20 || !country || !phone || !address ||
+      !isHttpUrl(avatarUrl) || !isPrivateAgencyDocument(idFrontPublicId) ||
+      !isPrivateAgencyDocument(idBackPublicId) || idFrontPublicId === idBackPublicId) {
+    return res.status(400).json({ message: "Name (max 20), country, phone, address and uploaded image URLs are required" });
+  }
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const existing = await client.query("SELECT id FROM agencies WHERE owner_id = $1", [req.user.id]);
+    if (existing.rowCount) {
+      await client.query("ROLLBACK");
+      return res.status(409).json({ message: "One account can create only one agency" });
+    }
+    const uid = String(Math.floor(100000 + Math.random() * 900000));
+    const created = await client.query(`
+      INSERT INTO agencies (owner_id, agency_uid, name, avatar_url, country, phone, address,
+        admin_public_uid, id_front_public_id, id_back_public_id, status)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'pending') RETURNING *
+    `, [req.user.id, uid, name, avatarUrl, country, phone, address, adminPublicUid, idFrontPublicId, idBackPublicId]);
+    await client.query(`INSERT INTO agency_members (agency_id, user_id, role, status)
+      VALUES ($1,$2,'owner','active')`, [created.rows[0].id, req.user.id]);
+    await client.query("COMMIT");
+    return res.status(201).json({ agency: created.rows[0] });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("Agency application failed:", error);
+    return res.status(500).json({ message: "Could not submit agency application" });
+  } finally { client.release(); }
+});
+
+app.get("/api/agencies/me", authMiddleware, async (req, res) => {
+  if (!pool) return res.status(503).json({ message: "Database is not configured" });
+  try {
+    const result = await pool.query(`SELECT a.* FROM agencies a WHERE a.owner_id = $1`, [req.user.id]);
+    res.json({ agency: result.rows[0] || null });
+  } catch (error) { console.error(error); res.status(500).json({ message: "Could not load agency" }); }
+});
+
+app.get("/api/agencies", authMiddleware, async (req, res) => {
+  if (!pool) return res.status(503).json({ message: "Database is not configured" });
+  const q = String(req.query.search || "").trim();
+  try {
+    const result = await pool.query(`SELECT a.id, a.name, a.agency_uid, a.avatar_url, a.cover_image_url,
+      a.country, a.status, COUNT(am.user_id)::INT AS members
+      FROM agencies a LEFT JOIN agency_members am ON am.agency_id = a.id AND am.status = 'active'
+      WHERE a.status = 'approved' AND ($1 = '' OR a.agency_uid ILIKE $2 OR a.name ILIKE $2)
+      GROUP BY a.id ORDER BY a.name LIMIT 100`, [q, `%${q}%`]);
+    res.json({ agencies: result.rows });
+  } catch (error) { console.error(error); res.status(500).json({ message: "Could not load agencies" }); }
+});
+
+app.get("/api/admin/agencies/pending", authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(`SELECT a.*, u.username AS owner_username, u.public_uid AS owner_public_uid
+      FROM agencies a JOIN users u ON u.id = a.owner_id WHERE a.status = 'pending' ORDER BY a.created_at`);
+    res.json({ agencies: result.rows });
+  } catch (error) { console.error(error); res.status(500).json({ message: "Could not load pending agencies" }); }
+});
+
+// Admin-only identity document metadata for the review dashboard. Never expose these IDs publicly.
+app.get("/api/admin/agencies/:agencyId/documents", authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(`SELECT id, agency_uid, name, id_front_public_id, id_back_public_id
+      FROM agencies WHERE id = $1`, [req.params.agencyId]);
+    if (!result.rowCount) return res.status(404).json({ message: "Agency not found" });
+    res.json({ documents: {
+      agency_id: result.rows[0].id,
+      agency_uid: result.rows[0].agency_uid,
+      agency_name: result.rows[0].name,
+      id_front_public_id: result.rows[0].id_front_public_id,
+      id_back_public_id: result.rows[0].id_back_public_id,
+      delivery: "authenticated_private_cloudinary"
+    }});
+  } catch (error) {
+    console.error("Agency document lookup failed:", error);
+    res.status(500).json({ message: "Could not load agency documents" });
+  }
+});
+
+app.post("/api/admin/agencies/:agencyId/review", authMiddleware, adminMiddleware, async (req, res) => {
+  const decision = String(req.body.decision || "").toLowerCase();
+  if (!["approved", "rejected"].includes(decision)) return res.status(400).json({ message: "decision must be approved or rejected" });
+  try {
+    const result = await pool.query(`UPDATE agencies SET status = $1, reviewed_at = NOW(), reviewed_by = $2
+      WHERE id = $3 AND status = 'pending' RETURNING *`, [decision, req.user.id, req.params.agencyId]);
+    if (!result.rowCount) return res.status(404).json({ message: "Pending agency not found" });
+    res.json({ agency: result.rows[0] });
+  } catch (error) { console.error(error); res.status(500).json({ message: "Could not review agency" }); }
+});
+
+// -------------------------
+// Approved agency rankings: gifts received by active agency hosts.
+// -------------------------
+app.get("/api/rankings/agencies", authMiddleware, async (req, res) => {
+  if (!pool) return res.status(503).json({ message: "Database is not configured" });
+  const period = String(req.query.period || "daily").toLowerCase();
+  if (!["daily", "weekly", "monthly"].includes(period)) {
+    return res.status(400).json({ message: "period must be daily, weekly or monthly" });
+  }
+  const dateFilter = period === "daily" ? "date_trunc('day', NOW())"
+    : period === "weekly" ? "date_trunc('week', NOW())" : "date_trunc('month', NOW())";
+  try {
+    const result = await pool.query(`
+      SELECT a.id, a.name, a.agency_uid, a.avatar_url, a.cover_image_url, a.country,
+        COALESCE(SUM(gt.coin_amount), 0)::BIGINT AS total_coins
+      FROM agencies a
+      LEFT JOIN agency_members am ON am.agency_id = a.id AND am.status = 'active'
+      LEFT JOIN gift_transactions gt ON gt.receiver_id = am.user_id
+        AND gt.status = 'success' AND gt.created_at >= ${dateFilter}
+      WHERE a.status = 'approved'
+      GROUP BY a.id
+      ORDER BY total_coins DESC, a.created_at ASC
+      LIMIT 100
+    `);
+    res.json({ period, ranking: result.rows });
+  } catch (error) {
+    console.error("Agency ranking failed:", error);
+    res.status(500).json({ message: "Could not load agency ranking" });
+  }
+});
+
 // -------------------------
 // Global room rankings (gift coins sent in each room)
 // -------------------------
@@ -1323,6 +1856,43 @@ app.get("/api/rankings/rooms", authMiddleware, async (req, res) => {
   } catch (error) {
     console.error("Global room ranking failed:", error);
     res.status(500).json({ message: "Could not load global room ranking" });
+  }
+});
+
+// -------------------------
+// Global user Wealth / Charm rankings
+// -------------------------
+app.get("/api/rankings/users", authMiddleware, async (req, res) => {
+  if (!pool) return res.status(503).json({ message: "Database is not configured" });
+  const category = String(req.query.category || "wealth").toLowerCase();
+  const period = String(req.query.period || "daily").toLowerCase();
+  if (!["wealth", "charm"].includes(category)) {
+    return res.status(400).json({ message: "category must be wealth or charm" });
+  }
+  if (!["daily", "weekly", "monthly"].includes(period)) {
+    return res.status(400).json({ message: "period must be daily, weekly or monthly" });
+  }
+  const dateFilter = period === "daily"
+    ? "date_trunc('day', NOW())"
+    : period === "weekly"
+      ? "date_trunc('week', NOW())"
+      : "date_trunc('month', NOW())";
+  const userColumn = category === "wealth" ? "gt.sender_id" : "gt.receiver_id";
+  try {
+    const result = await pool.query(`
+      SELECT u.id, u.username, u.display_name, u.avatar_url, u.public_uid,
+        COALESCE(SUM(gt.coin_amount), 0)::BIGINT AS total_coins
+      FROM gift_transactions gt
+      JOIN users u ON u.id = ${userColumn}
+      WHERE gt.status = 'success' AND gt.created_at >= ${dateFilter}
+      GROUP BY u.id
+      ORDER BY total_coins DESC, u.created_at ASC
+      LIMIT 100
+    `);
+    res.json({ category, period, ranking: result.rows });
+  } catch (error) {
+    console.error("Global user ranking failed:", error);
+    res.status(500).json({ message: "Could not load global user ranking" });
   }
 });
 
