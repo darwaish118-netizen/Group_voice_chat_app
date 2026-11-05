@@ -8,6 +8,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter_svga_easyplayer/flutter_svga_easyplayer.dart';
 
 const String apiBaseUrl =
     'https://mindo-voice-chat-server.onrender.com';
@@ -387,20 +389,54 @@ Future<Map<String, dynamic>> createRoom(
   }
 
     
+  // ROOM GIFTS: catalogue and secure server-side sending.
+  Future<List<dynamic>> getGiftCatalog(String token) async {
+    final response = await http.get(
+      Uri.parse('$apiBaseUrl/api/gifts/catalog'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    return _handleResponse(response)['gifts'] ?? [];
+  }
+
+  Future<Map<String, dynamic>> getRoomGiftEvents(String token, String roomId) async {
+    final response = await http.get(
+      Uri.parse('$apiBaseUrl/api/rooms/$roomId/gifts/events'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    return _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> sendRoomGift(
+    String token, {
+    required String giftId,
+    required String roomId,
+    required List<String> receiverUids,
+    required int quantity,
+    required String idempotencyKey,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$apiBaseUrl/api/gifts/send'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'gift_id': giftId,
+        'room_id': roomId,
+        'receiver_uids': receiverUids,
+        'quantity': quantity,
+        'idempotency_key': idempotencyKey,
+      }),
+    );
+    return _handleResponse(response);
+  }
+
   Future<Map<String, dynamic>> getDiamondExchange(String token) async {
-    // The backend returns the wallet balances and exchange settings together.
     final response = await http.get(
       Uri.parse('$apiBaseUrl/api/wallet/diamonds'),
       headers: {'Authorization': 'Bearer $token'},
     );
-    final data = _handleResponse(response);
-    return {
-      'config': data['exchange'] ?? <String, dynamic>{},
-      'balance': {
-        'diamonds': data['diamonds'] ?? 0,
-        'coins': data['coins'] ?? 0,
-      },
-    };
+    return _handleResponse(response);
   }
 
   Future<Map<String, dynamic>> getCoinHistory(String token) async {
@@ -412,21 +448,8 @@ Future<Map<String, dynamic>> createRoom(
   }
 
   Future<Map<String, dynamic>> exchangeDiamonds(String token, int diamonds) async {
-    final response = await http.post(
-      Uri.parse('$apiBaseUrl/api/wallet/diamonds/exchange'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode({'diamonds': diamonds}),
-    );
-    final data = _handleResponse(response);
-    // Keep the existing screen's snake_case response contract.
-    return {
-      ...data,
-      'diamonds_exchanged': data['diamondsExchanged'] ?? data['diamonds_exchanged'] ?? 0,
-      'coins_received': data['coinsReceived'] ?? data['coins_received'] ?? 0,
-    };
+    final response = await http.post(Uri.parse('$apiBaseUrl/api/wallet/diamonds/exchange'), headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'}, body: jsonEncode({'diamonds': diamonds}));
+    return _handleResponse(response);
   }
 
   Future<Map<String, dynamic>> getDiamondHistory(String token) async {
@@ -2958,9 +2981,12 @@ class _DiamondWalletScreenState extends State<DiamondWalletScreen> {
   String? error;
   int get amount => int.tryParse(controller.text.trim()) ?? 0;
   int get estimatedCoins {
-    final perD = int.tryParse('${config['diamonds_per_exchange'] ?? 1000}') ?? 1000;
-    final perC = int.tryParse('${config['coins_per_exchange'] ?? 800}') ?? 800;
-    return perD > 0 && amount > 0 && amount % perD == 0 ? (amount ~/ perD) * perC : 0;
+    if (config['enabled'] != true) return 0;
+    final perD = int.tryParse('${config['diamonds_per_exchange'] ?? 0}') ?? 0;
+    final perC = int.tryParse('${config['coins_per_exchange'] ?? 0}') ?? 0;
+    return perD > 0 && perC > 0 && amount > 0 && amount % perD == 0
+        ? (amount ~/ perD) * perC
+        : 0;
   }
 
   @override void initState() { super.initState(); load(); }
@@ -2970,14 +2996,24 @@ class _DiamondWalletScreenState extends State<DiamondWalletScreen> {
     setState(() { loading = true; error = null; });
     try {
       final data = await api.getDiamondExchange(widget.token);
-      final b = data['balance'] as Map? ?? {};
+      // Server contract: {diamonds, coins, exchange:{...}}.
+      // Keep compatibility with the earlier nested balance/config response too.
+      final b = data['balance'] is Map ? data['balance'] as Map : data;
+      final rawConfig = data['exchange'] is Map
+          ? data['exchange'] as Map
+          : (data['config'] is Map ? data['config'] as Map : <String, dynamic>{});
       if (!mounted) return;
-      setState(() { config = Map<String, dynamic>.from(data['config'] as Map? ?? {}); diamonds = int.tryParse('${b['diamonds'] ?? 0}') ?? 0; coins = int.tryParse('${b['coins'] ?? 0}') ?? 0; });
+      setState(() {
+        config = Map<String, dynamic>.from(rawConfig);
+        diamonds = int.tryParse('${b['diamonds'] ?? 0}') ?? 0;
+        coins = int.tryParse('${b['coins'] ?? 0}') ?? 0;
+      });
     } catch (e) { if (mounted) setState(() { error = e.toString().replaceFirst('Exception: ', ''); }); }
     finally { if (mounted) setState(() { loading = false; }); }
   }
 
   Future<void> exchange() async {
+    if (config['enabled'] != true) { setState(() { error = 'Diamond exchange is not enabled by the admin yet.'; }); return; }
     if (amount <= 0 || estimatedCoins <= 0) { setState(() { error = 'Enter a valid amount in the configured exchange multiple.'; }); return; }
     final min = int.tryParse('${config['min_diamonds'] ?? 1}') ?? 1;
     final max = int.tryParse('${config['max_diamonds'] ?? 100000}') ?? 100000;
@@ -2989,7 +3025,9 @@ class _DiamondWalletScreenState extends State<DiamondWalletScreen> {
       final result = await api.exchangeDiamonds(widget.token, amount);
       await load();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Success! ${result['diamonds_exchanged']} diamonds exchanged for ${result['coins_received']} M Coins.')));
+      final exchanged = result['diamondsExchanged'] ?? result['diamonds_exchanged'] ?? amount;
+      final received = result['coinsReceived'] ?? result['coins_received'] ?? estimatedCoins;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Success! $exchanged diamonds exchanged for $received M Coins.')));
     } catch (e) { if (mounted) setState(() { error = e.toString().replaceFirst('Exception: ', ''); }); }
     finally { if (mounted) setState(() { exchanging = false; }); }
   }
@@ -3000,7 +3038,7 @@ class _DiamondWalletScreenState extends State<DiamondWalletScreen> {
       body: Stack(fit: StackFit.expand, children: [Image.asset('assets/Futuristic Gold Carbon Fiber Frame.png', fit: BoxFit.cover, errorBuilder: (_, __, ___) => const ColoredBox(color: dark)), Container(color: const Color(0xE6080A18)), RefreshIndicator(color: gold, onRefresh: load, child: ListView(padding: const EdgeInsets.all(18), children: [
         Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xE9221035), Color(0xE6080A18)]), borderRadius: BorderRadius.circular(24), border: Border.all(color: gold)), child: Column(children: [const Icon(Icons.diamond_rounded, size: 76, color: Color(0xFFB58CFF), shadows: [Shadow(color: Color(0xFF8A2BE2), blurRadius: 22)]), const SizedBox(height: 8), const Text('MY DIAMONDS', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)), Text(loading ? '...' : '$diamonds', style: const TextStyle(color: Color(0xFFD9B7FF), fontSize: 34, fontWeight: FontWeight.w900)), const SizedBox(height: 12), const Divider(color: Colors.white24), Row(mainAxisAlignment: MainAxisAlignment.center, children: [Container(width: 34, height: 34, decoration: const BoxDecoration(shape: BoxShape.circle, gradient: RadialGradient(colors: [Color(0xFFFFF1A8), Color(0xFFFFC83D), Color(0xFF9A4D08)])), child: const Center(child: Text('M', style: TextStyle(color: Color(0xFF371B08), fontWeight: FontWeight.w900, fontSize: 21)))), const SizedBox(width: 9), Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('MY M COINS', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)), Text('$coins', style: const TextStyle(color: gold, fontSize: 24, fontWeight: FontWeight.w900))])])])),
         const SizedBox(height: 20), const Text('EXCHANGE DIAMONDS', style: TextStyle(color: gold, fontSize: 22, fontWeight: FontWeight.w900)), const SizedBox(height: 12),
-        Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: const Color(0xE9151027), borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFF8D6A32))), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Diamonds to exchange', style: TextStyle(color: Colors.white70)), const SizedBox(height: 8), TextField(controller: controller, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], onChanged: (_) => setState(() {}), style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold), decoration: InputDecoration(prefixIcon: const Icon(Icons.diamond_rounded, color: Color(0xFFD9B7FF)), filled: true, fillColor: const Color(0xFF080A18), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)), hintText: 'Enter diamonds', hintStyle: const TextStyle(color: Colors.white38))), const SizedBox(height: 12), Text('Rate: ${config['diamonds_per_exchange'] ?? 1000} Diamonds = ${config['coins_per_exchange'] ?? 800} M Coins', style: const TextStyle(color: gold, fontWeight: FontWeight.bold)), const SizedBox(height: 12), Row(children: [const Expanded(child: Text('You will receive', style: TextStyle(color: Colors.white70))), const Icon(Icons.arrow_forward_rounded, color: gold), const SizedBox(width: 8), const Text('M', style: TextStyle(color: gold, fontSize: 22, fontWeight: FontWeight.w900)), const SizedBox(width: 6), Text('$estimatedCoins', style: const TextStyle(color: gold, fontSize: 24, fontWeight: FontWeight.w900))]), if (error != null) Padding(padding: const EdgeInsets.only(top: 12), child: Text(error!, style: const TextStyle(color: Colors.redAccent))), ])),
+        Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: const Color(0xE9151027), borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFF8D6A32))), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Diamonds to exchange', style: TextStyle(color: Colors.white70)), const SizedBox(height: 8), TextField(controller: controller, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], onChanged: (_) => setState(() {}), style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold), decoration: InputDecoration(prefixIcon: const Icon(Icons.diamond_rounded, color: Color(0xFFD9B7FF)), filled: true, fillColor: const Color(0xFF080A18), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)), hintText: 'Enter diamonds', hintStyle: const TextStyle(color: Colors.white38))), const SizedBox(height: 12), Text(config['enabled'] == true ? 'Rate: ${config['diamonds_per_exchange']} Diamonds = ${config['coins_per_exchange']} M Coins' : 'Diamond exchange is currently disabled by admin', style: const TextStyle(color: gold, fontWeight: FontWeight.bold)), const SizedBox(height: 12), Row(children: [const Expanded(child: Text('You will receive', style: TextStyle(color: Colors.white70))), const Icon(Icons.arrow_forward_rounded, color: gold), const SizedBox(width: 8), const Text('M', style: TextStyle(color: gold, fontSize: 22, fontWeight: FontWeight.w900)), const SizedBox(width: 6), Text('$estimatedCoins', style: const TextStyle(color: gold, fontSize: 24, fontWeight: FontWeight.w900))]), if (error != null) Padding(padding: const EdgeInsets.only(top: 12), child: Text(error!, style: const TextStyle(color: Colors.redAccent))), ])),
         const SizedBox(height: 14),
         SizedBox(
           width: double.infinity,
@@ -3138,17 +3176,19 @@ class _DiamondHistoryScreenState
                             transactions[i] as Map,
                           );
 
-                          final deltaD = int.tryParse(
-                                '${t['diamonds_delta'] ?? 0}',
-                              ) ??
-                              0;
-
-                          final deltaC = int.tryParse(
-                                '${t['coins_delta'] ?? 0}',
-                              ) ??
-                              0;
-
+                          final currency = '${t['currency'] ?? 'diamonds'}';
+                          final amount = int.tryParse('${t['amount'] ?? 0}') ?? 0;
+                          final details = t['details'] is Map
+                              ? Map<String, dynamic>.from(t['details'] as Map)
+                              : <String, dynamic>{};
+                          final isGiftIncome = '${t['kind'] ?? ''}' == 'gift_income';
+                          final isExchangeOut = '${t['kind'] ?? ''}' == 'diamond_exchange_out';
+                          final deltaD = currency == 'diamonds' ? amount : 0;
+                          final deltaC = currency == 'coins' ? amount : 0;
+                          final coinsReceived = int.tryParse('${details['coins_received'] ?? details['coinsReceived'] ?? 0}') ?? 0;
+                          final giftCoinValue = int.tryParse('${details['coin_amount'] ?? 0}') ?? 0;
                           final status = '${t['status'] ?? 'success'}';
+                          final title = isGiftIncome ? 'Gift Income' : (isExchangeOut ? 'Diamond Exchange' : 'Diamond Transaction');
 
                           return Container(
                             padding: const EdgeInsets.all(15),
@@ -3172,7 +3212,7 @@ class _DiamondHistoryScreenState
                                     const SizedBox(width: 8),
                                     const Expanded(
                                       child: Text(
-                                        'Diamond Exchange',
+                                        title,
                                         style: TextStyle(
                                           color: Colors.white,
                                           fontWeight: FontWeight.bold,
@@ -3205,14 +3245,14 @@ class _DiamondHistoryScreenState
                                   children: [
                                     const Expanded(
                                       child: Text(
-                                        'Diamonds exchanged',
+                                        isGiftIncome ? 'Diamonds received' : 'Diamonds exchanged',
                                         style: TextStyle(
                                           color: Colors.white70,
                                         ),
                                       ),
                                     ),
                                     Text(
-                                      deltaD < 0 ? '${-deltaD}' : '$deltaD',
+                                      deltaD < 0 ? '${-deltaD}' : '+$deltaD',
                                       style: const TextStyle(
                                         color: Color(0xFFD9B7FF),
                                         fontWeight: FontWeight.w900,
@@ -3225,14 +3265,14 @@ class _DiamondHistoryScreenState
                                   children: [
                                     const Expanded(
                                       child: Text(
-                                        'M Coins received',
+                                        isGiftIncome ? 'Gift value (Coins)' : 'M Coins received',
                                         style: TextStyle(
                                           color: Colors.white70,
                                         ),
                                       ),
                                     ),
                                     Text(
-                                      deltaC > 0 ? '+$deltaC' : '$deltaC',
+                                      isGiftIncome ? '$giftCoinValue' : (coinsReceived > 0 ? '+$coinsReceived' : (deltaC > 0 ? '+$deltaC' : '$deltaC')),
                                       style: const TextStyle(
                                         color: gold,
                                         fontWeight: FontWeight.w900,
@@ -3250,8 +3290,7 @@ class _DiamondHistoryScreenState
                                 ),
                                 Text(
                                   'Balances after: '
-                                  '${t['diamonds_balance_after']} diamonds · '
-                                  '${t['coins_balance_after']} M Coins',
+                                  'Balance after: ${t['balance_after']} $currency',
                                   style: const TextStyle(
                                     color: Colors.white54,
                                     fontSize: 11,
@@ -7127,7 +7166,14 @@ class _VoiceRoomScreenState
   bool speakerOn = true;
   Timer? _presenceHeartbeat;
   Timer? _reactionPoll;
+  Timer? _giftPoll;
+  Timer? _giftOverlayTimer;
   bool _presenceStarted = false;
+  bool _giftEventsInitialized = false;
+  final Set<String> _seenGiftEventIds = <String>{};
+  final List<Map<String, dynamic>> _giftEventQueue = <Map<String, dynamic>>[];
+  Map<String, dynamic>? _activeGiftEvent;
+  final AudioPlayer _giftAudioPlayer = AudioPlayer();
   int _lastReactionId = 0;
   final Map<String, String> _activeReactions = {};
   final Map<String, Timer> _reactionTimers = {};
@@ -7152,6 +7198,9 @@ class _VoiceRoomScreenState
   Future<void> _endPresence() async {
     _presenceHeartbeat?.cancel();
     _reactionPoll?.cancel();
+    _giftPoll?.cancel();
+    _giftOverlayTimer?.cancel();
+    _giftAudioPlayer.stop();
     for (final timer in _reactionTimers.values) { timer.cancel(); }
     if (_presenceStarted) {
       _presenceStarted = false;
@@ -7162,6 +7211,10 @@ class _VoiceRoomScreenState
   @override
   void dispose() {
     _presenceHeartbeat?.cancel();
+    _reactionPoll?.cancel();
+    _giftPoll?.cancel();
+    _giftOverlayTimer?.cancel();
+    _giftAudioPlayer.dispose();
     if (_presenceStarted) { api.endRoomPresence(widget.token, widget.roomId).catchError((e) { debugPrint('Room presence cleanup failed: $e'); return <String, dynamic>{}; }); }
     super.dispose();
   }
@@ -7427,7 +7480,70 @@ void initState() {
   _loadRoomEmojis();
   _pollRoomReactions();
   _reactionPoll = Timer.periodic(const Duration(seconds: 2), (_) => _pollRoomReactions());
+  _pollRoomGiftEvents();
+  _giftPoll = Timer.periodic(const Duration(seconds: 2), (_) => _pollRoomGiftEvents());
 }
+
+  Future<void> _pollRoomGiftEvents() async {
+    try {
+      final result = await api.getRoomGiftEvents(widget.token, widget.roomId);
+      final rawEvents = result['events'];
+      if (rawEvents is! List) return;
+      final fresh = <Map<String, dynamic>>[];
+      for (final raw in rawEvents) {
+        if (raw is! Map) continue;
+        final event = Map<String, dynamic>.from(raw);
+        final id = '${event['id'] ?? ''}';
+        if (id.isEmpty || _seenGiftEventIds.contains(id)) continue;
+        _seenGiftEventIds.add(id);
+        fresh.add(event);
+      }
+      // Seed recent events on room entry; do not replay gifts sent before joining.
+      if (!_giftEventsInitialized) {
+        _giftEventsInitialized = true;
+        while (_seenGiftEventIds.length > 300) {
+          _seenGiftEventIds.remove(_seenGiftEventIds.first);
+        }
+        return;
+      }
+      if (fresh.isEmpty || !mounted) return;
+      // Events arrive newest-first; queue them chronologically so every
+      // selected recipient receives an individual room notification.
+      _giftEventQueue.addAll(fresh.reversed);
+      _showNextRoomGiftEvent();
+      while (_seenGiftEventIds.length > 300) {
+        _seenGiftEventIds.remove(_seenGiftEventIds.first);
+      }
+    } catch (e) {
+      debugPrint('Room gift event polling failed: $e');
+    }
+  }
+
+
+  Future<void> _playRoomGiftSound(Map<String, dynamic> event) async {
+    final url = '${event['mp3_url'] ?? ''}'.trim();
+    if (!url.startsWith('https://')) return;
+    try {
+      await _giftAudioPlayer.stop();
+      await _giftAudioPlayer.play(UrlSource(url));
+    } catch (e) {
+      debugPrint('Room gift sound failed: $e');
+    }
+  }
+
+  void _showNextRoomGiftEvent() {
+    if (!mounted || _giftEventQueue.isEmpty) return;
+    final event = _giftEventQueue.removeAt(0);
+    _giftOverlayTimer?.cancel();
+    setState(() => _activeGiftEvent = event);
+    _playRoomGiftSound(event);
+    _giftOverlayTimer = Timer(const Duration(seconds: 4), () {
+      if (!mounted) return;
+      setState(() => _activeGiftEvent = null);
+      if (_giftEventQueue.isNotEmpty) _showNextRoomGiftEvent();
+    });
+  }
+
   Future<void> _loadRoomEmojis() async {
     final prefs = await SharedPreferences.getInstance();
     final saved = prefs.getStringList('mindo_room_emojis_${widget.roomId}');
@@ -7545,6 +7661,78 @@ void initState() {
         const SizedBox(width: 2),
         Text('$prefix$level', style: const TextStyle(color: Color(0xFFFFE2A0), fontSize: 8, fontWeight: FontWeight.bold)),
       ]),
+    );
+  }
+
+  Future<void> _openRoomGiftSheet() async {
+    List<dynamic> gifts = [];
+    try {
+      gifts = await api.getGiftCatalog(widget.token);
+    } catch (e) {
+      _roomMessage('Could not load gifts: ${e.toString().replaceFirst('Exception: ', '')}');
+      return;
+    }
+    if (!mounted) return;
+    if (gifts.isEmpty) { _roomMessage('No active gifts are available yet.'); return; }
+
+    final occupied = seatMembers.values.where((m) => m['public_uid'] != null && '${m['public_uid']}'.isNotEmpty && (currentUserId == null || '${m['id']}' != currentUserId)).toList();
+    if (occupied.isEmpty) { _roomMessage('There are no other occupied seats to receive a gift.'); return; }
+    final categories = <String>['All', ...{for (final g in gifts) '${g['category'] ?? 'Popular'}'}];
+    String selectedCategory = 'All';
+    Map<String, dynamic>? selectedGift;
+    final selectedRecipients = <String>{};
+    int quantity = 1;
+    bool sending = false;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF171225),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      builder: (sheetContext) => StatefulBuilder(builder: (context, refresh) {
+        final filtered = gifts.where((raw) {
+          final g = Map<String, dynamic>.from(raw as Map);
+          return selectedCategory == 'All' || '${g['category'] ?? 'Popular'}' == selectedCategory;
+        }).toList();
+        return SafeArea(child: Padding(
+          padding: EdgeInsets.only(left: 14, right: 14, top: 12, bottom: MediaQuery.of(context).viewInsets.bottom + 12),
+          child: SizedBox(height: MediaQuery.of(context).size.height * .78, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [const Expanded(child: Text('Send Gift', style: TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.bold))), IconButton(onPressed: () => Navigator.pop(sheetContext), icon: const Icon(Icons.close, color: Colors.white70))]),
+            const Text('Choose gift', style: TextStyle(color: Colors.white70)),
+            const SizedBox(height: 8),
+            SizedBox(height: 38, child: ListView(scrollDirection: Axis.horizontal, children: categories.map((c) => Padding(padding: const EdgeInsets.only(right: 7), child: ChoiceChip(label: Text(c), selected: selectedCategory == c, onSelected: (_) => refresh(() => selectedCategory = c), selectedColor: const Color(0xFF8B4DE8), backgroundColor: const Color(0xFF302541), labelStyle: TextStyle(color: selectedCategory == c ? Colors.white : Colors.white70)))).toList())),
+            const SizedBox(height: 8),
+            Expanded(child: GridView.builder(gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 4, crossAxisSpacing: 8, mainAxisSpacing: 8, childAspectRatio: .78), itemCount: filtered.length, itemBuilder: (_, i) {
+              final gift = Map<String, dynamic>.from(filtered[i] as Map);
+              final chosen = selectedGift?['id']?.toString() == gift['id']?.toString();
+              final image = '${gift['image_url'] ?? ''}';
+              final price = int.tryParse('${gift['coin_price']}') ?? 0;
+              return InkWell(onTap: () => refresh(() => selectedGift = gift), child: Container(padding: const EdgeInsets.all(6), decoration: BoxDecoration(color: chosen ? const Color(0xFF56327D) : const Color(0xFF292137), borderRadius: BorderRadius.circular(12), border: Border.all(color: chosen ? const Color(0xFFFFD36A) : Colors.white12, width: chosen ? 2 : 1)), child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Expanded(child: image.startsWith('https://') ? Image.network(image, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Icon(Icons.card_giftcard, color: Colors.white70, size: 34)) : const Icon(Icons.card_giftcard, color: Colors.white70, size: 34)), const SizedBox(height: 3), Text('${gift['name'] ?? 'Gift'}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 10)), Text('$price Coins', style: const TextStyle(color: Color(0xFFFFD36A), fontSize: 10, fontWeight: FontWeight.bold))])));
+            })),
+            const Text('Send to room members', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 5),
+            SizedBox(height: 66, child: ListView(scrollDirection: Axis.horizontal, children: [
+              Padding(padding: const EdgeInsets.only(right: 8), child: InkWell(onTap: () => refresh(() { if (selectedRecipients.length == occupied.length) { selectedRecipients.clear(); } else { selectedRecipients..clear()..addAll(occupied.map((m) => '${m['public_uid']}')); } }), child: Column(children: [CircleAvatar(backgroundColor: const Color(0xFF8B4DE8), child: const Icon(Icons.groups, color: Colors.white)), const SizedBox(height: 3), const Text('All', style: TextStyle(color: Colors.white70, fontSize: 10))]))),
+              ...occupied.map((member) { final uid = '${member['public_uid']}'; final name = '${member['display_name'] ?? member['username'] ?? 'User'}'; final avatar = '${member['avatar_url'] ?? ''}'; final chosen = selectedRecipients.contains(uid); return Padding(padding: const EdgeInsets.only(right: 10), child: InkWell(onTap: () => refresh(() { chosen ? selectedRecipients.remove(uid) : selectedRecipients.add(uid); }), child: Column(children: [CircleAvatar(radius: 19, backgroundColor: chosen ? const Color(0xFFFFC857) : Colors.deepPurple, backgroundImage: avatar.startsWith('https://') ? NetworkImage(avatar) : null, child: avatar.startsWith('https://') ? null : const Icon(Icons.person, color: Colors.white)), const SizedBox(height: 3), SizedBox(width: 52, child: Text(name, maxLines: 1, textAlign: TextAlign.center, overflow: TextOverflow.ellipsis, style: TextStyle(color: chosen ? const Color(0xFFFFD36A) : Colors.white70, fontSize: 9)))]))); }),
+            ])),
+            Row(children: [const Text('Quantity', style: TextStyle(color: Colors.white70)), const SizedBox(width: 12), DropdownButton<int>(value: quantity, dropdownColor: const Color(0xFF302541), style: const TextStyle(color: Colors.white), items: [1, 5, 10, 20, 50, 99, 177].map((n) => DropdownMenuItem(value: n, child: Text('$n'))).toList(), onChanged: (v) => refresh(() => quantity = v ?? 1)), const Spacer(), if (selectedGift != null) Text('Total: ${(int.tryParse('${selectedGift!['coin_price']}') ?? 0) * quantity * selectedRecipients.length} Coins', style: const TextStyle(color: Color(0xFFFFD36A), fontWeight: FontWeight.bold))]),
+            SizedBox(width: double.infinity, child: ElevatedButton.icon(style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF58C900), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 13)), onPressed: sending || selectedGift == null || selectedRecipients.isEmpty ? null : () async {
+              refresh(() => sending = true);
+              try {
+                final result = await api.sendRoomGift(widget.token, giftId: '${selectedGift!['id']}', roomId: widget.roomId, receiverUids: selectedRecipients.toList(), quantity: quantity, idempotencyKey: 'gift-${DateTime.now().microsecondsSinceEpoch}');
+                if (!mounted) return;
+                Navigator.pop(sheetContext);
+                final total = result['total_debit'] ?? ((int.tryParse('${selectedGift!['coin_price']}') ?? 0) * quantity * selectedRecipients.length);
+                _roomMessage('Gift sent successfully! $total Coins used.');
+                _pollRoomGiftEvents();
+              } catch (e) {
+                refresh(() => sending = false);
+                _roomMessage(e.toString().replaceFirst('Exception: ', ''));
+              }
+            }, icon: sending ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.card_giftcard), label: Text(sending ? 'Sending...' : 'Send Gift'))),
+          ])),
+        ));
+      }),
     );
   }
 
@@ -7835,7 +8023,9 @@ actions: [
   ),
 ],
       ),
-      body: Column(
+      body: Stack(
+        children: [
+          Column(
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
@@ -8125,29 +8315,7 @@ Container(
           ),
           const SizedBox(height: 10),
           GestureDetector(
-            onTap: () {
-              showDialog(
-                context: context,
-                builder: (dialogContext) => AlertDialog(
-                  backgroundColor: const Color(0xFF171225),
-                  title: const Text(
-                    'Send Gift',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  content: const Text(
-                    'Gift system will be connected here.',
-                    style: TextStyle(color: Colors.white70),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () =>
-                          Navigator.pop(dialogContext),
-                      child: const Text('OK'),
-                    ),
-                  ],
-                ),
-              );
-            },
+            onTap: _openRoomGiftSheet,
             child: Container(
               width: 58,
               height: 58,
@@ -8170,9 +8338,73 @@ Container(
   ),
 ),
 ],
-),
-);
-}
+          ),
+          if (_activeGiftEvent != null)
+            Positioned(
+              left: 16,
+              right: 16,
+              top: 10,
+              child: IgnorePointer(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  child: Container(
+                    key: ValueKey('${_activeGiftEvent!['id']}'),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xEE171225),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFFFD36A), width: 1.4),
+                      boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 12)],
+                    ),
+                    child: Row(children: [
+                      SizedBox(
+                        width: 88,
+                        height: 88,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            if ('${_activeGiftEvent!['svga_url'] ?? ''}'.startsWith('https://'))
+                              SVGAEasyPlayer(
+                                resUrl: '${_activeGiftEvent!['svga_url']}',
+                                loops: 0,
+                                isMute: true,
+                                fit: BoxFit.contain,
+                              )
+                            else if ('${_activeGiftEvent!['gift_image'] ?? ''}'.startsWith('https://'))
+                              Image.network(
+                                '${_activeGiftEvent!['gift_image']}',
+                                width: 72,
+                                height: 72,
+                                fit: BoxFit.contain,
+                                errorBuilder: (_, __, ___) => const Icon(Icons.card_giftcard, color: Color(0xFFFFD36A), size: 38),
+                              )
+                            else
+                              const Icon(Icons.card_giftcard, color: Color(0xFFFFD36A), size: 38),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                        Text(
+                          '${_activeGiftEvent!['sender_name'] ?? _activeGiftEvent!['sender_username'] ?? 'User'} sent ${_activeGiftEvent!['gift_name'] ?? 'a gift'}',
+                          maxLines: 2, overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                        Text(
+                          'To ${_activeGiftEvent!['receiver_name'] ?? _activeGiftEvent!['receiver_username'] ?? 'member'}  •  x${_activeGiftEvent!['quantity'] ?? 1}',
+                          maxLines: 1, overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(color: Color(0xFFFFD36A), fontSize: 11),
+                        ),
+                      ])),
+                    ]),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
     
 Widget _roomButton({
   required IconData icon,
