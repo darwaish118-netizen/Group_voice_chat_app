@@ -263,6 +263,16 @@ await pool.query(`
   `);
   await pool.query(`CREATE INDEX IF NOT EXISTS gift_catalog_active_sort_idx ON gift_catalog(active, sort_order)`);
   await pool.query("ALTER TABLE gift_catalog ADD COLUMN IF NOT EXISTS category VARCHAR(60) NOT NULL DEFAULT 'Popular'");
+  await pool.query('ALTER TABLE gift_catalog ADD COLUMN IF NOT EXISTS svga_url TEXT');
+  await pool.query('ALTER TABLE gift_catalog ADD COLUMN IF NOT EXISTS mp3_url TEXT');
+  await pool.query('ALTER TABLE gift_catalog ADD COLUMN IF NOT EXISTS target_counting_percentage NUMERIC(5,2) NOT NULL DEFAULT 100 CHECK (target_counting_percentage BETWEEN 0 AND 100)');
+  await pool.query('ALTER TABLE gift_catalog ADD COLUMN IF NOT EXISTS host_diamond_percentage NUMERIC(5,2) NOT NULL DEFAULT 0 CHECK (host_diamond_percentage BETWEEN 0 AND 100)');
+  await pool.query(`CREATE TABLE IF NOT EXISTS gift_category_settings (
+    category VARCHAR(60) PRIMARY KEY,
+    target_counting_percent NUMERIC(5,2) NOT NULL DEFAULT 100 CHECK (target_counting_percent BETWEEN 0 AND 100),
+    host_diamond_percent NUMERIC(5,2) NOT NULL DEFAULT 5 CHECK (host_diamond_percent BETWEEN 0 AND 100),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS wallet_recharge_packages (
@@ -309,6 +319,8 @@ await pool.query(`
   // Wealth / Charm levels. Values are cumulative gift coins sent/received,
   // never wallet recharge coins. Thresholds are controlled by the admin.
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT FALSE`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_main_admin BOOLEAN NOT NULL DEFAULT FALSE`);
+  await pool.query(`UPDATE users SET is_main_admin=TRUE WHERE id=(SELECT id FROM users WHERE is_admin=TRUE ORDER BY created_at ASC LIMIT 1) AND NOT EXISTS (SELECT 1 FROM users WHERE is_main_admin=TRUE)`);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS user_level_stats (
       user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
@@ -489,6 +501,18 @@ async function adminMiddleware(req, res, next) {
   }
 }
 
+async function mainAdminMiddleware(req, res, next) {
+  if (!pool) return res.status(503).json({ message: "Database is not configured" });
+  try {
+    const result = await pool.query(`SELECT is_admin,is_main_admin FROM users WHERE id=$1`, [req.user.id]);
+    if (!result.rows[0]?.is_admin || !result.rows[0]?.is_main_admin) return res.status(403).json({ message: "Main Admin authorization required" });
+    next();
+  } catch (error) {
+    console.error("Main Admin authorization failed:", error);
+    res.status(500).json({ message: "Could not verify Main Admin access" });
+  }
+}
+
 // -------------------------
 // Health
 // -------------------------
@@ -663,9 +687,9 @@ app.post("/api/auth/bootstrap-admin", async (req, res) => {
     const id = uuidv4();
     const passwordHash = await bcrypt.hash(password, 12);
     const created = await client.query(
-      `INSERT INTO users (id, username, public_uid, password_hash, is_admin)
-       VALUES ($1, $2, $3, $4, TRUE)
-       RETURNING id, username, public_uid, avatar_url, coins, diamonds, level, is_admin, created_at`,
+      `INSERT INTO users (id, username, public_uid, password_hash, is_admin, is_main_admin)
+       VALUES ($1, $2, $3, $4, TRUE, TRUE)
+       RETURNING id, username, public_uid, avatar_url, coins, diamonds, level, is_admin, is_main_admin, created_at`,
       [id, username, publicUid, passwordHash]
     );
     await client.query("COMMIT");
@@ -1403,10 +1427,116 @@ res.status(201).json({
 // -------------------------
 // Secure room gifts and wallet debit
 // -------------------------
+// Admin gift category and percentage controls. Percentages are copied to each gift
+// in the category so gift-send transactions use a stable, server-side snapshot.
+app.get("/api/admin/gift-categories", authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT c.category,
+             COALESCE(s.target_counting_percent, 100) AS target_counting_percent,
+             COALESCE(s.host_diamond_percent, 5) AS host_diamond_percent
+      FROM (SELECT DISTINCT category FROM gift_catalog UNION SELECT category FROM gift_category_settings) c
+      LEFT JOIN gift_category_settings s ON s.category=c.category
+      ORDER BY c.category`);
+    res.json({ categories: result.rows });
+  } catch (error) {
+    console.error("Gift categories load failed:", error);
+    res.status(500).json({ message: "Could not load gift categories" });
+  }
+});
+
+app.post("/api/admin/gift-categories", authMiddleware, adminMiddleware, async (req, res) => {
+  const category = String(req.body.category || "").trim().slice(0, 60);
+  if (!category) return res.status(400).json({ message: "Category name is required" });
+  try {
+    await pool.query(`INSERT INTO gift_category_settings(category) VALUES($1) ON CONFLICT(category) DO NOTHING`, [category]);
+    res.status(201).json({ category });
+  } catch (error) {
+    console.error("Gift category create failed:", error);
+    res.status(500).json({ message: "Could not create gift category" });
+  }
+});
+
+app.put("/api/admin/gift-categories/:category/settings", authMiddleware, adminMiddleware, async (req, res) => {
+  const category = String(req.params.category || "").trim().slice(0, 60);
+  const target = Number(req.body.target_counting_percent);
+  const diamond = Number(req.body.host_diamond_percent);
+  if (!category || !Number.isFinite(target) || target < 0 || target > 100 || !Number.isFinite(diamond) || diamond < 0 || diamond > 100) {
+    return res.status(400).json({ message: "Both percentages must be between 0 and 100" });
+  }
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const saved = await client.query(`INSERT INTO gift_category_settings(category,target_counting_percent,host_diamond_percent)
+      VALUES($1,$2,$3) ON CONFLICT(category) DO UPDATE SET target_counting_percent=EXCLUDED.target_counting_percent,
+      host_diamond_percent=EXCLUDED.host_diamond_percent,updated_at=NOW()
+      RETURNING category,target_counting_percent,host_diamond_percent`, [category,target,diamond]);
+    await client.query(`UPDATE gift_catalog SET target_counting_percentage=$1,host_diamond_percentage=$2,updated_at=NOW() WHERE category=$3`, [target,diamond,category]);
+    await client.query("COMMIT");
+    res.json({ settings: { category: saved.rows[0].category, target_counting_percent: Number(saved.rows[0].target_counting_percent), host_diamond_percent: Number(saved.rows[0].host_diamond_percent) } });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("Gift category settings save failed:", error);
+    res.status(500).json({ message: "Could not save gift category settings" });
+  } finally { client.release(); }
+});
+
+app.post("/api/cloudinary/gift-upload-signature", authMiddleware, adminMiddleware, async (req, res) => {
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+  const apiKey = process.env.CLOUDINARY_API_KEY;
+  const apiSecret = process.env.CLOUDINARY_API_SECRET;
+  if (!cloudName || !apiKey || !apiSecret) return res.status(503).json({ message: "Cloudinary is not configured" });
+  const kind = String(req.body.kind || "");
+  const resourceType = kind === "gift_picture" ? "image" : kind === "gift_svga" ? "raw" : kind === "gift_mp3" ? "video" : null;
+  if (!resourceType) return res.status(400).json({ message: "Invalid gift media type" });
+  const timestamp = Math.floor(Date.now() / 1000);
+  const folder = "mindo-voice-chat/gifts";
+  const params = { folder, timestamp };
+  const toSign = Object.keys(params).sort().map(key => `${key}=${params[key]}`).join("&");
+  const signature = crypto.createHash("sha1").update(toSign + apiSecret).digest("hex");
+  res.json({ cloud_name: cloudName, api_key: apiKey, timestamp, folder, signature, resource_type: resourceType });
+});
+
+// Main Admin-only coin issuance and audited test-wallet adjustments.
+app.get("/api/admin/coin-users", authMiddleware, mainAdminMiddleware, async (req, res) => {
+  const q = String(req.query.q || "").trim();
+  if (q.length < 2) return res.status(400).json({ message: "Enter at least 2 characters of UID or username" });
+  try {
+    const result = await pool.query(`SELECT id,public_uid,username,display_name,coins FROM users WHERE public_uid::text ILIKE $1 OR username ILIKE $1 OR COALESCE(display_name,'') ILIKE $1 ORDER BY username LIMIT 20`, [`%${q}%`]);
+    res.json({ users: result.rows });
+  } catch (error) { console.error("Coin user search failed:", error); res.status(500).json({ message: "Could not search users" }); }
+});
+
+app.post("/api/admin/coins/adjust", authMiddleware, mainAdminMiddleware, async (req, res) => {
+  const publicUid=String(req.body.public_uid||"").trim(), amount=Number(req.body.amount), action=String(req.body.action||"").trim(), reason=String(req.body.reason||"").trim().slice(0,240), key=String(req.body.idempotency_key||"").trim();
+  if (!/^[0-9]{1,12}$/.test(publicUid) || !Number.isSafeInteger(amount) || amount<=0 || amount>2000000000 || !["add","deduct"].includes(action) || reason.length<3 || !/^[A-Za-z0-9:_-]{12,100}$/.test(key)) return res.status(400).json({message:"Provide valid UID, positive whole coin amount, action, reason and unique request key"});
+  const client=await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const target=await client.query(`SELECT id,public_uid,username,coins FROM users WHERE public_uid=$1 FOR UPDATE`,[Number(publicUid)]);
+    if(!target.rowCount){await client.query("ROLLBACK");return res.status(404).json({message:"User UID not found"});}
+    const user=target.rows[0], delta=action==="add"?amount:-amount;
+    const changed=await client.query(`UPDATE users SET coins=(coins::BIGINT+$1::BIGINT)::INTEGER WHERE id=$2 AND coins::BIGINT+$1::BIGINT BETWEEN 0 AND 2147483647 RETURNING coins`,[delta,user.id]);
+    if(!changed.rowCount){await client.query("ROLLBACK");return res.status(409).json({message:"Insufficient user coin balance for deduction"});}
+    const tx=await client.query(`INSERT INTO wallet_transactions(user_id,kind,currency,amount,balance_after,status,source,idempotency_key,details) VALUES($1,$2,'coin',$3,$4,'success','main_admin',$5,$6::jsonb) RETURNING id,created_at`,[user.id,action==="add"?"admin_coin_credit":"admin_coin_debit",delta,changed.rows[0].coins,key,JSON.stringify({actor_admin_id:req.user.id,public_uid:user.public_uid,reason,action})]);
+    await client.query("COMMIT");
+    res.status(201).json({message:action==="add"?"Coins added successfully":"Coins deducted successfully",transaction_id:tx.rows[0].id,created_at:tx.rows[0].created_at,user:{public_uid:user.public_uid,username:user.username,coins:changed.rows[0].coins},amount:delta});
+  } catch(error) { await client.query("ROLLBACK"); if(error.code==="23505")return res.status(409).json({message:"This coin adjustment request was already processed"}); console.error("Main Admin coin adjustment failed:",error); res.status(500).json({message:"Could not adjust user coins"}); }
+  finally {client.release();}
+});
+
+app.get("/api/admin/coins/history", authMiddleware, mainAdminMiddleware, async (req,res)=>{
+  const uid=String(req.query.public_uid||"").trim();
+  try { const values=[]; let where=`wt.source='main_admin' AND wt.currency='coin'`; if(uid){values.push(uid);where+=` AND u.public_uid::text=$${values.length}`;}
+    const result=await pool.query(`SELECT wt.id,u.public_uid,u.username,wt.kind,wt.amount,wt.balance_after,wt.details,wt.created_at FROM wallet_transactions wt JOIN users u ON u.id=wt.user_id WHERE ${where} ORDER BY wt.created_at DESC LIMIT 100`,values);
+    res.json({transactions:result.rows});
+  } catch(error){console.error("Coin adjustment history failed:",error);res.status(500).json({message:"Could not load coin adjustment history"});}
+});
+
 app.get("/api/gifts/catalog", authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, code, name, image_url, coin_price, category
+      `SELECT id, code, name, image_url, svga_url, mp3_url, coin_price, category, target_counting_percentage, host_diamond_percentage
        FROM gift_catalog WHERE active = TRUE ORDER BY sort_order, name`
     );
     res.json({ gifts: result.rows });
@@ -1422,17 +1552,26 @@ app.post("/api/admin/gifts", authMiddleware, adminMiddleware, async (req, res) =
   const imageUrl = String(req.body.image_url || "").trim() || null;
   const category = String(req.body.category || "Popular").trim().slice(0, 60) || "Popular";
   const coinPrice = Number(req.body.coin_price);
-  if (!code || !name || !Number.isSafeInteger(coinPrice) || coinPrice <= 0) {
+  const targetPct = Number(req.body.target_counting_percentage ?? 100);
+  const diamondPct = Number(req.body.host_diamond_percentage ?? 0);
+  const svgaUrl = String(req.body.svga_url || '').trim() || null;
+  const mp3Url = String(req.body.mp3_url || '').trim() || null;
+  if (!code || !name || !Number.isSafeInteger(coinPrice) || coinPrice <= 0 || !Number.isFinite(targetPct) || targetPct < 0 || targetPct > 100 || !Number.isFinite(diamondPct) || diamondPct < 0 || diamondPct > 100) {
     return res.status(400).json({ message: "Valid code, name and positive coin_price are required" });
   }
   try {
+    const categorySettings = await pool.query(`SELECT target_counting_percent,host_diamond_percent FROM gift_category_settings WHERE category=$1`, [category]);
+    const effectiveTargetPct = categorySettings.rowCount ? Number(categorySettings.rows[0].target_counting_percent) : targetPct;
+    const effectiveDiamondPct = categorySettings.rowCount ? Number(categorySettings.rows[0].host_diamond_percent) : diamondPct;
     const result = await pool.query(
-      `INSERT INTO gift_catalog(code,name,image_url,coin_price,category,active,sort_order)
-       VALUES($1,$2,$3,$4,$5,TRUE,$6)
+      `INSERT INTO gift_catalog(code,name,image_url,coin_price,category,active,sort_order,svga_url,mp3_url,target_counting_percentage,host_diamond_percentage)
+       VALUES($1,$2,$3,$4,$5,TRUE,$6,$7,$8,$9,$10)
        ON CONFLICT(code) DO UPDATE SET name=EXCLUDED.name,image_url=EXCLUDED.image_url,
-         coin_price=EXCLUDED.coin_price,category=EXCLUDED.category,active=TRUE,sort_order=EXCLUDED.sort_order,updated_at=NOW()
-       RETURNING id,code,name,image_url,coin_price,category`,
-      [code, name, imageUrl, coinPrice, category, Number(req.body.sort_order) || 0]
+         coin_price=EXCLUDED.coin_price,category=EXCLUDED.category,svga_url=EXCLUDED.svga_url,mp3_url=EXCLUDED.mp3_url,
+         target_counting_percentage=EXCLUDED.target_counting_percentage,host_diamond_percentage=EXCLUDED.host_diamond_percentage,
+         active=TRUE,sort_order=EXCLUDED.sort_order,updated_at=NOW()
+       RETURNING id,code,name,image_url,svga_url,mp3_url,coin_price,category,target_counting_percentage,host_diamond_percentage`,
+      [code, name, imageUrl, coinPrice, category, Number(req.body.sort_order) || 0, svgaUrl, mp3Url, effectiveTargetPct, effectiveDiamondPct]
     );
     res.status(201).json({ gift: result.rows[0] });
   } catch (error) {
@@ -1445,7 +1584,7 @@ app.post("/api/admin/gifts", authMiddleware, adminMiddleware, async (req, res) =
 app.get("/api/admin/gifts", authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, code, name, image_url, coin_price, category, active, sort_order, created_at, updated_at
+      `SELECT id, code, name, image_url, svga_url, mp3_url, coin_price, category, target_counting_percentage, host_diamond_percentage, active, sort_order, created_at, updated_at
        FROM gift_catalog ORDER BY category, sort_order, name`
     );
     const categories = [...new Set(result.rows.map(row => row.category).filter(Boolean))];
@@ -1458,11 +1597,14 @@ app.get("/api/admin/gifts", authMiddleware, adminMiddleware, async (req, res) =>
 
 app.patch("/api/admin/gifts/:giftId", authMiddleware, adminMiddleware, async (req, res) => {
   const { giftId } = req.params;
-  const allowed = ["code", "name", "image_url", "coin_price", "category", "active", "sort_order"];
+  const allowed = ["code", "name", "image_url", "svga_url", "mp3_url", "coin_price", "category", "target_counting_percentage", "host_diamond_percentage", "active", "sort_order"];
   const updates = Object.entries(req.body || {}).filter(([key]) => allowed.includes(key));
   if (!updates.length) return res.status(400).json({ message: "No supported gift fields supplied" });
   if (req.body.coin_price !== undefined && (!Number.isSafeInteger(Number(req.body.coin_price)) || Number(req.body.coin_price) <= 0)) {
     return res.status(400).json({ message: "coin_price must be a positive integer" });
+  }
+  for (const field of ['target_counting_percentage', 'host_diamond_percentage']) {
+    if (req.body[field] !== undefined && (!Number.isFinite(Number(req.body[field])) || Number(req.body[field]) < 0 || Number(req.body[field]) > 100)) return res.status(400).json({ message: `${field} must be between 0 and 100` });
   }
   if (req.body.name !== undefined && !String(req.body.name).trim()) {
     return res.status(400).json({ message: "Gift name cannot be empty" });
@@ -1473,7 +1615,7 @@ app.patch("/api/admin/gifts/:giftId", authMiddleware, adminMiddleware, async (re
     const setSql = updates.map(([key], index) => `${key}=$${index + 1}`).join(", ");
     const result = await pool.query(
       `UPDATE gift_catalog SET ${setSql}, updated_at=NOW() WHERE id=$${values.length + 1}
-       RETURNING id, code, name, image_url, coin_price, category, active, sort_order`,
+       RETURNING id, code, name, image_url, svga_url, mp3_url, coin_price, category, target_counting_percentage, host_diamond_percentage, active, sort_order`,
       [...values, giftId]
     );
     if (!result.rowCount) return res.status(404).json({ message: "Gift not found" });
@@ -1517,7 +1659,7 @@ app.post("/api/gifts/send", authMiddleware, async (req, res) => {
   try {
     await client.query("BEGIN");
     const giftResult = await client.query(
-      `SELECT id, coin_price, name FROM gift_catalog WHERE id=$1 AND active=TRUE`, [giftId]
+      `SELECT id, coin_price, name, target_counting_percentage, host_diamond_percentage FROM gift_catalog WHERE id=$1 AND active=TRUE`, [giftId]
     );
     if (!giftResult.rowCount) {
       await client.query("ROLLBACK");
@@ -1602,6 +1744,44 @@ app.post("/api/gifts/send", authMiddleware, async (req, res) => {
          giftId, giftResult.rows[0].name, quantity]
       );
       transactions.push(transaction.rows[0]);
+      // Count eligible received gift coins toward the receiver's global charm/host target.
+      // This is global per user and deliberately independent of room_id.
+      const targetCountedCoins = Math.floor(
+        Number(perRecipient) * Number(giftResult.rows[0].target_counting_percentage) / 100
+      );
+      if (targetCountedCoins > 0) {
+        await client.query(
+          `INSERT INTO user_level_stats(user_id, charm_value, wealth_value, updated_at)
+           VALUES($1,$2,0,NOW())
+           ON CONFLICT(user_id) DO UPDATE SET
+             charm_value = user_level_stats.charm_value + EXCLUDED.charm_value,
+             updated_at = NOW()`,
+          [receiver.id, targetCountedCoins]
+        );
+      }
+      // Credit host diamonds atomically with the sender debit and gift record.
+      // Formula: gift coins x target-counting % x host-diamond %.
+      const diamondCredit = Math.floor(
+        Number(perRecipient) * Number(giftResult.rows[0].target_counting_percentage) *
+        Number(giftResult.rows[0].host_diamond_percentage) / 10000
+      );
+      if (diamondCredit > 0) {
+        const credited = await client.query(
+          `UPDATE users SET diamonds=diamonds+$1 WHERE id=$2 RETURNING diamonds`,
+          [diamondCredit, receiver.id]
+        );
+        await client.query(
+          `INSERT INTO wallet_transactions(user_id,kind,currency,amount,balance_after,status,source,idempotency_key,details)
+           VALUES($1,'gift_income','diamonds',$2,$3,'success','gift',$4,$5::jsonb)`,
+          [receiver.id, diamondCredit, credited.rows[0].diamonds,
+           `gift-income:${idempotencyKey}:${receiver.id}`,
+           JSON.stringify({ gift_id: giftId, gift_name: giftResult.rows[0].name,
+             sender_id: req.user.id, room_id: roomId, coin_amount: perRecipient,
+             target_counting_percentage: Number(giftResult.rows[0].target_counting_percentage),
+             target_counted_coins: targetCountedCoins,
+             host_diamond_percentage: Number(giftResult.rows[0].host_diamond_percentage) })]
+        );
+      }
     }
     await client.query(
       `INSERT INTO wallet_transactions(user_id,kind,currency,amount,balance_after,status,source,idempotency_key,details)
@@ -1610,7 +1790,7 @@ app.post("/api/gifts/send", authMiddleware, async (req, res) => {
        JSON.stringify({ gift_id: giftId, gift_name: giftResult.rows[0].name, receiver_ids: receiverIds, room_id: roomId, quantity, recipient_count: receiverIds.length })]
     );
     await client.query("COMMIT");
-    res.status(201).json({ transactions, balance: debit.rows[0].coins, quantity, recipient_count: receiverIds.length, total_debit: totalDebit, animation_mode: quantity === 1 ? "individual" : "combined" });
+    res.status(201).json({ transactions, balance: debit.rows[0].coins, quantity, recipient_count: receiverIds.length, total_debit: totalDebit, animation_mode: quantity === 1 ? "individual" : "combined", target_counting_percentage: Number(giftResult.rows[0].target_counting_percentage), target_counted_coins_total: Math.floor(perRecipient * receiverIds.length * Number(giftResult.rows[0].target_counting_percentage) / 100), host_diamond_percentage: Number(giftResult.rows[0].host_diamond_percentage) });
   } catch (error) {
     await client.query("ROLLBACK");
     if (error.code === "23505") return res.status(409).json({ message: "Duplicate gift request" });
@@ -1641,7 +1821,7 @@ app.get("/api/rooms/:roomId/gifts/events", authMiddleware, async (req, res) => {
               su.public_uid AS sender_uid, su.avatar_url AS sender_avatar,
               ru.display_name AS receiver_name, ru.username AS receiver_username,
               ru.public_uid AS receiver_uid, ru.avatar_url AS receiver_avatar,
-              gc.image_url AS gift_image, gc.coin_price
+              gc.image_url AS gift_image, gc.svga_url, gc.mp3_url, gc.coin_price
        FROM gift_transactions gt
        JOIN users su ON su.id=gt.sender_id
        JOIN users ru ON ru.id=gt.receiver_id
