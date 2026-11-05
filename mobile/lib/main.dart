@@ -8364,19 +8364,11 @@ Container(
                           alignment: Alignment.center,
                           children: [
                             if ('${_activeGiftEvent!['svga_url'] ?? ''}'.startsWith('https://'))
-                              SVGAEasyPlayer.network(
-                                '${_activeGiftEvent!['svga_url']}',
-                                muted: true,
-                                fit: BoxFit.contain,
-                                placeholder: const Center(
-                                  child: CircularProgressIndicator(strokeWidth: 2),
-                                ),
-                                errorBuilder: (context, error) => const Icon(
-                                  Icons.card_giftcard,
-                                  color: Color(0xFFFFD36A),
-                                  size: 38,
-                                ),
-                              )
+SVGAEasyPlayer(
+  resUrl: '${_activeGiftEvent!['svga_url']}',
+  isMute: true,
+  fit: BoxFit.contain,
+),
                             else if ('${_activeGiftEvent!['gift_image'] ?? ''}'.startsWith('https://'))
                               Image.network(
                                 '${_activeGiftEvent!['gift_image']}',
