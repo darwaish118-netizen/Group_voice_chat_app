@@ -5,7 +5,7 @@ publish_to: "none"
 version: 1.0.0+1
 
 environment:
-  sdk: ">=3.3.0 <4.0.0"
+  sdk: ">=3.8.0 <4.0.0"
 
 dependencies:
   flutter:
@@ -15,8 +15,8 @@ dependencies:
   cupertino_icons: ^1.0.8
   http: ^1.2.2
   shared_preferences: ^2.3.2
-  audioplayers: ^6.1.0
-  flutter_svga_easyplayer: ^0.0.7
+  audioplayers: ^6.6.0
+  flutter_svga_easyplayer: ^0.2.0
 
 dev_dependencies:
   flutter_test:
@@ -33,6 +33,4 @@ flutter:
     - assets/Royal Blue and Gold Fantasy Stage.png
     - assets/Futuristic Gold Carbon Fiber Frame.png
 
-dependency_overrides:
-  shared_preferences_android: 2.4.28
-  
+
