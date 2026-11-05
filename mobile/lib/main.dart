@@ -8368,7 +8368,7 @@ SVGAEasyPlayer(
   resUrl: '${_activeGiftEvent!['svga_url']}',
   isMute: true,
   fit: BoxFit.contain,
-),
+)
                             else if ('${_activeGiftEvent!['gift_image'] ?? ''}'.startsWith('https://'))
                               Image.network(
                                 '${_activeGiftEvent!['gift_image']}',
