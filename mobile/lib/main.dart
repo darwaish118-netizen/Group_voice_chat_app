@@ -388,20 +388,18 @@ Future<Map<String, dynamic>> createRoom(
 
     
   Future<Map<String, dynamic>> getDiamondExchange(String token) async {
-    final headers = {'Authorization': 'Bearer $token'};
-    final configResponse = await http.get(
-      Uri.parse('$apiBaseUrl/api/wallet/diamond-exchange-config'),
-      headers: headers,
+    // The backend returns the wallet balances and exchange settings together.
+    final response = await http.get(
+      Uri.parse('$apiBaseUrl/api/wallet/diamonds'),
+      headers: {'Authorization': 'Bearer $token'},
     );
-    final configData = _handleResponse(configResponse);
-    final balanceResponse = await http.get(
-      Uri.parse('$apiBaseUrl/api/wallet/balance'),
-      headers: headers,
-    );
-    final balanceData = _handleResponse(balanceResponse);
+    final data = _handleResponse(response);
     return {
-      'config': configData['config'] ?? configData,
-      'balance': balanceData['balance'] ?? balanceData['user'] ?? balanceData,
+      'config': data['exchange'] ?? <String, dynamic>{},
+      'balance': {
+        'diamonds': data['diamonds'] ?? 0,
+        'coins': data['coins'] ?? 0,
+      },
     };
   }
 
@@ -414,8 +412,21 @@ Future<Map<String, dynamic>> createRoom(
   }
 
   Future<Map<String, dynamic>> exchangeDiamonds(String token, int diamonds) async {
-    final response = await http.post(Uri.parse('$apiBaseUrl/api/wallet/diamond-exchange'), headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'}, body: jsonEncode({'diamonds': diamonds}));
-    return _handleResponse(response);
+    final response = await http.post(
+      Uri.parse('$apiBaseUrl/api/wallet/diamonds/exchange'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({'diamonds': diamonds}),
+    );
+    final data = _handleResponse(response);
+    // Keep the existing screen's snake_case response contract.
+    return {
+      ...data,
+      'diamonds_exchanged': data['diamondsExchanged'] ?? data['diamonds_exchanged'] ?? 0,
+      'coins_received': data['coinsReceived'] ?? data['coins_received'] ?? 0,
+    };
   }
 
   Future<Map<String, dynamic>> getDiamondHistory(String token) async {
