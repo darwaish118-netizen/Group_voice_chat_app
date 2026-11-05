@@ -3210,7 +3210,7 @@ class _DiamondHistoryScreenState
                                       size: 28,
                                     ),
                                     const SizedBox(width: 8),
-                                    const Expanded(
+                                    Expanded(
                                       child: Text(
                                         title,
                                         style: TextStyle(
@@ -3243,7 +3243,7 @@ class _DiamondHistoryScreenState
                                 const SizedBox(height: 8),
                                 Row(
                                   children: [
-                                    const Expanded(
+                                    Expanded(
                                       child: Text(
                                         isGiftIncome ? 'Diamonds received' : 'Diamonds exchanged',
                                         style: TextStyle(
@@ -3263,7 +3263,7 @@ class _DiamondHistoryScreenState
                                 const SizedBox(height: 4),
                                 Row(
                                   children: [
-                                    const Expanded(
+                                    Expanded(
                                       child: Text(
                                         isGiftIncome ? 'Gift value (Coins)' : 'M Coins received',
                                         style: TextStyle(
@@ -8364,11 +8364,18 @@ Container(
                           alignment: Alignment.center,
                           children: [
                             if ('${_activeGiftEvent!['svga_url'] ?? ''}'.startsWith('https://'))
-                              SVGAEasyPlayer(
-                                resUrl: '${_activeGiftEvent!['svga_url']}',
-                                loops: 0,
-                                isMute: true,
+                              SVGAEasyPlayer.network(
+                                '${_activeGiftEvent!['svga_url']}',
+                                muted: true,
                                 fit: BoxFit.contain,
+                                placeholder: const Center(
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                                errorBuilder: (context, error) => const Icon(
+                                  Icons.card_giftcard,
+                                  color: Color(0xFFFFD36A),
+                                  size: 38,
+                                ),
                               )
                             else if ('${_activeGiftEvent!['gift_image'] ?? ''}'.startsWith('https://'))
                               Image.network(
