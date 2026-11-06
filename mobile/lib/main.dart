@@ -10,6 +10,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_svga_easyplayer/flutter_svga_easyplayer.dart';
+import 'package:video_player/video_player.dart';
 
 const String apiBaseUrl =
     'https://mindo-voice-chat-server.onrender.com';
@@ -2326,13 +2327,18 @@ try {
 
   String _flag(String country) {
     const flags = {
-      'Pakistan': '🇵🇰', 'India': '🇮🇳', 'United Arab Emirates': '🇦🇪',
-      'United Kingdom': '🇬🇧', 'Saudi Arabia': '🇸🇦', 'Bangladesh': '🇧🇩',
-      'Nepal': '🇳🇵', 'Qatar': '🇶🇦', 'Kuwait': '🇰🇼', 'Oman': '🇴🇲',
-      'Bahrain': '🇧🇭', 'United States': '🇺🇸', 'Canada': '🇨🇦',
-      'Australia': '🇦🇺', 'Germany': '🇩🇪', 'France': '🇫🇷', 'Turkey': '🇹🇷',
+      'pakistan': '🇵🇰', 'pk': '🇵🇰', 'india': '🇮🇳', 'in': '🇮🇳',
+      'united arab emirates': '🇦🇪', 'uae': '🇦🇪', 'ae': '🇦🇪',
+      'united kingdom': '🇬🇧', 'uk': '🇬🇧', 'gb': '🇬🇧',
+      'saudi arabia': '🇸🇦', 'sa': '🇸🇦', 'bangladesh': '🇧🇩', 'bd': '🇧🇩',
+      'nepal': '🇳🇵', 'np': '🇳🇵', 'qatar': '🇶🇦', 'qa': '🇶🇦',
+      'kuwait': '🇰🇼', 'kw': '🇰🇼', 'oman': '🇴🇲', 'om': '🇴🇲',
+      'bahrain': '🇧🇭', 'bh': '🇧🇭', 'united states': '🇺🇸', 'usa': '🇺🇸', 'us': '🇺🇸',
+      'canada': '🇨🇦', 'ca': '🇨🇦', 'australia': '🇦🇺', 'au': '🇦🇺',
+      'germany': '🇩🇪', 'de': '🇩🇪', 'france': '🇫🇷', 'fr': '🇫🇷',
+      'turkey': '🇹🇷', 'tr': '🇹🇷',
     };
-    return flags[country] ?? '🌍';
+    return flags[country.trim().toLowerCase()] ?? '🌍';
   }
 
   Future<void> _openSearch() async {
@@ -2388,7 +2394,7 @@ try {
       [Color(0xFF9A4A13), Color(0xFF7026A8)],
     ];
     final colors = gradients[index % gradients.length];
-    final titles = ['COUNTRY EVENT', 'MINDO SPECIAL EVENT', 'WEEKLY CHALLENGE'];
+    final titles = ['COUNTRY EVENT', 'SPECIAL EVENT', 'WEEKLY CHALLENGE'];
     final subtitles = ['Meet friends • Join the celebration', 'Play together • Win rewards', 'New rankings every week'];
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 10),
@@ -2474,7 +2480,7 @@ try {
     final sortedRooms = [...rooms];
     sortedRooms.sort((a, b) => _roomCoins(Map<String, dynamic>.from(b as Map)).compareTo(_roomCoins(Map<String, dynamic>.from(a as Map))));
     var visibleRooms = sortedRooms.map((r) => Map<String, dynamic>.from(r as Map)).toList();
-    if (_selectedTab == 2) visibleRooms = [];
+    if (_selectedTab == 2) visibleRooms = []; // Follow tab is wired to followed-room data when available.
     if (_selectedCountry != 'All') visibleRooms = visibleRooms.where((r) => _roomCountry(r) == _selectedCountry).toList();
     if (_searchQuery.isNotEmpty) visibleRooms = visibleRooms.where((r) => '${r['name']} ${r['id']}'.toLowerCase().contains(_searchQuery)).toList();
 
@@ -2492,33 +2498,18 @@ try {
                   child: SafeArea(bottom: false, child: Padding(
                     padding: const EdgeInsets.fromLTRB(14, 7, 14, 0),
                     child: Column(children: [
+                      // Home header: remove the M badge and MINDO branding text.
+                      // Popular / Follow now share one row with Search and Ranking.
                       Row(children: [
-                        Container(width: 43, height: 43, decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: const Color(0xFFFFD76A), width: 1.5), gradient: const LinearGradient(colors: [Color(0xFF8D32C7), Color(0xFF24103C)]), boxShadow: [BoxShadow(color: const Color(0xFFE83EAD).withOpacity(.35), blurRadius: 12)]), child: const Center(child: Text('M', style: TextStyle(color: Color(0xFFFFD76A), fontSize: 25, fontWeight: FontWeight.w900)))),
-                        const SizedBox(width: 8),
-                        const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('MINDO', style: TextStyle(color: Color(0xFFFFD76A), fontSize: 19, fontWeight: FontWeight.w900, letterSpacing: 2)), Text('VOICE CHAT', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 2.5))])),
+                        _homeTabButton('Popular', 0),
+                        const SizedBox(width: 6),
+                        _homeTabButton('Follow', 2),
+                        const Spacer(),
                         _headerAction(Icons.search_rounded, _openSearch, 'Search'),
-                        const SizedBox(width: 9),
+                        const SizedBox(width: 8),
                         _headerAction(Icons.emoji_events_rounded, _openRanking, 'Ranking'),
                       ]),
-                      const SizedBox(height: 13),
-                      Row(children: [
-                        for (int i = 0; i < 3; i++)
-                          Expanded(child: GestureDetector(
-                            onTap: () => setState(() => _selectedTab = i),
-                            child: Container(
-                              margin: EdgeInsets.only(right: i == 2 ? 0 : 7),
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(20),
-                                gradient: _selectedTab == i ? const LinearGradient(colors: [Color(0xFFE83EAD), Color(0xFF7927B5)]) : null,
-                                color: _selectedTab == i ? null : const Color(0xFF241332),
-                                border: Border.all(color: _selectedTab == i ? const Color(0xFFFFD76A) : Colors.white12),
-                              ),
-                              child: Center(child: Text(['Popular', 'Explore', 'Follow'][i], style: TextStyle(color: _selectedTab == i ? Colors.white : Colors.white70, fontWeight: FontWeight.w800))),
-                            ),
-                          )),
-                      ]),
-                      SizedBox(height: 150, child: PageView.builder(
+                      SizedBox(height: 165, child: PageView.builder(
                         controller: _bannerController,
                         itemCount: 3,
                         onPageChanged: (index) => setState(() => _bannerIndex = index),
@@ -2531,9 +2522,9 @@ try {
                         PopupMenuButton<String>(
                           color: const Color(0xFF28103D),
                           initialValue: _selectedCountry,
-                          onSelected: (value) => setState(() { _selectedCountry = value; _selectedTab = 1; }),
+                          onSelected: (value) => setState(() { _selectedCountry = value; _selectedTab = 0; }),
                           itemBuilder: (_) => ['All', 'Pakistan', 'India', 'United Arab Emirates', 'Saudi Arabia', 'Bangladesh', 'United Kingdom', 'United States', 'Germany'].map((c) => PopupMenuItem(value: c, child: Text(c, style: const TextStyle(color: Colors.white)))).toList(),
-                          child: Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7), decoration: BoxDecoration(color: const Color(0xFF28103D), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFFFD76A).withOpacity(.6))), child: Row(children: [const Icon(Icons.public, color: Color(0xFFFFD76A), size: 16), const SizedBox(width: 5), Text(_selectedCountry, style: const TextStyle(color: Colors.white, fontSize: 11)), const Icon(Icons.arrow_drop_down, color: Colors.white)])),
+                          child: Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7), decoration: BoxDecoration(color: const Color(0xFF28103D), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFFFD76A).withOpacity(.6))), child: Row(children: [const Icon(Icons.public, color: Color(0xFFFFD76A), size: 16), const SizedBox(width: 5), Text(_selectedCountry == 'All' ? 'All Country' : _selectedCountry, style: const TextStyle(color: Colors.white, fontSize: 11)), const Icon(Icons.arrow_drop_down, color: Colors.white)])),
                         ),
                       ]),
                       const SizedBox(height: 9),
@@ -2564,6 +2555,36 @@ try {
       ),
     );
   }
+
+  Widget _homeTabButton(String label, int tab) => Expanded(
+    child: GestureDetector(
+      onTap: () => setState(() => _selectedTab = tab),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 8),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(22),
+          gradient: _selectedTab == tab
+              ? const LinearGradient(colors: [Color(0xFFE83EAD), Color(0xFF7927B5)])
+              : null,
+          color: _selectedTab == tab ? null : const Color(0xFF241332),
+          border: Border.all(
+            color: _selectedTab == tab ? const Color(0xFFFFD76A) : Colors.white12,
+          ),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            maxLines: 1,
+            style: TextStyle(
+              color: _selectedTab == tab ? Colors.white : Colors.white70,
+              fontWeight: FontWeight.w800,
+              fontSize: 13,
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
 
   Widget _headerAction(IconData icon, VoidCallback onTap, String tooltip) => Container(
     decoration: BoxDecoration(shape: BoxShape.circle, gradient: const LinearGradient(colors: [Color(0xFF8C2CC2), Color(0xFF32134C)]), border: Border.all(color: const Color(0xFFFFD76A), width: 1.2), boxShadow: [BoxShadow(color: const Color(0xFFE83EAD).withOpacity(.3), blurRadius: 9)]),
@@ -7198,6 +7219,65 @@ _selectedRoomImage = image;
 // VOICE ROOM UI
 // ============================================================
 
+class RoomGiftAnimation extends StatefulWidget {
+  final Map<String, dynamic> event;
+  const RoomGiftAnimation({super.key, required this.event});
+  @override
+  State<RoomGiftAnimation> createState() => _RoomGiftAnimationState();
+}
+
+class _RoomGiftAnimationState extends State<RoomGiftAnimation> {
+  VideoPlayerController? _controller;
+  bool _videoFailed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final url = '${widget.event['mp4_url'] ?? ''}'.trim();
+    if (url.startsWith('https://')) {
+      final controller = VideoPlayerController.networkUrl(Uri.parse(url));
+      _controller = controller;
+      controller.initialize().then((_) async {
+        if (!mounted) return;
+        await controller.setLooping(true);
+        await controller.setVolume(0);
+        await controller.play();
+        if (mounted) setState(() {});
+      }).catchError((_) {
+        if (mounted) setState(() => _videoFailed = true);
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final mp4 = '${widget.event['mp4_url'] ?? ''}'.trim();
+    final gif = '${widget.event['gif_url'] ?? ''}'.trim();
+    final svga = '${widget.event['svga_url'] ?? ''}'.trim();
+    final image = '${widget.event['gift_image'] ?? ''}'.trim();
+    if (mp4.startsWith('https://')) {
+      final controller = _controller;
+      if (!_videoFailed && controller != null && controller.value.isInitialized) {
+        return ClipRRect(borderRadius: BorderRadius.circular(10), child: FittedBox(
+          fit: BoxFit.contain,
+          child: SizedBox(width: controller.value.size.width, height: controller.value.size.height, child: VideoPlayer(controller)),
+        ));
+      }
+      if (!_videoFailed) return const Center(child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFFFD36A)));
+    }
+    if (gif.startsWith('https://')) return Image.network(gif, width: 88, height: 88, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Icon(Icons.card_giftcard, color: Color(0xFFFFD36A), size: 38));
+    if (svga.startsWith('https://')) return SVGAEasyPlayer(resUrl: svga, loops: 0, isMute: true, fit: BoxFit.contain);
+    if (image.startsWith('https://')) return Image.network(image, width: 72, height: 72, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Icon(Icons.card_giftcard, color: Color(0xFFFFD36A), size: 38));
+    return const Icon(Icons.card_giftcard, color: Color(0xFFFFD36A), size: 38);
+  }
+}
+
 class VoiceRoomScreen
     extends StatefulWidget {
   final String roomId;
@@ -8466,28 +8546,7 @@ Container(
                       SizedBox(
                         width: 88,
                         height: 88,
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            if ('${_activeGiftEvent!['svga_url'] ?? ''}'.startsWith('https://'))
-                              SVGAEasyPlayer(
-                                resUrl: '${_activeGiftEvent!['svga_url']}',
-                                loops: 0,
-                                isMute: true,
-                                fit: BoxFit.contain,
-                              )
-                            else if ('${_activeGiftEvent!['gift_image'] ?? ''}'.startsWith('https://'))
-                              Image.network(
-                                '${_activeGiftEvent!['gift_image']}',
-                                width: 72,
-                                height: 72,
-                                fit: BoxFit.contain,
-                                errorBuilder: (_, __, ___) => const Icon(Icons.card_giftcard, color: Color(0xFFFFD36A), size: 38),
-                              )
-                            else
-                              const Icon(Icons.card_giftcard, color: Color(0xFFFFD36A), size: 38),
-                          ],
-                        ),
+                        child: RoomGiftAnimation(event: _activeGiftEvent!),
                       ),
                       const SizedBox(width: 10),
                       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
