@@ -70,6 +70,10 @@ async function initDatabase() {
     ALTER TABLE users
     ADD COLUMN IF NOT EXISTS public_uid INTEGER
   `);
+  await pool.query(`
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS wallet_frozen BOOLEAN NOT NULL DEFAULT FALSE
+  `);
 
   await pool.query(`
     ALTER TABLE users
@@ -163,6 +167,17 @@ await pool.query(`
     )
   `);
   await pool.query(`CREATE INDEX IF NOT EXISTS room_presence_room_idx ON room_presence(room_id, last_seen DESC)`);
+  // Global app presence is separate from room presence. Mobile clients heartbeat
+  // while foregrounded; stale rows automatically age out after 90 seconds.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS user_presence (
+      user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      last_seen TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      app_state VARCHAR(20) NOT NULL DEFAULT 'active'
+    )
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS user_presence_last_seen_idx ON user_presence(last_seen DESC)`);
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS room_emoji_reactions (
       id BIGSERIAL PRIMARY KEY,
@@ -877,6 +892,112 @@ app.get("/api/me", authMiddleware, async (req, res) => {
 });
 
 // -------------------------
+// Global app presence and Main Admin live-user / wallet controls
+// -------------------------
+
+app.post("/api/presence/heartbeat", authMiddleware, async (req, res) => {
+  if (!pool) return res.status(503).json({ message: "Database is not configured" });
+  try {
+    await pool.query(`
+      INSERT INTO user_presence(user_id, last_seen, app_state)
+      VALUES($1, NOW(), 'active')
+      ON CONFLICT(user_id) DO UPDATE
+      SET last_seen=NOW(), app_state='active'
+    `, [req.user.id]);
+    res.json({ ok: true, last_seen: new Date().toISOString() });
+  } catch (error) {
+    console.error("Global presence heartbeat failed:", error);
+    res.status(500).json({ message: "Could not update online status" });
+  }
+});
+
+app.delete("/api/presence", authMiddleware, async (req, res) => {
+  if (!pool) return res.status(503).json({ message: "Database is not configured" });
+  try {
+    await pool.query(`DELETE FROM user_presence WHERE user_id=$1`, [req.user.id]);
+    res.json({ ok: true });
+  } catch (error) {
+    console.error("Global presence end failed:", error);
+    res.status(500).json({ message: "Could not end online status" });
+  }
+});
+
+app.get("/api/admin/online-users", authMiddleware, mainAdminMiddleware, async (req, res) => {
+  const limit = Math.min(Math.max(Number.parseInt(req.query.limit, 10) || 100, 1), 500);
+  try {
+    const result = await pool.query(`
+      SELECT u.public_uid, u.username, COALESCE(u.display_name,u.username) AS display_name,
+             u.avatar_url, up.last_seen,
+             r.id AS room_id, r.name AS room_name
+      FROM user_presence up
+      JOIN users u ON u.id=up.user_id
+      LEFT JOIN room_presence rp ON rp.user_id=u.id
+        AND rp.last_seen >= NOW()-INTERVAL '90 seconds'
+      LEFT JOIN rooms r ON r.id=rp.room_id
+      WHERE up.last_seen >= NOW()-INTERVAL '90 seconds'
+        AND up.app_state='active'
+      ORDER BY up.last_seen DESC
+      LIMIT $1
+    `, [limit]);
+    res.json({ users: result.rows, count: result.rowCount, checked_at: new Date().toISOString(), stale_after_seconds: 90 });
+  } catch (error) {
+    console.error("Live online users lookup failed:", error);
+    res.status(500).json({ message: "Could not load online users" });
+  }
+});
+
+app.post("/api/admin/wallet/freeze", authMiddleware, mainAdminMiddleware, async (req, res) => {
+  const publicUid = String(req.body?.public_uid || "").trim();
+  const frozen = req.body?.frozen;
+  const reason = String(req.body?.reason || "").trim().slice(0, 240);
+  const key = String(req.body?.idempotency_key || "").trim();
+  if (!/^[0-9]{1,12}$/.test(publicUid) || typeof frozen !== "boolean" ||
+      reason.length < 3 || !/^[A-Za-z0-9:_-]{12,100}$/.test(key)) {
+    return res.status(400).json({ message: "Provide valid UID, freeze status, reason and unique request key" });
+  }
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const target = await client.query(
+      `SELECT id, public_uid, username, coins, wallet_frozen FROM users WHERE public_uid=$1 FOR UPDATE`,
+      [Number(publicUid)]
+    );
+    if (!target.rowCount) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ message: "User UID not found" });
+    }
+    const user = target.rows[0];
+    const changed = await client.query(
+      `UPDATE users SET wallet_frozen=$1 WHERE id=$2
+       RETURNING public_uid, username, coins, wallet_frozen`,
+      [frozen, user.id]
+    );
+    const transaction = await client.query(
+      `INSERT INTO wallet_transactions
+       (user_id,kind,currency,amount,balance_after,status,source,idempotency_key,details)
+       VALUES($1,$2,'coin',0,$3,'success','main_admin',$4,$5::jsonb)
+       RETURNING id,created_at`,
+      [user.id, frozen ? "wallet_frozen" : "wallet_unfrozen", user.coins, key,
+       JSON.stringify({ actor_admin_id:req.user.id, public_uid:user.public_uid, reason, frozen })]
+    );
+    await client.query("COMMIT");
+    res.status(200).json({
+      message: frozen ? "User wallet frozen" : "User wallet unfrozen",
+      transaction_id: transaction.rows[0].id,
+      created_at: transaction.rows[0].created_at,
+      user: changed.rows[0]
+    });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    if (error.code === "23505") return res.status(409).json({ message: "This wallet control request was already processed" });
+    console.error("Main Admin wallet freeze update failed:", error);
+    res.status(500).json({ message: "Could not update wallet freeze status" });
+  } finally {
+    client.release();
+  }
+});
+
+// -------------------------
 // Public Profile Actions: room presence, follow, and private chat
 // -------------------------
 
@@ -1502,7 +1623,7 @@ app.get("/api/admin/coin-users", authMiddleware, mainAdminMiddleware, async (req
   const q = String(req.query.q || "").trim();
   if (q.length < 2) return res.status(400).json({ message: "Enter at least 2 characters of UID or username" });
   try {
-    const result = await pool.query(`SELECT id,public_uid,username,display_name,coins FROM users WHERE public_uid::text ILIKE $1 OR username ILIKE $1 OR COALESCE(display_name,'') ILIKE $1 ORDER BY username LIMIT 20`, [`%${q}%`]);
+    const result = await pool.query(`SELECT id,public_uid,username,display_name,coins,wallet_frozen FROM users WHERE public_uid::text ILIKE $1 OR username ILIKE $1 OR COALESCE(display_name,'') ILIKE $1 ORDER BY username LIMIT 20`, [`%${q}%`]);
     res.json({ users: result.rows });
   } catch (error) { console.error("Coin user search failed:", error); res.status(500).json({ message: "Could not search users" }); }
 });
@@ -1726,11 +1847,17 @@ app.post("/api/gifts/send", authMiddleware, async (req, res) => {
       });
     }
     const debit = await client.query(
-      `UPDATE users SET coins=coins-$1 WHERE id=$2 AND coins >= $1 RETURNING coins`,
+      `UPDATE users SET coins=coins-$1
+       WHERE id=$2 AND coins >= $1 AND wallet_frozen=FALSE
+       RETURNING coins`,
       [totalDebit, req.user.id]
     );
     if (!debit.rowCount) {
+      const walletState = await client.query(`SELECT wallet_frozen FROM users WHERE id=$1`, [req.user.id]);
       await client.query("ROLLBACK");
+      if (walletState.rows[0]?.wallet_frozen) {
+        return res.status(423).json({ message: "Your wallet is frozen by Main Admin. Coin spending is disabled." });
+      }
       return res.status(402).json({ message: "Insufficient coin balance" });
     }
     const transactions = [];
