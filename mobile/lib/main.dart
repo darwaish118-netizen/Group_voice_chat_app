@@ -348,6 +348,22 @@ Future<Map<String, dynamic>> createRoom(
     return _handleResponse(response);
   }
 
+  Future<Map<String, dynamic>> heartbeatGlobalPresence(String token) async {
+    final response = await http.post(
+      Uri.parse('$apiBaseUrl/api/presence/heartbeat'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    return _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> endGlobalPresence(String token) async {
+    final response = await http.delete(
+      Uri.parse('$apiBaseUrl/api/presence'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    return _handleResponse(response);
+  }
+
   Future<Map<String, dynamic>> startRoomPresence(String token, String roomId) async {
     final response = await http.post(Uri.parse('$apiBaseUrl/api/rooms/$roomId/presence'), headers: {'Authorization': 'Bearer $token'});
     return _handleResponse(response);
@@ -1854,8 +1870,54 @@ class HomeScreen
 }
 
 class _HomeScreenState
-    extends State<HomeScreen> {
+    extends State<HomeScreen> with WidgetsBindingObserver {
   int selectedIndex = 0;
+  Timer? _globalPresenceTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _sendGlobalPresenceHeartbeat();
+    _globalPresenceTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      _sendGlobalPresenceHeartbeat();
+    });
+  }
+
+  Future<void> _sendGlobalPresenceHeartbeat() async {
+    try {
+      await api.heartbeatGlobalPresence(widget.token);
+    } catch (e) {
+      debugPrint('Global presence heartbeat failed: $e');
+    }
+  }
+
+  Future<void> _endGlobalPresence() async {
+    try {
+      await api.endGlobalPresence(widget.token);
+    } catch (e) {
+      debugPrint('Global presence end failed: $e');
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _sendGlobalPresenceHeartbeat();
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached ||
+        state == AppLifecycleState.inactive) {
+      _endGlobalPresence();
+    }
+  }
+
+  @override
+  void dispose() {
+    _globalPresenceTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    _endGlobalPresence();
+    super.dispose();
+  }
 
 final titles = const [
   'Voice Rooms',
@@ -3210,7 +3272,7 @@ class _DiamondHistoryScreenState
                                       size: 28,
                                     ),
                                     const SizedBox(width: 8),
-                                    Expanded(
+                                    const Expanded(
                                       child: Text(
                                         title,
                                         style: TextStyle(
@@ -3243,7 +3305,7 @@ class _DiamondHistoryScreenState
                                 const SizedBox(height: 8),
                                 Row(
                                   children: [
-                                    Expanded(
+                                    const Expanded(
                                       child: Text(
                                         isGiftIncome ? 'Diamonds received' : 'Diamonds exchanged',
                                         style: TextStyle(
@@ -3263,7 +3325,7 @@ class _DiamondHistoryScreenState
                                 const SizedBox(height: 4),
                                 Row(
                                   children: [
-                                    Expanded(
+                                    const Expanded(
                                       child: Text(
                                         isGiftIncome ? 'Gift value (Coins)' : 'M Coins received',
                                         style: TextStyle(
@@ -7818,60 +7880,36 @@ title: SizedBox(
   ),
 ),
 actions: [
-  // Share
-  IconButton(
-    onPressed: () {},
-    icon: const Icon(
-      Icons.share,
+  // Share button with gold circular outline.
+  Padding(
+    padding: const EdgeInsets.only(right: 4),
+    child: Container(
+      width: 42,
+      height: 42,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: const Color(0xFFFFD36A), width: 1.5),
+      ),
+      child: IconButton(
+        padding: EdgeInsets.zero,
+        onPressed: () {},
+        tooltip: 'Share Room',
+        icon: const Icon(Icons.share, size: 21, color: Colors.white),
+      ),
     ),
   ),
 
-  // Room members count and member list.
-  IconButton(
-    tooltip: 'Room Members',
-    onPressed: () {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => RoomMembersScreen(
-            token: widget.token,
-            roomId: widget.roomId,
-            roomName: widget.roomName,
-          ),
-        ),
-      );
-    },
-    icon: Stack(
-      clipBehavior: Clip.none,
-      children: [
-        const Icon(Icons.groups_rounded),
-        Positioned(
-          right: -9,
-          top: -7,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFD36A),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            constraints: const BoxConstraints(minWidth: 17),
-            child: Text(
-              '${seatMembers.length}',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Color(0xFF211A35),
-                fontSize: 9,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ),
-        ),
-      ],
+  // Off / Room Options with gold circular outline.
+  Container(
+    width: 42,
+    height: 42,
+    margin: const EdgeInsets.only(right: 6),
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      border: Border.all(color: const Color(0xFFFFD36A), width: 1.5),
     ),
-  ),
-
-  // Off / Room Options
-  IconButton(
+    child: IconButton(
+    padding: EdgeInsets.zero,
     onPressed: () {
       showModalBottomSheet(
         context: context,
@@ -8019,6 +8057,9 @@ actions: [
     },
     icon: const Icon(
       Icons.power_settings_new_rounded,
+      color: Colors.white,
+      size: 21,
+    ),
     ),
   ),
 ],
@@ -8028,47 +8069,112 @@ actions: [
           Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(18),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => RoomRankingScreen(
-                        token: widget.token,
-                        roomId: widget.roomId,
-                        roomName: widget.roomName,
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Room ranking trophy sits directly below the room DP.
+                InkWell(
+                  borderRadius: BorderRadius.circular(30),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => RoomRankingScreen(
+                          token: widget.token,
+                          roomId: widget.roomId,
+                          roomName: widget.roomName,
+                        ),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: const Color(0xFFFFD36A),
+                        width: 1.6,
                       ),
                     ),
-                  );
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFFFD76A), Color(0xFFB87925)],
+                    child: const Icon(
+                      Icons.emoji_events_rounded,
+                      color: Color(0xFFFFD36A),
+                      size: 25,
                     ),
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: const Color(0xFFFFF0B5), width: 1.2),
-                    boxShadow: [
-                      BoxShadow(color: const Color(0xFFFFC857).withOpacity(.28), blurRadius: 14, spreadRadius: 1),
-                    ],
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.emoji_events_rounded, color: Color(0xFF4A260D), size: 25),
-                      SizedBox(width: 8),
-                      Text('ROOM RANKING', style: TextStyle(color: Color(0xFF4A260D), fontWeight: FontWeight.w900, letterSpacing: 1)),
-                      SizedBox(width: 5),
-                      Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFF4A260D), size: 13),
-                    ],
                   ),
                 ),
-              ),
+
+                // Members button aligned below the power button.
+                InkWell(
+                  borderRadius: BorderRadius.circular(30),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => RoomMembersScreen(
+                          token: widget.token,
+                          roomId: widget.roomId,
+                          roomName: widget.roomName,
+                        ),
+                      ),
+                    );
+                  },
+                  child: SizedBox(
+                    width: 48,
+                    height: 48,
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: const Color(0xFFFFD36A),
+                              width: 1.6,
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.groups_rounded,
+                            color: Colors.white,
+                            size: 25,
+                          ),
+                        ),
+                        Positioned(
+                          right: -5,
+                          top: -5,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 1,
+                            ),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFFFD36A),
+                              shape: BoxShape.circle,
+                            ),
+                            constraints: const BoxConstraints(
+                              minWidth: 17,
+                              minHeight: 17,
+                            ),
+                            child: Text(
+                              '${seatMembers.length}',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: Color(0xFF211A35),
+                                fontSize: 9,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 12),
@@ -8364,11 +8470,12 @@ Container(
                           alignment: Alignment.center,
                           children: [
                             if ('${_activeGiftEvent!['svga_url'] ?? ''}'.startsWith('https://'))
-SVGAEasyPlayer(
-  resUrl: '${_activeGiftEvent!['svga_url']}',
-  isMute: true,
-  fit: BoxFit.contain,
-)
+                              SVGAEasyPlayer(
+                                resUrl: '${_activeGiftEvent!['svga_url']}',
+                                loops: 0,
+                                isMute: true,
+                                fit: BoxFit.contain,
+                              )
                             else if ('${_activeGiftEvent!['gift_image'] ?? ''}'.startsWith('https://'))
                               Image.network(
                                 '${_activeGiftEvent!['gift_image']}',
