@@ -3272,7 +3272,7 @@ class _DiamondHistoryScreenState
                                       size: 28,
                                     ),
                                     const SizedBox(width: 8),
-                                    const Expanded(
+                                    Expanded(
                                       child: Text(
                                         title,
                                         style: TextStyle(
@@ -3305,7 +3305,7 @@ class _DiamondHistoryScreenState
                                 const SizedBox(height: 8),
                                 Row(
                                   children: [
-                                    const Expanded(
+                                    Expanded(
                                       child: Text(
                                         isGiftIncome ? 'Diamonds received' : 'Diamonds exchanged',
                                         style: TextStyle(
@@ -3325,7 +3325,7 @@ class _DiamondHistoryScreenState
                                 const SizedBox(height: 4),
                                 Row(
                                   children: [
-                                    const Expanded(
+                                    Expanded(
                                       child: Text(
                                         isGiftIncome ? 'Gift value (Coins)' : 'M Coins received',
                                         style: TextStyle(
