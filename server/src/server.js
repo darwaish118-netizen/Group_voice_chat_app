@@ -375,7 +375,7 @@ await pool.query(`
       coin_amount BIGINT NOT NULL CHECK (coin_amount > 0),
       status VARCHAR(20) NOT NULL DEFAULT 'success' CHECK (status IN ('pending','success','failed','refunded')),
       idempotency_key TEXT UNIQUE,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
   await pool.query(`ALTER TABLE gift_transactions DROP CONSTRAINT IF EXISTS gift_transactions_sender_id_receiver_id_check`);
