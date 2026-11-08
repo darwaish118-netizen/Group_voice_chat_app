@@ -7734,74 +7734,175 @@ void initState() {
       gifts = await api.getGiftCatalog(widget.token);
     } catch (e) {
       debugPrint('Room gift catalogue load failed: $e');
-      gifts = [];
     }
     if (!mounted) return;
-    final occupied = seatMembers.values.where((m) => m['public_uid'] != null && '${m['public_uid']}'.isNotEmpty).toList();
+
+    final occupied = seatMembers.values
+        .where((m) => m['public_uid'] != null && '${m['public_uid']}'.isNotEmpty)
+        .toList();
     final recipientMembers = <Map<String, dynamic>>[];
     final own = currentRoomUser;
     if (own != null && own['public_uid'] != null && '${own['public_uid']}'.isNotEmpty) {
       recipientMembers.add({...own, '_is_self': true});
     }
     for (final member in occupied) {
-      if (currentUserId == null || '${member['id']}' != currentUserId) recipientMembers.add(member);
+      if (currentUserId == null || '${member['id']}' != currentUserId) {
+        if (!recipientMembers.any((m) => '${m['public_uid']}' == '${member['public_uid']}')) {
+          recipientMembers.add(member);
+        }
+      }
     }
-    final categories = <String>['All', ...{for (final g in gifts) '${g['category'] ?? 'Popular'}'}];
-    String selectedCategory = 'All';
+
+    const categories = <String>['General', 'CP Gift', 'pk Gift', 'VIP'];
+    String selectedCategory = 'General';
     Map<String, dynamic>? selectedGift;
     final selectedRecipients = <String>{};
     int quantity = 1;
     bool sending = false;
+    final myCoins = int.tryParse('${currentRoomUser?['coins'] ?? 0}') ?? 0;
+    final myLevel = int.tryParse('${currentRoomUser?['level'] ?? 1}') ?? 1;
 
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: const Color(0xFF171225),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (sheetContext) => StatefulBuilder(builder: (context, refresh) {
-        final filtered = gifts.where((raw) {
-          final g = Map<String, dynamic>.from(raw as Map);
-          return selectedCategory == 'All' || '${g['category'] ?? 'Popular'}' == selectedCategory;
-        }).toList();
-        return SafeArea(child: Padding(
-          padding: EdgeInsets.only(left: 14, right: 14, top: 12, bottom: MediaQuery.of(context).viewInsets.bottom + 12),
-          child: SizedBox(height: MediaQuery.of(context).size.height * .78, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [const Expanded(child: Text('Send Gift', style: TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.bold))), IconButton(onPressed: () => Navigator.pop(sheetContext), icon: const Icon(Icons.close, color: Colors.white70))]),
-            const Text('Choose gift', style: TextStyle(color: Colors.white70)),
-            const SizedBox(height: 8),
-            SizedBox(height: 38, child: ListView(scrollDirection: Axis.horizontal, children: categories.map((c) => Padding(padding: const EdgeInsets.only(right: 7), child: ChoiceChip(label: Text(c), selected: selectedCategory == c, onSelected: (_) => refresh(() => selectedCategory = c), selectedColor: const Color(0xFF8B4DE8), backgroundColor: const Color(0xFF302541), labelStyle: TextStyle(color: selectedCategory == c ? Colors.white : Colors.white70)))).toList())),
-            const SizedBox(height: 8),
-            Expanded(child: filtered.isEmpty
-              ? const Center(child: Text('No active gifts available', style: TextStyle(color: Colors.white60)))
-              : GridView.builder(gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 4, crossAxisSpacing: 8, mainAxisSpacing: 8, childAspectRatio: .78), itemCount: filtered.length, itemBuilder: (_, i) {
-              final gift = Map<String, dynamic>.from(filtered[i] as Map);
-              final chosen = selectedGift?['id']?.toString() == gift['id']?.toString();
-              final image = '${gift['image_url'] ?? ''}';
-              final price = int.tryParse('${gift['coin_price']}') ?? 0;
-              return InkWell(onTap: () => refresh(() => selectedGift = gift), child: Container(padding: const EdgeInsets.all(6), decoration: BoxDecoration(color: chosen ? const Color(0xFF56327D) : const Color(0xFF292137), borderRadius: BorderRadius.circular(12), border: Border.all(color: chosen ? const Color(0xFFFFD36A) : Colors.white12, width: chosen ? 2 : 1)), child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Expanded(child: image.startsWith('https://') ? Image.network(image, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Icon(Icons.card_giftcard, color: Colors.white70, size: 34)) : const Icon(Icons.card_giftcard, color: Colors.white70, size: 34)), const SizedBox(height: 3), Text('${gift['name'] ?? 'Gift'}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 10)), Text('$price Coins', style: const TextStyle(color: Color(0xFFFFD36A), fontSize: 10, fontWeight: FontWeight.bold))])));
-            })),
-            const Text('Send to room members', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 5),
-            SizedBox(height: 66, child: ListView(scrollDirection: Axis.horizontal, children: [
-              Padding(padding: const EdgeInsets.only(right: 8), child: InkWell(onTap: () => refresh(() { if (selectedRecipients.length == recipientMembers.length) { selectedRecipients.clear(); } else { selectedRecipients..clear()..addAll(recipientMembers.map((m) => '${m['public_uid']}')); } }), child: Column(children: [CircleAvatar(backgroundColor: const Color(0xFF8B4DE8), child: const Icon(Icons.groups, color: Colors.white)), const SizedBox(height: 3), const Text('All', style: TextStyle(color: Colors.white70, fontSize: 10))]))),
-              ...recipientMembers.map((member) { final uid = '${member['public_uid']}'; final name = member['_is_self'] == true ? 'You' : '${member['display_name'] ?? member['username'] ?? 'User'}'; final avatar = '${member['avatar_url'] ?? ''}'; final chosen = selectedRecipients.contains(uid); return Padding(padding: const EdgeInsets.only(right: 10), child: InkWell(onTap: () => refresh(() { chosen ? selectedRecipients.remove(uid) : selectedRecipients.add(uid); }), child: Column(children: [CircleAvatar(radius: 19, backgroundColor: chosen ? const Color(0xFFFFC857) : Colors.deepPurple, backgroundImage: avatar.startsWith('https://') ? NetworkImage(avatar) : null, child: avatar.startsWith('https://') ? null : const Icon(Icons.person, color: Colors.white)), const SizedBox(height: 3), SizedBox(width: 52, child: Text(name, maxLines: 1, textAlign: TextAlign.center, overflow: TextOverflow.ellipsis, style: TextStyle(color: chosen ? const Color(0xFFFFD36A) : Colors.white70, fontSize: 9)))]))); }),
-            ])),
-            Row(children: [const Text('Quantity', style: TextStyle(color: Colors.white70)), const SizedBox(width: 12), DropdownButton<int>(value: quantity, dropdownColor: const Color(0xFF302541), style: const TextStyle(color: Colors.white), items: [1, 5, 10, 20, 50, 99, 177].map((n) => DropdownMenuItem(value: n, child: Text('$n'))).toList(), onChanged: (v) => refresh(() => quantity = v ?? 1)), const Spacer(), if (selectedGift != null) Text('Total: ${(int.tryParse('${selectedGift!['coin_price']}') ?? 0) * quantity * selectedRecipients.length} Coins', style: const TextStyle(color: Color(0xFFFFD36A), fontWeight: FontWeight.bold))]),
-            SizedBox(width: double.infinity, child: ElevatedButton.icon(style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF58C900), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 13)), onPressed: sending || selectedGift == null || selectedRecipients.isEmpty ? null : () async {
-              refresh(() => sending = true);
-              try {
-                final result = await api.sendRoomGift(widget.token, giftId: '${selectedGift!['id']}', roomId: widget.roomId, receiverUids: selectedRecipients.toList(), quantity: quantity, idempotencyKey: 'gift-${DateTime.now().microsecondsSinceEpoch}');
-                if (!mounted) return;
-                Navigator.pop(sheetContext);
-                final total = result['total_debit'] ?? ((int.tryParse('${selectedGift!['coin_price']}') ?? 0) * quantity * selectedRecipients.length);
-                _roomMessage('Gift sent successfully! $total Coins used.');
-                _pollRoomGiftEvents();
-              } catch (e) {
-                refresh(() => sending = false);
-                _roomMessage(e.toString().replaceFirst('Exception: ', ''));
-              }
-            }, icon: sending ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.card_giftcard), label: Text(sending ? 'Sending...' : 'Send Gift'))),
-          ])),
+        bool categoryMatches(Map<String, dynamic> gift) {
+          final raw = '${gift['category'] ?? 'General'}'.toLowerCase().replaceAll(RegExp(r'[^a-z]'), '');
+          final wanted = selectedCategory.toLowerCase().replaceAll(RegExp(r'[^a-z]'), '');
+          if (wanted == 'general') return raw == 'general' || raw == 'popular' || raw.isEmpty;
+          return raw == wanted;
+        }
+        final filtered = gifts
+            .where((raw) => categoryMatches(Map<String, dynamic>.from(raw as Map)))
+            .map((raw) => Map<String, dynamic>.from(raw as Map))
+            .toList();
+        final selectedCount = selectedRecipients.length;
+        final selectedPrice = int.tryParse('${selectedGift?['coin_price'] ?? 0}') ?? 0;
+        final total = selectedPrice * quantity * selectedCount;
+
+        Widget recipientChip(Map<String, dynamic> member) {
+          final uid = '${member['public_uid']}';
+          final self = member['_is_self'] == true;
+          final label = self ? 'You' : '${member['seat_number'] ?? member['seat'] ?? member['display_name'] ?? member['username'] ?? 'User'}';
+          final avatar = '${member['avatar_url'] ?? ''}';
+          final chosen = selectedRecipients.contains(uid);
+          return Padding(
+            padding: const EdgeInsets.only(right: 10),
+            child: InkWell(
+              onTap: () => refresh(() {
+                if (chosen) { selectedRecipients.remove(uid); } else { selectedRecipients.add(uid); }
+              }),
+              child: SizedBox(
+                width: 52,
+                child: Column(children: [
+                  Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(shape: BoxShape.circle,
+                      border: Border.all(color: chosen ? const Color(0xFF8BE044) : const Color(0xFFD7B66D), width: chosen ? 2.5 : 1.2)),
+                    child: CircleAvatar(radius: 19, backgroundColor: const Color(0xFF49365F),
+                      backgroundImage: avatar.startsWith('https://') ? NetworkImage(avatar) : null,
+                      child: avatar.startsWith('https://') ? null : const Icon(Icons.person, color: Colors.white, size: 20)),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(label, maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: chosen ? const Color(0xFF9BE85A) : const Color(0xFFF3E8D0), fontSize: 9, fontWeight: FontWeight.w600)),
+                ]),
+              ),
+            ),
+          );
+        }
+
+        return SafeArea(child: SizedBox(
+          height: MediaQuery.of(context).size.height * .88,
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(12, 10, 12, MediaQuery.of(context).viewInsets.bottom + 10),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              // Top recipient strip: Mic All, occupied seats, Profile. No Home All button.
+              Row(children: [
+                InkWell(onTap: () => refresh(() {
+                  if (selectedRecipients.length == recipientMembers.length) { selectedRecipients.clear(); }
+                  else { selectedRecipients..clear()..addAll(recipientMembers.map((m) => '${m['public_uid']}')); }
+                }), child: Container(padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8), decoration: BoxDecoration(color: const Color(0xFF332641), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFD7B66D))), child: const Column(children: [Icon(Icons.mic, color: Color(0xFFF5D58E), size: 19), Text('Mic All', style: TextStyle(color: Colors.white, fontSize: 9))]))),
+                const SizedBox(width: 8),
+                Expanded(child: SizedBox(height: 62, child: ListView(scrollDirection: Axis.horizontal, children: recipientMembers.map(recipientChip).toList()))),
+                IconButton(tooltip: 'Profile', onPressed: () {}, icon: const Icon(Icons.account_circle_outlined, color: Color(0xFFF5D58E), size: 28)),
+                IconButton(onPressed: () => Navigator.pop(sheetContext), icon: const Icon(Icons.close, color: Colors.white70)),
+              ]),
+              const SizedBox(height: 5),
+              Row(children: [
+                Text('LV $myLevel', style: const TextStyle(color: Color(0xFFF5D58E), fontWeight: FontWeight.bold, fontSize: 11)),
+                const SizedBox(width: 9),
+                Expanded(child: ClipRRect(borderRadius: BorderRadius.circular(8), child: const LinearProgressIndicator(value: .62, minHeight: 6, backgroundColor: Color(0xFF40334D), color: Color(0xFFD7B66D)))),
+                Text('Details', style: TextStyle(color: Colors.amber.shade100, fontSize: 10)),
+              ]),
+              const SizedBox(height: 10),
+              // Fixed category row.
+              Row(children: categories.map((c) => Expanded(child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                child: InkWell(onTap: () => refresh(() { selectedCategory = c; selectedGift = null; }), child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 9),
+                  decoration: BoxDecoration(color: selectedCategory == c ? const Color(0xFF59412D) : const Color(0xFF292137), borderRadius: BorderRadius.circular(10), border: Border.all(color: selectedCategory == c ? const Color(0xFFD7B66D) : Colors.white10)),
+                  child: Text(c, textAlign: TextAlign.center, style: TextStyle(color: selectedCategory == c ? const Color(0xFFFFE3A5) : Colors.white70, fontWeight: FontWeight.bold, fontSize: 10)),
+                )),
+              ))).toList()),
+              const SizedBox(height: 8),
+              Row(children: [
+                const Expanded(child: Text('Gift Catalogue', style: TextStyle(color: Color(0xFFF4E8D2), fontWeight: FontWeight.bold, fontSize: 13))),
+                IconButton(onPressed: () {}, icon: const Icon(Icons.search, color: Color(0xFFD7B66D), size: 20)),
+                IconButton(onPressed: () {}, icon: const Icon(Icons.shopping_bag_outlined, color: Color(0xFFD7B66D), size: 20)),
+                IconButton(onPressed: () => refresh(() { filtered.sort((a,b) => (int.tryParse('${a['coin_price']}') ?? 0).compareTo(int.tryParse('${b['coin_price']}') ?? 0)); }), icon: const Icon(Icons.sort, color: Color(0xFFD7B66D), size: 20)),
+              ]),
+              // Only this catalogue region scrolls; header and bottom bar stay fixed.
+              Expanded(child: filtered.isEmpty
+                ? const Center(child: Text('No gifts in this category yet', style: TextStyle(color: Colors.white60)))
+                : GridView.builder(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 4, crossAxisSpacing: 8, mainAxisSpacing: 8, childAspectRatio: .76),
+                    itemCount: filtered.length,
+                    itemBuilder: (_, i) {
+                      final gift = filtered[i];
+                      final chosen = selectedGift?['id']?.toString() == gift['id']?.toString();
+                      final image = '${gift['image_url'] ?? ''}';
+                      final price = int.tryParse('${gift['coin_price']}') ?? 0;
+                      return InkWell(onTap: () => refresh(() => selectedGift = gift), child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(color: chosen ? const Color(0xFF3B3040) : const Color(0xFF292137), borderRadius: BorderRadius.circular(12), border: Border.all(color: chosen ? const Color(0xFF8BE044) : const Color(0xFF59452F), width: chosen ? 2.2 : 1)),
+                        child: Column(children: [
+                          Expanded(child: image.startsWith('https://') ? Image.network(image, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Icon(Icons.card_giftcard, color: Color(0xFFD7B66D), size: 34)) : const Icon(Icons.card_giftcard, color: Color(0xFFD7B66D), size: 34)),
+                          Text('${gift['name'] ?? 'Gift'}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 9)),
+                          Text('$price', style: const TextStyle(color: Color(0xFFF5D58E), fontSize: 10, fontWeight: FontWeight.bold)),
+                        ]),
+                      ));
+                    },
+                  )),
+              const Divider(color: Color(0xFF59452F), height: 10),
+              // Fixed bottom bar: coins left, quantity and send right.
+              Row(children: [
+                Expanded(child: Row(children: [const Icon(Icons.monetization_on, color: Color(0xFFF5D58E), size: 20), const SizedBox(width: 4), Flexible(child: Text('$myCoins', overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFFFFE3A5), fontWeight: FontWeight.bold, fontSize: 12))), IconButton(onPressed: () {}, icon: const Icon(Icons.add_circle_outline, color: Color(0xFFD7B66D), size: 18), padding: EdgeInsets.zero, constraints: const BoxConstraints(minWidth: 26, minHeight: 28))])),
+                Container(padding: const EdgeInsets.symmetric(horizontal: 5), decoration: BoxDecoration(color: const Color(0xFF302541), borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFFD7B66D))), child: DropdownButtonHideUnderline(child: DropdownButton<int>(value: quantity, dropdownColor: const Color(0xFF302541), style: const TextStyle(color: Colors.white, fontSize: 12), items: [1, 5, 7, 10, 17, 20, 50, 100, 177].map((n) => DropdownMenuItem(value: n, child: Text('$n'))).toList(), onChanged: (v) => refresh(() => quantity = v ?? 1)))),
+                const SizedBox(width: 8),
+                ElevatedButton(onPressed: sending || selectedGift == null || selectedRecipients.isEmpty ? null : () async {
+                  refresh(() => sending = true);
+                  try {
+                    final result = await api.sendRoomGift(widget.token, giftId: '${selectedGift!['id']}', roomId: widget.roomId, receiverUids: selectedRecipients.toList(), quantity: quantity, idempotencyKey: 'gift-${DateTime.now().microsecondsSinceEpoch}');
+                    if (!mounted) return;
+                    Navigator.pop(sheetContext);
+                    final spent = result['total_debit'] ?? total;
+                    _roomMessage('Gift sent successfully! $spent Coins used.');
+                    _pollRoomGiftEvents();
+                  } catch (e) {
+                    refresh(() => sending = false);
+                    _roomMessage(e.toString().replaceFirst('Exception: ', ''));
+                  }
+                }, style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF83D63C), foregroundColor: const Color(0xFF18220F), disabledBackgroundColor: Colors.white12, padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11))), child: Text(sending ? 'Sending…' : 'SEND', style: const TextStyle(fontWeight: FontWeight.w900, letterSpacing: .5))),
+              ]),
+              if (selectedGift != null) Padding(padding: const EdgeInsets.only(top: 4), child: Text('Selected: ${selectedGift!['name']} · $total coins · $selectedCount recipient(s)', style: const TextStyle(color: Color(0xFFD7B66D), fontSize: 9))),
+            ]),
+          ),
         ));
       }),
     );
