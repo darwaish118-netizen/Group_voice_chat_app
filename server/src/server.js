@@ -7,7 +7,7 @@ const jwt = require("jsonwebtoken");
 const { Pool } = require("pg");
 const { v4: uuidv4 } = require("uuid");
 const crypto = require("crypto");
-const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+const { S3Client, PutObjectCommand, GetObjectCommand } = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 
 function containsRestrictedMindoName(value) {
@@ -1611,20 +1611,15 @@ app.put("/api/admin/gift-categories/:category/settings", authMiddleware, adminMi
   } finally { client.release(); }
 });
 
-// Cloudflare R2 direct-to-storage gift upload. Credentials remain server-side;
-// the browser receives a short-lived, single-object PUT URL only.
+// Private Cloudflare R2 gift media. Object keys are stored in PostgreSQL as r2://<key>.
+// The bucket stays private; only authenticated API responses receive short-lived GET URLs.
 const r2Client = (() => {
   const accountId = process.env.R2_ACCOUNT_ID;
   const accessKeyId = process.env.R2_ACCESS_KEY_ID;
   const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
   if (!accountId || !accessKeyId || !secretAccessKey) return null;
-  return new S3Client({
-    region: "auto",
-    endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
-    credentials: { accessKeyId, secretAccessKey },
-  });
+  return new S3Client({ region: "auto", endpoint: `https://${accountId}.r2.cloudflarestorage.com`, credentials: { accessKeyId, secretAccessKey } });
 })();
-
 const GIFT_MEDIA_TYPES = {
   gift_picture: { extensions: ["png", "jpg", "jpeg", "webp"], contentTypes: ["image/png", "image/jpeg", "image/webp"] },
   gift_gif: { extensions: ["gif"], contentTypes: ["image/gif"] },
@@ -1632,38 +1627,41 @@ const GIFT_MEDIA_TYPES = {
   gift_mp4: { extensions: ["mp4"], contentTypes: ["video/mp4"] },
   gift_mp3: { extensions: ["mp3"], contentTypes: ["audio/mpeg", "audio/mp3"] },
 };
-
+function isR2GiftKey(value) { return typeof value === "string" && value.startsWith("r2://") && value.length > 5; }
+async function resolveGiftMediaUrl(value) {
+  if (!isR2GiftKey(value)) return value || null; // keep legacy Cloudinary/external assets working
+  if (!r2Client || !process.env.R2_BUCKET_NAME) throw new Error("Private R2 storage is not configured");
+  const key = value.slice(5);
+  return getSignedUrl(r2Client, new GetObjectCommand({ Bucket: process.env.R2_BUCKET_NAME, Key: key }), { expiresIn: 300 });
+}
+async function resolveGiftRows(rows) {
+  return Promise.all(rows.map(async row => ({
+    ...row,
+    image_url: await resolveGiftMediaUrl(row.image_url),
+    svga_url: await resolveGiftMediaUrl(row.svga_url),
+    gif_url: await resolveGiftMediaUrl(row.gif_url),
+    mp4_url: await resolveGiftMediaUrl(row.mp4_url),
+    mp3_url: await resolveGiftMediaUrl(row.mp3_url),
+  })));
+}
 app.post("/api/r2/gift-upload-url", authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const bucket = process.env.R2_BUCKET_NAME;
-    const publicBaseUrl = String(process.env.R2_PUBLIC_BASE_URL || "").replace(/\/+$/, "");
-    if (!r2Client || !bucket || !publicBaseUrl) {
-      return res.status(503).json({ message: "R2 is not configured. Set R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME and R2_PUBLIC_BASE_URL on the server." });
-    }
-    const kind = String(req.body.kind || "");
-    const config = GIFT_MEDIA_TYPES[kind];
+    if (!r2Client || !bucket) return res.status(503).json({ message: "Private R2 is not configured. Check R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY and R2_BUCKET_NAME." });
+    const kind = String(req.body.kind || ""); const config = GIFT_MEDIA_TYPES[kind];
     if (!config) return res.status(400).json({ message: "Unsupported gift media type" });
     const filename = String(req.body.filename || "").trim();
     const extension = filename.includes(".") ? filename.split(".").pop().toLowerCase() : "";
-    const contentType = String(req.body.content_type || "").toLowerCase();
-    const size = Number(req.body.size);
-    if (!config.extensions.includes(extension) || !config.contentTypes.includes(contentType)) {
-      return res.status(400).json({ message: "File extension or content type does not match the selected gift media field" });
-    }
-    if (!Number.isSafeInteger(size) || size <= 0 || size > 100 * 1024 * 1024) {
-      return res.status(400).json({ message: "Gift media must be between 1 byte and 100 MB" });
-    }
+    const contentType = String(req.body.content_type || "").toLowerCase(); const size = Number(req.body.size);
+    if (!config.extensions.includes(extension) || !config.contentTypes.includes(contentType)) return res.status(400).json({ message: "File extension or content type does not match the selected gift media field" });
+    if (!Number.isSafeInteger(size) || size <= 0 || size > 100 * 1024 * 1024) return res.status(400).json({ message: "Gift media must be between 1 byte and 100 MB" });
     const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-100) || `gift.${extension}`;
     const key = `mindo-voice-chat/gifts/${Date.now()}-${crypto.randomUUID()}-${safeName}`;
     const command = new PutObjectCommand({ Bucket: bucket, Key: key, ContentType: contentType });
     const uploadUrl = await getSignedUrl(r2Client, command, { expiresIn: 300 });
-    const publicUrl = `${publicBaseUrl}/${key.split("/").map(encodeURIComponent).join("/")}`;
-    console.info("R2 gift upload URL issued", { kind, admin_id: req.user.id, bytes: size });
-    res.json({ upload_url: uploadUrl, public_url: publicUrl, key, method: "PUT", content_type: contentType, expires_in: 300 });
-  } catch (error) {
-    console.error("R2 gift upload URL failed:", error);
-    res.status(500).json({ message: "Could not prepare R2 gift upload" });
-  }
+    console.info("Private R2 gift upload URL issued", { kind, admin_id: req.user.id, bytes: size });
+    res.json({ upload_url: uploadUrl, media_key: `r2://${key}`, method: "PUT", content_type: contentType, expires_in: 300 });
+  } catch (error) { console.error("R2 gift upload URL failed:", error); res.status(500).json({ message: "Could not prepare private R2 upload" }); }
 });
 
 // Main Admin-only coin issuance and audited test-wallet adjustments.
@@ -1708,7 +1706,7 @@ app.get("/api/gifts/catalog", authMiddleware, async (req, res) => {
       `SELECT id, code, name, image_url, svga_url, gif_url, mp4_url, mp3_url, coin_price, category, target_counting_percentage, host_diamond_percentage
        FROM gift_catalog WHERE active = TRUE ORDER BY sort_order, name`
     );
-    res.json({ gifts: result.rows });
+    res.json({ gifts: await resolveGiftRows(result.rows) });
   } catch (error) {
     console.error("Gift catalog failed:", error);
     res.status(500).json({ message: "Could not load gift catalog" });
@@ -1759,7 +1757,7 @@ app.get("/api/admin/gifts", authMiddleware, adminMiddleware, async (req, res) =>
        FROM gift_catalog ORDER BY category, sort_order, name`
     );
     const categories = [...new Set(result.rows.map(row => row.category).filter(Boolean))];
-    res.json({ gifts: result.rows, categories });
+    res.json({ gifts: await resolveGiftRows(result.rows), categories });
   } catch (error) {
     console.error("Admin gift list failed:", error);
     res.status(500).json({ message: "Could not load admin gift catalogue" });
