@@ -7753,8 +7753,15 @@ void initState() {
       }
     }
 
-    const categories = <String>['General', 'CP Gift', 'pk Gift', 'VIP'];
-    String selectedCategory = 'General';
+    // Categories are sourced from active gifts created in the Admin Dashboard.
+    final categories = gifts
+        .map((raw) => '${(raw as Map)['category'] ?? ''}'.trim())
+        .where((name) => name.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    if (categories.isEmpty) categories.add('General');
+    String selectedCategory = categories.first;
     Map<String, dynamic>? selectedGift;
     final selectedRecipients = <String>{};
     int quantity = 1;
@@ -7817,7 +7824,7 @@ void initState() {
         }
 
         return SafeArea(child: SizedBox(
-          height: MediaQuery.of(context).size.height * .88,
+          height: MediaQuery.of(context).size.height * .56,
           child: Padding(
             padding: EdgeInsets.fromLTRB(12, 10, 12, MediaQuery.of(context).viewInsets.bottom + 10),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -7850,13 +7857,8 @@ void initState() {
                 )),
               ))).toList()),
               const SizedBox(height: 8),
-              Row(children: [
-                const Expanded(child: Text('Gift Catalogue', style: TextStyle(color: Color(0xFFF4E8D2), fontWeight: FontWeight.bold, fontSize: 13))),
-                IconButton(onPressed: () {}, icon: const Icon(Icons.search, color: Color(0xFFD7B66D), size: 20)),
-                IconButton(onPressed: () {}, icon: const Icon(Icons.shopping_bag_outlined, color: Color(0xFFD7B66D), size: 20)),
-                IconButton(onPressed: () => refresh(() { filtered.sort((a,b) => (int.tryParse('${a['coin_price']}') ?? 0).compareTo(int.tryParse('${b['coin_price']}') ?? 0)); }), icon: const Icon(Icons.sort, color: Color(0xFFD7B66D), size: 20)),
-              ]),
-              // Only this catalogue region scrolls; header and bottom bar stay fixed.
+              // Gift Catalogue heading and its toolbar are intentionally removed.
+              // Only the gift grid scrolls; room remains visible above this half-sheet.
               Expanded(child: filtered.isEmpty
                 ? const Center(child: Text('No gifts in this category yet', style: TextStyle(color: Colors.white60)))
                 : GridView.builder(
