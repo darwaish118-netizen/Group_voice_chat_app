@@ -7,6 +7,8 @@ const jwt = require("jsonwebtoken");
 const { Pool } = require("pg");
 const { v4: uuidv4 } = require("uuid");
 const crypto = require("crypto");
+const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 
 function containsRestrictedMindoName(value) {
   if (typeof value !== "string") return false;
@@ -1609,21 +1611,59 @@ app.put("/api/admin/gift-categories/:category/settings", authMiddleware, adminMi
   } finally { client.release(); }
 });
 
-app.post("/api/cloudinary/gift-upload-signature", authMiddleware, adminMiddleware, async (req, res) => {
-  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
-  const apiKey = process.env.CLOUDINARY_API_KEY;
-  const apiSecret = process.env.CLOUDINARY_API_SECRET;
-  if (!cloudName || !apiKey || !apiSecret) { console.error("Gift upload signature unavailable: Cloudinary environment variables missing"); return res.status(503).json({ message: "Cloudinary is not configured" }); }
-  const kind = String(req.body.kind || "");
-  const resourceType = kind === "gift_picture" || kind === "gift_gif" ? "image" : kind === "gift_svga" ? "raw" : kind === "gift_mp4" || kind === "gift_mp3" ? "video" : null;
-  if (!resourceType) { console.warn("Gift upload signature rejected unsupported kind:", kind); return res.status(400).json({ message: "Invalid gift media type" }); }
-  const timestamp = Math.floor(Date.now() / 1000);
-  const folder = "mindo-voice-chat/gifts";
-  const params = { folder, timestamp };
-  const toSign = Object.keys(params).sort().map(key => `${key}=${params[key]}`).join("&");
-  const signature = crypto.createHash("sha1").update(toSign + apiSecret).digest("hex");
-  console.info("Gift upload signature issued", { kind, resource_type: resourceType, admin_id: req.user.id });
-  res.json({ cloud_name: cloudName, api_key: apiKey, timestamp, folder, signature, resource_type: resourceType });
+// Cloudflare R2 direct-to-storage gift upload. Credentials remain server-side;
+// the browser receives a short-lived, single-object PUT URL only.
+const r2Client = (() => {
+  const accountId = process.env.R2_ACCOUNT_ID;
+  const accessKeyId = process.env.R2_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
+  if (!accountId || !accessKeyId || !secretAccessKey) return null;
+  return new S3Client({
+    region: "auto",
+    endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+    credentials: { accessKeyId, secretAccessKey },
+  });
+})();
+
+const GIFT_MEDIA_TYPES = {
+  gift_picture: { extensions: ["png", "jpg", "jpeg", "webp"], contentTypes: ["image/png", "image/jpeg", "image/webp"] },
+  gift_gif: { extensions: ["gif"], contentTypes: ["image/gif"] },
+  gift_svga: { extensions: ["svga"], contentTypes: ["application/octet-stream", "application/x-svga"] },
+  gift_mp4: { extensions: ["mp4"], contentTypes: ["video/mp4"] },
+  gift_mp3: { extensions: ["mp3"], contentTypes: ["audio/mpeg", "audio/mp3"] },
+};
+
+app.post("/api/r2/gift-upload-url", authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const bucket = process.env.R2_BUCKET_NAME;
+    const publicBaseUrl = String(process.env.R2_PUBLIC_BASE_URL || "").replace(/\/+$/, "");
+    if (!r2Client || !bucket || !publicBaseUrl) {
+      return res.status(503).json({ message: "R2 is not configured. Set R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME and R2_PUBLIC_BASE_URL on the server." });
+    }
+    const kind = String(req.body.kind || "");
+    const config = GIFT_MEDIA_TYPES[kind];
+    if (!config) return res.status(400).json({ message: "Unsupported gift media type" });
+    const filename = String(req.body.filename || "").trim();
+    const extension = filename.includes(".") ? filename.split(".").pop().toLowerCase() : "";
+    const contentType = String(req.body.content_type || "").toLowerCase();
+    const size = Number(req.body.size);
+    if (!config.extensions.includes(extension) || !config.contentTypes.includes(contentType)) {
+      return res.status(400).json({ message: "File extension or content type does not match the selected gift media field" });
+    }
+    if (!Number.isSafeInteger(size) || size <= 0 || size > 100 * 1024 * 1024) {
+      return res.status(400).json({ message: "Gift media must be between 1 byte and 100 MB" });
+    }
+    const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-100) || `gift.${extension}`;
+    const key = `mindo-voice-chat/gifts/${Date.now()}-${crypto.randomUUID()}-${safeName}`;
+    const command = new PutObjectCommand({ Bucket: bucket, Key: key, ContentType: contentType });
+    const uploadUrl = await getSignedUrl(r2Client, command, { expiresIn: 300 });
+    const publicUrl = `${publicBaseUrl}/${key.split("/").map(encodeURIComponent).join("/")}`;
+    console.info("R2 gift upload URL issued", { kind, admin_id: req.user.id, bytes: size });
+    res.json({ upload_url: uploadUrl, public_url: publicUrl, key, method: "PUT", content_type: contentType, expires_in: 300 });
+  } catch (error) {
+    console.error("R2 gift upload URL failed:", error);
+    res.status(500).json({ message: "Could not prepare R2 gift upload" });
+  }
 });
 
 // Main Admin-only coin issuance and audited test-wallet adjustments.
