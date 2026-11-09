@@ -226,15 +226,11 @@ function drawCategoryGiftRows(){let el=document.getElementById("categoryGiftRows
 async function addServerGiftCategory(){let name=prompt("New gift category name");if(!name||!name.trim())return;let n=name.trim();if(categoryNames().some(x=>x.toLowerCase()===n.toLowerCase())){alert("Category already exists.");return}try{await giftApiRequest("/api/admin/gift-categories",{method:"POST",body:JSON.stringify({category:n})});await loadLiveGifts();await loadGiftCategorySettings();selectGiftCategory(n)}catch(e){giftApiStatus(e.message,true)}}
 async function uploadGiftMedia(file,kind){
  if(!file)return null;
- const sig=await giftApiRequest("/api/cloudinary/gift-upload-signature",{method:"POST",body:JSON.stringify({kind})});
- if(!sig?.cloud_name||!sig?.api_key||!sig?.timestamp||!sig?.signature||!sig?.resource_type)throw new Error("Server returned an incomplete Cloudinary upload signature.");
- const form=new FormData();form.append("file",file);form.append("api_key",sig.api_key);form.append("timestamp",String(sig.timestamp));form.append("folder",sig.folder);form.append("signature",sig.signature);
- const endpoint=`https://api.cloudinary.com/v1_1/${encodeURIComponent(sig.cloud_name)}/${encodeURIComponent(sig.resource_type)}/upload`;
- let response;try{response=await fetch(endpoint,{method:"POST",body:form})}catch(e){throw new Error("Cloudinary network/CORS request failed: "+(e?.message||"network error"))}
- const raw=await response.text();let result={};try{result=raw?JSON.parse(raw):{}}catch(_){throw new Error(`Cloudinary returned non-JSON response (HTTP ${response.status}).`)}
- if(!response.ok)throw new Error(`Cloudinary upload failed (HTTP ${response.status}): ${result.error?.message||"unknown provider error"}`);
- if(!result.secure_url)throw new Error("Cloudinary upload response did not contain secure_url.");
- return result.secure_url;
+ const signed=await giftApiRequest("/api/r2/gift-upload-url",{method:"POST",body:JSON.stringify({kind,filename:file.name,content_type:file.type||({gift_svga:"application/octet-stream",gift_mp3:"audio/mpeg"}[kind]||"application/octet-stream"),size:file.size})});
+ if(!signed?.upload_url||!signed?.public_url||signed.method!=="PUT")throw new Error("Server returned an incomplete R2 upload URL.");
+ let response;try{response=await fetch(signed.upload_url,{method:"PUT",headers:{"Content-Type":signed.content_type},body:file})}catch(e){throw new Error("Cloudflare R2 upload network/CORS failed: "+(e?.message||"network error"))}
+ if(!response.ok){const detail=await response.text().catch(()=>"");throw new Error(`Cloudflare R2 upload failed (HTTP ${response.status})${detail?": "+detail.slice(0,240):""}`)}
+ return signed.public_url;
 }
 async function loadGiftCategorySettings(){try{let data=await giftApiRequest("/api/admin/gift-categories");giftCategoryData=(data.categories||[]).map(x=>({id:x.category,name:x.category,targetWeight:Number(x.target_counting_percent),diamondPercent:Number(x.host_diamond_percent),active:true}));drawGiftCategoryTiles();if(!selectedGiftCategory&&giftCategoryData.length)selectGiftCategory(giftCategoryData[0].name)}catch(e){giftApiStatus(e.message,true)}}
 async function saveCategoryGift(){
