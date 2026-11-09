@@ -2,13 +2,15 @@
   "name": "group-voice-chat-server",
   "version": "1.0.0",
   "private": true,
-  "description": "Backend API for Group Voice Chat App",
+  "description": "Backend API for MINDO Voice Chat",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.900.0",
+    "@aws-sdk/s3-request-presigner": "^3.900.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
