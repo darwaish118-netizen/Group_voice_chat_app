@@ -1644,25 +1644,54 @@ async function resolveGiftRows(rows) {
     mp3_url: await resolveGiftMediaUrl(row.mp3_url),
   })));
 }
-app.post("/api/r2/gift-upload-url", authMiddleware, adminMiddleware, async (req, res) => {
-  try {
-    const bucket = process.env.R2_BUCKET_NAME;
-    if (!r2Client || !bucket) return res.status(503).json({ message: "Private R2 is not configured. Check R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY and R2_BUCKET_NAME." });
-    const kind = String(req.body.kind || ""); const config = GIFT_MEDIA_TYPES[kind];
-    if (!config) return res.status(400).json({ message: "Unsupported gift media type" });
-    const filename = String(req.body.filename || "").trim();
-    const extension = filename.includes(".") ? filename.split(".").pop().toLowerCase() : "";
-    const contentType = String(req.body.content_type || "").toLowerCase(); const size = Number(req.body.size);
-    if (!config.extensions.includes(extension) || !config.contentTypes.includes(contentType)) return res.status(400).json({ message: "File extension or content type does not match the selected gift media field" });
-    if (!Number.isSafeInteger(size) || size <= 0 || size > 100 * 1024 * 1024) return res.status(400).json({ message: "Gift media must be between 1 byte and 100 MB" });
-    const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-100) || `gift.${extension}`;
-    const key = `mindo-voice-chat/gifts/${Date.now()}-${crypto.randomUUID()}-${safeName}`;
-    const command = new PutObjectCommand({ Bucket: bucket, Key: key, ContentType: contentType });
-    const uploadUrl = await getSignedUrl(r2Client, command, { expiresIn: 300 });
-    console.info("Private R2 gift upload URL issued", { kind, admin_id: req.user.id, bytes: size });
-    res.json({ upload_url: uploadUrl, media_key: `r2://${key}`, method: "PUT", content_type: contentType, expires_in: 300 });
-  } catch (error) { console.error("R2 gift upload URL failed:", error); res.status(500).json({ message: "Could not prepare private R2 upload" }); }
-});
+// Admin uploads gift bytes through this API. The browser never talks directly to R2,
+// so gift uploads do not depend on bucket CORS or public bucket access.
+app.post(
+  "/api/r2/gift-upload",
+  authMiddleware,
+  adminMiddleware,
+  express.raw({ type: "application/octet-stream", limit: "100mb" }),
+  async (req, res) => {
+    try {
+      const bucket = process.env.R2_BUCKET_NAME;
+      if (!r2Client || !bucket) {
+        return res.status(503).json({ message: "Private R2 is not configured. Check R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY and R2_BUCKET_NAME." });
+      }
+      if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
+        return res.status(400).json({ message: "No gift media file was received by the server" });
+      }
+      const kind = String(req.query.kind || "");
+      const config = GIFT_MEDIA_TYPES[kind];
+      if (!config) return res.status(400).json({ message: "Unsupported gift media type" });
+      const filename = String(req.query.filename || "gift").trim();
+      const extension = filename.includes(".") ? filename.split(".").pop().toLowerCase() : "";
+      if (!config.extensions.includes(extension)) {
+        return res.status(400).json({ message: "File extension does not match the selected gift media field" });
+      }
+      const size = req.body.length;
+      if (size > 100 * 1024 * 1024) return res.status(413).json({ message: "Gift media must not exceed 100 MB" });
+      const contentTypeByExtension = {
+        png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "image/webp",
+        gif: "image/gif", svga: "application/octet-stream", mp4: "video/mp4", mp3: "audio/mpeg"
+      };
+      const contentType = contentTypeByExtension[extension];
+      const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-100) || `gift.${extension}`;
+      const key = `mindo-voice-chat/gifts/${Date.now()}-${crypto.randomUUID()}-${safeName}`;
+      await r2Client.send(new PutObjectCommand({
+        Bucket: bucket,
+        Key: key,
+        Body: req.body,
+        ContentLength: size,
+        ContentType: contentType,
+      }));
+      console.info("Private R2 gift media uploaded", { kind, admin_id: req.user.id, bytes: size, key });
+      return res.status(201).json({ media_key: `r2://${key}`, size, content_type: contentType });
+    } catch (error) {
+      console.error("Private R2 gift media upload failed:", error);
+      return res.status(500).json({ message: "Server could not store gift media in private R2" });
+    }
+  }
+);
 
 // Main Admin-only coin issuance and audited test-wallet adjustments.
 app.get("/api/admin/coin-users", authMiddleware, mainAdminMiddleware, async (req, res) => {
