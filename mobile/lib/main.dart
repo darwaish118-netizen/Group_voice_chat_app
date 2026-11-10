@@ -10,6 +10,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_svga_easyplayer/flutter_svga_easyplayer.dart';
+import 'package:video_player/video_player.dart';
 
 const String apiBaseUrl =
     'https://mindo-voice-chat-server.onrender.com';
@@ -7198,6 +7199,52 @@ _selectedRoomImage = image;
 // VOICE ROOM UI
 // ============================================================
 
+class RoomGiftAnimation extends StatefulWidget {
+  final Map<String, dynamic> event;
+  const RoomGiftAnimation({super.key, required this.event});
+  @override
+  State<RoomGiftAnimation> createState() => _RoomGiftAnimationState();
+}
+
+class _RoomGiftAnimationState extends State<RoomGiftAnimation> {
+  VideoPlayerController? _video;
+  bool _failed = false;
+  @override
+  void initState() { super.initState(); _initVideo(); }
+  Future<void> _initVideo() async {
+    final url='${widget.event['mp4_url'] ?? ''}'.trim();
+    if (!url.startsWith('https://')) return;
+    final c=VideoPlayerController.networkUrl(Uri.parse(url)); _video=c;
+    try {
+      await c.initialize();
+      if (!mounted) return;
+      final duration=c.value.duration;
+      final speed=duration.inMilliseconds>15000 ? duration.inMilliseconds/15000.0 : 1.0;
+      await c.setPlaybackSpeed(speed);
+      await c.setLooping(false); await c.setVolume(0); await c.play();
+      if (mounted) setState(() {});
+    } catch (_) { if (mounted) setState(()=>_failed=true); }
+  }
+  @override
+  void dispose(){_video?.dispose();super.dispose();}
+  @override
+  Widget build(BuildContext context){
+    final mp4='${widget.event['mp4_url'] ?? ''}'.trim();
+    final gif='${widget.event['gif_url'] ?? ''}'.trim();
+    final svga='${widget.event['svga_url'] ?? ''}'.trim();
+    final image='${widget.event['gift_image'] ?? ''}'.trim();
+    if(mp4.startsWith('https://')){
+      final c=_video;
+      if(c!=null && c.value.isInitialized && !_failed) return FittedBox(fit:BoxFit.contain,child:SizedBox(width:c.value.size.width,height:c.value.size.height,child:VideoPlayer(c)));
+      if(!_failed)return const Center(child:CircularProgressIndicator(strokeWidth:2,color:Color(0xFFFFD36A)));
+    }
+    if(gif.startsWith('https://')) return Image.network(gif,width:88,height:88,fit:BoxFit.contain,errorBuilder:(_,__,___)=>const Icon(Icons.card_giftcard,color:Color(0xFFFFD36A),size:38));
+    if(svga.startsWith('https://')) return SVGAEasyPlayer(resUrl:svga,loops:0,isMute:true,fit:BoxFit.contain);
+    if(image.startsWith('https://')) return Image.network(image,width:88,height:88,fit:BoxFit.contain,errorBuilder:(_,__,___)=>const Icon(Icons.card_giftcard,color:Color(0xFFFFD36A),size:38));
+    return const Icon(Icons.card_giftcard,color:Color(0xFFFFD36A),size:38);
+  }
+}
+
 class VoiceRoomScreen
     extends StatefulWidget {
   final String roomId;
@@ -7601,7 +7648,7 @@ void initState() {
     _giftOverlayTimer?.cancel();
     setState(() => _activeGiftEvent = event);
     _playRoomGiftSound(event);
-    _giftOverlayTimer = Timer(const Duration(seconds: 4), () {
+    _giftOverlayTimer = Timer(const Duration(seconds: 15), () {
       if (!mounted) return;
       setState(() => _activeGiftEvent = null);
       if (_giftEventQueue.isNotEmpty) _showNextRoomGiftEvent();
@@ -8578,28 +8625,7 @@ Container(
                       SizedBox(
                         width: 88,
                         height: 88,
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            if ('${_activeGiftEvent!['svga_url'] ?? ''}'.startsWith('https://'))
-                              SVGAEasyPlayer(
-                                resUrl: '${_activeGiftEvent!['svga_url']}',
-                                loops: 0,
-                                isMute: true,
-                                fit: BoxFit.contain,
-                              )
-                            else if ('${_activeGiftEvent!['gift_image'] ?? ''}'.startsWith('https://'))
-                              Image.network(
-                                '${_activeGiftEvent!['gift_image']}',
-                                width: 72,
-                                height: 72,
-                                fit: BoxFit.contain,
-                                errorBuilder: (_, __, ___) => const Icon(Icons.card_giftcard, color: Color(0xFFFFD36A), size: 38),
-                              )
-                            else
-                              const Icon(Icons.card_giftcard, color: Color(0xFFFFD36A), size: 38),
-                          ],
-                        ),
+                        child: RoomGiftAnimation(event: _activeGiftEvent!),
                       ),
                       const SizedBox(width: 10),
                       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
