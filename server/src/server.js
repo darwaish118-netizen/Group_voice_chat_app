@@ -2018,7 +2018,15 @@ app.get("/api/rooms/:roomId/gifts/events", authMiddleware, async (req, res) => {
        LIMIT 30`,
       [roomId]
     );
-    res.json({ events: result.rows });
+    const events = await Promise.all(result.rows.map(async row => ({
+      ...row,
+      gift_image: await resolveGiftMediaUrl(row.gift_image),
+      svga_url: await resolveGiftMediaUrl(row.svga_url),
+      gif_url: await resolveGiftMediaUrl(row.gif_url),
+      mp4_url: await resolveGiftMediaUrl(row.mp4_url),
+      mp3_url: await resolveGiftMediaUrl(row.mp3_url),
+    })));
+    res.json({ events });
   } catch (error) {
     console.error("Room gift events failed:", error);
     res.status(500).json({ message: "Could not load room gift events" });
