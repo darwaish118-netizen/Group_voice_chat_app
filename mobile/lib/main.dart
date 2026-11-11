@@ -410,14 +410,6 @@ Future<Map<String, dynamic>> createRoom(
   }
 
     
-  Future<Map<String, dynamic>> getWalletBalance(String token) async {
-    final response = await http.get(
-      Uri.parse('$apiBaseUrl/api/wallet/balance'),
-      headers: {'Authorization': 'Bearer $token'},
-    );
-    return _handleResponse(response);
-  }
-
   // ROOM GIFTS: catalogue and secure server-side sending.
   Future<List<dynamic>> getGiftCatalog(String token) async {
     final response = await http.get(
@@ -1943,30 +1935,6 @@ final titles = const [
   Widget build(
     BuildContext context,
   ) {
-Widget _mindoNavItem(int index, IconData icon, String label) {
-  final selected = selectedIndex == index;
-  return Expanded(child: InkWell(
-    borderRadius: BorderRadius.circular(18),
-    onTap: () => setState(() => selectedIndex = index),
-    child: AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
-      margin: const EdgeInsets.symmetric(horizontal: 4),
-      padding: const EdgeInsets.symmetric(vertical: 7),
-      decoration: BoxDecoration(
-        color: selected ? const Color(0xFF6B168F).withOpacity(.55) : Colors.transparent,
-        borderRadius: BorderRadius.circular(18),
-        border: selected ? Border.all(color: const Color(0xFFFFD36A), width: 1) : null,
-        boxShadow: selected ? [BoxShadow(color: const Color(0xFFE83EAD).withOpacity(.35), blurRadius: 12)] : const [],
-      ),
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Icon(icon, color: const Color(0xFFFFD36A), size: 24),
-        const SizedBox(height: 2),
-        Text(label, maxLines: 1, style: TextStyle(color: selected ? const Color(0xFFFFE08A) : Colors.white, fontSize: 11, fontWeight: selected ? FontWeight.bold : FontWeight.w500)),
-      ]),
-    ),
-  ));
-}
-
 final pages = [
   RoomsScreen(
     token: widget.token,
@@ -2004,22 +1972,42 @@ final pages = [
         centerTitle: true,
       ),
       body: pages[selectedIndex],
-bottomNavigationBar: Container(
-  decoration: BoxDecoration(
-    color: const Color(0xFF160A27),
-    border: const Border(top: BorderSide(color: Color(0xFFFFD36A), width: 1.2)),
-    boxShadow: [BoxShadow(color: const Color(0xFFE83EAD).withOpacity(.22), blurRadius: 18, spreadRadius: 1)],
+bottomNavigationBar: NavigationBar(
+  backgroundColor: Colors.transparent,
+  surfaceTintColor: Colors.transparent,
+  indicatorColor: const Color(0xFF8E24AA).withOpacity(0.35),
+  elevation: 0,
+  selectedIndex: selectedIndex,
+        onDestinationSelected:
+            (index) {
+          setState(() {
+            selectedIndex =
+                index;
+          });
+        },
+destinations: const [
+  NavigationDestination(
+    icon: Icon(Icons.groups_outlined),
+    selectedIcon: Icon(Icons.groups),
+    label: 'Rooms',
   ),
-  child: SafeArea(top: false, child: Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-    child: Row(children: [
-      _mindoNavItem(0, Icons.groups_rounded, 'Rooms'),
-      _mindoNavItem(1, Icons.event_rounded, 'Events'),
-      _mindoNavItem(2, Icons.message_rounded, 'Messages'),
-      _mindoNavItem(3, Icons.person_rounded, 'Profile'),
-    ]),
-  )),
-),
+  NavigationDestination(
+    icon: Icon(Icons.event_outlined),
+    selectedIcon: Icon(Icons.event),
+    label: 'Events',
+  ),
+  NavigationDestination(
+    icon: Icon(Icons.message_outlined),
+    selectedIcon: Icon(Icons.message),
+    label: 'Messages',
+  ),
+  NavigationDestination(
+    icon: Icon(Icons.person_outline),
+    selectedIcon: Icon(Icons.person),
+    label: 'Profile',
+  ),
+],
+      ),
     );
   }
 }
@@ -2477,9 +2465,10 @@ try {
                 Image.network(cover, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _roomCoverFallback())
               else
                 _roomCoverFallback(),
+              DecoratedBox(decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.black.withOpacity(.38), Colors.transparent, Colors.black.withOpacity(.82)]))),
               if (countryFlag.isNotEmpty)
-                Positioned(left: 7, top: 7, child: Container(padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4), decoration: const BoxDecoration(), child: Text(countryFlag, style: const TextStyle(fontSize: 15)))),
-              Positioned(right: 7, top: 7, child: Container(padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4), decoration: const BoxDecoration(), child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.people_alt_rounded, size: 13, color: Colors.white), const SizedBox(width: 3), Text('$members', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold))]))),
+                Positioned(left: 7, top: 7, child: Container(padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4), decoration: BoxDecoration(color: Colors.black.withOpacity(.58), borderRadius: BorderRadius.circular(9)), child: Text(countryFlag, style: const TextStyle(fontSize: 15)))),
+              Positioned(right: 7, top: 7, child: Container(padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4), decoration: BoxDecoration(color: Colors.black.withOpacity(.62), borderRadius: BorderRadius.circular(9)), child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.people_alt_rounded, size: 13, color: Colors.white), const SizedBox(width: 3), Text('$members', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold))]))),
               Positioned(left: 7, right: 7, bottom: 8, child: Text(name, maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13, shadows: [Shadow(color: Colors.black, blurRadius: 5)]))),
               if (isTop)
                 Positioned(top: 0, left: 0, right: 0, child: Center(child: _uniqueRankBadge(rank))),
@@ -2559,7 +2548,7 @@ try {
                         const SizedBox(width: 8),
                         _headerAction(Icons.emoji_events_rounded, _openRanking, 'Ranking'),
                       ]),
-                      SizedBox(height: 108, child: PageView.builder(
+                      SizedBox(height: 140, child: PageView.builder(
                         controller: _bannerController,
                         itemCount: 3,
                         onPageChanged: (index) => setState(() => _bannerIndex = index),
@@ -2573,7 +2562,7 @@ try {
                           color: const Color(0xFF28103D),
                           initialValue: _selectedCountry,
                           onSelected: (value) => setState(() { _selectedCountry = value; _selectedTab = 0; }),
-                          itemBuilder: (_) => const ['All','Afghanistan','Albania','Algeria','Andorra','Angola','Antigua and Barbuda','Argentina','Armenia','Australia','Austria','Azerbaijan','Bahamas','Bahrain','Bangladesh','Barbados','Belarus','Belgium','Belize','Benin','Bhutan','Bolivia','Bosnia and Herzegovina','Botswana','Brazil','Brunei','Bulgaria','Burkina Faso','Burundi','Cambodia','Cameroon','Canada','Cape Verde','Central African Republic','Chad','Chile','China','Colombia','Comoros','Congo','Costa Rica','Croatia','Cuba','Cyprus','Czechia','Denmark','Djibouti','Dominica','Dominican Republic','DR Congo','Ecuador','Egypt','El Salvador','Equatorial Guinea','Eritrea','Estonia','Eswatini','Ethiopia','Fiji','Finland','France','Gabon','Gambia','Georgia','Germany','Ghana','Greece','Grenada','Guatemala','Guinea','Guinea-Bissau','Guyana','Haiti','Honduras','Hungary','Iceland','India','Indonesia','Iran','Iraq','Ireland','Israel','Italy','Jamaica','Japan','Jordan','Kazakhstan','Kenya','Kiribati','Kosovo','Kuwait','Kyrgyzstan','Laos','Latvia','Lebanon','Lesotho','Liberia','Libya','Liechtenstein','Lithuania','Luxembourg','Madagascar','Malawi','Malaysia','Maldives','Mali','Malta','Marshall Islands','Mauritania','Mauritius','Mexico','Micronesia','Moldova','Monaco','Mongolia','Montenegro','Morocco','Mozambique','Myanmar','Namibia','Nauru','Nepal','Netherlands','New Zealand','Nicaragua','Niger','Nigeria','North Korea','North Macedonia','Norway','Oman','Pakistan','Palau','Palestine','Panama','Papua New Guinea','Paraguay','Peru','Philippines','Poland','Portugal','Qatar','Romania','Russia','Rwanda','Saint Kitts and Nevis','Saint Lucia','Saint Vincent and the Grenadines','Samoa','San Marino','Sao Tome and Principe','Saudi Arabia','Senegal','Serbia','Seychelles','Sierra Leone','Singapore','Slovakia','Slovenia','Solomon Islands','Somalia','South Africa','South Korea','South Sudan','Spain','Sri Lanka','Sudan','Suriname','Sweden','Switzerland','Syria','Taiwan','Tajikistan','Tanzania','Thailand','Timor-Leste','Togo','Tonga','Trinidad and Tobago','Tunisia','Turkey','Turkmenistan','Tuvalu','Uganda','Ukraine','United Arab Emirates','United Kingdom','United States','Uruguay','Uzbekistan','Vanuatu','Vatican City','Venezuela','Vietnam','Yemen','Zambia','Zimbabwe'].map((c) => PopupMenuItem(value: c, child: Text(c, style: const TextStyle(color: Colors.white)))).toList(),
+                          itemBuilder: (_) => ['All', 'Pakistan', 'India', 'United Arab Emirates', 'Saudi Arabia', 'Bangladesh', 'United Kingdom', 'United States', 'Germany'].map((c) => PopupMenuItem(value: c, child: Text(c, style: const TextStyle(color: Colors.white)))).toList(),
                           child: Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7), decoration: BoxDecoration(color: const Color(0xFF28103D), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFFFD76A).withOpacity(.6))), child: Row(children: [const Icon(Icons.public, color: Color(0xFFFFD76A), size: 16), const SizedBox(width: 5), Text(_selectedCountry == 'All' ? 'All Country' : _selectedCountry, style: const TextStyle(color: Colors.white, fontSize: 11)), const Icon(Icons.arrow_drop_down, color: Colors.white)])),
                         ),
                       ]),
@@ -7398,9 +7387,7 @@ class _VoiceRoomScreenState
   }
 
 final Map<int, Map<String, dynamic>> seatMembers = {};
-final Set<int> _locallyLockedSeats = <int>{};
-final Set<String> _roomModeratorIds = <String>{};
-String? _roomOwnerId;
+final Set<int> blockedSeatNumbers = <int>{};
 String currentRoomRole = 'member';
 String? currentUserId;
 Map<String, dynamic>? currentRoomUser;
@@ -7464,11 +7451,8 @@ Future<void> _runRoomAction(
         if (targetUserId != null) 'targetUserId': targetUserId,
       },
     );
-    if (action == 'block_seat' && seatNumber != null && mounted) {
-      setState(() => _locallyLockedSeats.add(seatNumber));
-    }
     await loadRoomMembers();
-    _roomMessage(action == 'block_seat' ? 'Seat locked.' : 'Action completed.');
+    _roomMessage('Action completed.');
   } catch (e) {
     _roomMessage(e.toString().replaceFirst('Exception: ', ''));
   }
@@ -7478,6 +7462,7 @@ void _showSeatActionSheet({
   required int seatNumber,
   required Map<String, dynamic>? member,
 }) {
+  final isBlocked = blockedSeatNumbers.contains(seatNumber);
   final isOccupied = member != null;
   final isOwnSeat = isOccupied &&
       currentUserId != null &&
@@ -7485,10 +7470,17 @@ void _showSeatActionSheet({
 
   final actions = <Map<String, dynamic>>[];
 
-  if (!isOccupied) {
+  if (isBlocked) {
+    if (_canModerate) {
+      actions.add({'label': 'Unblock Seat', 'icon': Icons.lock_open_rounded, 'action': 'unblock_seat'});
+    } else {
+      _roomMessage('This seat is locked.');
+      return;
+    }
+  } else if (!isOccupied) {
     if (_canModerate) {
       actions.addAll([
-        {'label': 'Join Seat', 'icon': Icons.event_seat_rounded, 'action': 'join_seat'},
+        {'label': 'Move to this Mic', 'icon': Icons.swap_horiz_rounded, 'action': 'move_to_mic'},
         {'label': 'Invite him/her to take mic', 'icon': Icons.record_voice_over_rounded, 'action': 'invite_to_mic'},
         {'label': 'Mute Mic', 'icon': Icons.mic_off_rounded, 'action': 'mute_mic'},
         {'label': 'Block Seat', 'icon': Icons.lock_rounded, 'action': 'block_seat'},
@@ -7554,16 +7546,16 @@ void _showSeatActionSheet({
               onTap: () {
                 Navigator.pop(sheetContext);
                 final action = item['action'] as String;
-                if (action == 'join_seat') {
-                  _joinEmptySeat(seatNumber);
-                  return;
-                }
                 if (action == 'mute_mic') {
                   _roomMessage('Actual voice mute needs RTC voice integration; it is not enabled yet.');
                   return;
                 }
                 if (action == 'invite_to_mic') {
                   _roomMessage('Mic invitations need the room notification flow; not connected yet.');
+                  return;
+                }
+                if (action == 'move_to_mic') {
+                  _roomMessage('Choose a member first to move them to this mic; move flow is not connected yet.');
                   return;
                 }
                 _runRoomAction(
@@ -7631,14 +7623,17 @@ Future<void> loadRoomMembers() async {
     );
 
     final List<dynamic> seats = result['seats'] ?? [];
-    final blockedSeats = (result['blockedSeats'] as List? ?? []).map((e) => int.tryParse('$e')).whereType<int>().toSet();
-    final moderatorIds = (result['moderatorIds'] as List? ?? []).map((e) => '$e').toSet();
-    _roomOwnerId = result['room'] is Map ? result['room']['owner_id']?.toString() : _roomOwnerId;
     final currentUser = result['currentUser'] ?? result['current_user'];
     if (currentUser is Map) {
       currentRoomRole = (currentUser['role'] ?? 'member').toString().toLowerCase();
       currentUserId = currentUser['id']?.toString();
       currentRoomUser = Map<String, dynamic>.from(currentUser);
+    }
+    final Set<int> updatedBlocked = <int>{};
+    for (final seat in seats) {
+      if (seat['isBlocked'] == true) {
+        updatedBlocked.add(int.parse(seat['seatNumber'].toString()));
+      }
     }
     final Map<int, Map<String, dynamic>> updated = {};
 
@@ -7655,12 +7650,9 @@ Future<void> loadRoomMembers() async {
         seatMembers
           ..clear()
           ..addAll(updated);
-        _locallyLockedSeats
+        blockedSeatNumbers
           ..clear()
-          ..addAll(blockedSeats);
-        _roomModeratorIds
-          ..clear()
-          ..addAll(moderatorIds);
+          ..addAll(updatedBlocked);
       });
     }
   } catch (e) {
@@ -7867,17 +7859,6 @@ void initState() {
       debugPrint('Room gift catalogue load failed: $e');
     }
     if (!mounted) return;
-    var walletCoins = int.tryParse('${currentRoomUser?['coins'] ?? 0}') ?? 0;
-    try {
-      final walletResult = await api.getWalletBalance(widget.token);
-      final wallet = walletResult['wallet'];
-      if (wallet is Map) {
-        walletCoins = int.tryParse('${wallet['coins'] ?? walletCoins}') ?? walletCoins;
-      }
-    } catch (e) {
-      debugPrint('Wallet balance refresh for Gift Box failed: $e');
-    }
-    if (!mounted) return;
 
     // Build recipients from the actual occupied seats first. The members API's
     // currentUser object contains only id/role, so relying on currentRoomUser
@@ -7920,7 +7901,15 @@ void initState() {
     final selectedRecipients = <String>{};
     int quantity = 1;
     bool sending = false;
-    final myCoins = walletCoins;
+    int myCoins = int.tryParse('${currentRoomUser?['coins'] ?? 0}') ?? 0;
+    try {
+      final profile = await api.me(widget.token);
+      final user = profile['user'] is Map ? profile['user'] : profile;
+      myCoins = int.tryParse('${user['coins'] ?? myCoins}') ?? myCoins;
+    } catch (e) {
+      debugPrint('Gift balance refresh failed: $e');
+    }
+    if (!mounted) return;
 
     await showModalBottomSheet(
       context: context,
@@ -8451,18 +8440,12 @@ actions: [
           Expanded(
             child:
                 GridView.builder(
-              padding:
-                  const EdgeInsets.all(
-                      20),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: MediaQuery.of(context).size.width >= 720
-                    ? 6
-                    : MediaQuery.of(context).size.width >= 520
-                        ? 5
-                        : 4,
-                crossAxisSpacing: MediaQuery.of(context).size.width >= 600 ? 10 : 5,
-                mainAxisSpacing: MediaQuery.of(context).size.width >= 600 ? 18 : 12,
-                childAspectRatio: MediaQuery.of(context).size.width >= 600 ? .88 : .82,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 5,
+                crossAxisSpacing: 4,
+                mainAxisSpacing: 12,
+                childAspectRatio: 0.72,
               ),
               itemCount: widget.seatCount,
               itemBuilder:
@@ -8480,6 +8463,9 @@ child: Column(
     Builder(
       builder: (context) {
         final member = seatMembers[index + 1];
+        if (blockedSeatNumbers.contains(index + 1)) {
+          return const Icon(Icons.lock_rounded, color: Color(0xFFFFD36A), size: 40);
+        }
         final avatarUrl = member?['avatar_url']?.toString() ?? '';
         final displayName =
             member?['display_name']?.toString().trim();
@@ -8493,15 +8479,9 @@ child: Column(
 
         final memberId = member?['id']?.toString() ?? '';
         return Stack(clipBehavior: Clip.none, alignment: Alignment.center, children: [
-          CircleAvatar(radius: MediaQuery.of(context).size.width >= 600 ? 29 : 25, backgroundColor: Colors.deepPurple.shade300,
+          CircleAvatar(radius: 24, backgroundColor: Colors.deepPurple.shade300,
             backgroundImage: avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
-            child: avatarUrl.isEmpty ? Icon(Icons.person, color: Colors.white, size: MediaQuery.of(context).size.width >= 600 ? 29 : 25) : null),
-          if (_locallyLockedSeats.contains(index + 1))
-            Positioned(top: -2, right: -2, child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: const BoxDecoration(color: Color(0xFF171225), shape: BoxShape.circle),
-              child: const Icon(Icons.lock, color: Color(0xFFFFD36A), size: 17),
-            )),
+            child: avatarUrl.isEmpty ? const Icon(Icons.person, color: Colors.white, size: 32) : null),
           if (memberId.isNotEmpty && _activeReactions[memberId] != null)
             Positioned(top: -34, child: TweenAnimationBuilder<double>(tween: Tween(begin: .5, end: 1), duration: const Duration(milliseconds: 350),
               builder: (_, scale, child) => Transform.scale(scale: scale, child: child),
@@ -8510,33 +8490,28 @@ child: Column(
       },
     ),
     const SizedBox(height: 0),
-    SizedBox(height: 17, width: double.infinity, child: Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        if ((seatMembers[index + 1]?['id']?.toString() == _roomOwnerId) ||
-            (seatMembers[index + 1]?['role']?.toString().toLowerCase() == 'owner') ||
-            (seatMembers[index + 1]?['is_owner'] == true))
-          const Padding(padding: EdgeInsets.only(right: 2), child: Icon(Icons.verified, color: Color(0xFFFFD36A), size: 11)),
-        if (_roomModeratorIds.contains(seatMembers[index + 1]?['id']?.toString()) ||
-            seatMembers[index + 1]?['role']?.toString().toLowerCase() == 'moderator')
-          const Padding(padding: EdgeInsets.only(right: 2), child: Icon(Icons.shield, color: Color(0xFF7DD3FC), size: 11)),
-        Expanded(child: SizedBox(
-          height: 17,
-          child: ScrollingRainbowRoomName(
-            text: (() {
-              final member = seatMembers[index + 1];
-              final displayName = member?['display_name']?.toString().trim();
-              final username = member?['username']?.toString().trim();
-              if (displayName != null && displayName.isNotEmpty) return displayName;
-              if (username != null && username.isNotEmpty) return username;
-              return speaker;
-            })(),
-            fontSize: 10,
-            fontWeight: FontWeight.w600,
-          ),
-        )),
-      ],
-    )),
+    Text(
+      (() {
+        if (blockedSeatNumbers.contains(index + 1)) return 'Locked';
+        final member = seatMembers[index + 1];
+        final displayName = member?['display_name']?.toString().trim();
+        final username = member?['username']?.toString().trim();
+
+        if (displayName != null && displayName.isNotEmpty) {
+          return displayName;
+        }
+        if (username != null && username.isNotEmpty) {
+          return username;
+        }
+        return speaker;
+      })(),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 11,
+      ),
+    ),
   ],
 ),
 );
@@ -8701,20 +8676,15 @@ Container(
             child: Container(
               width: 58,
               height: 58,
-              decoration: BoxDecoration(
-                color: const Color(0xFF241638),
+              decoration: const BoxDecoration(
+                color: Color(0xFF58C900),
                 shape: BoxShape.circle,
-                border: Border.all(color: const Color(0xFFFFD36A), width: 1.8),
-                boxShadow: const [
-                  BoxShadow(color: Color(0x99B56CFF), blurRadius: 13, spreadRadius: 1),
-                  BoxShadow(color: Color(0x66FFD36A), blurRadius: 7),
-                ],
               ),
               child: const Center(
                 child: Icon(
                   Icons.card_giftcard,
-                  color: Color(0xFFFFD36A),
-                  size: 34,
+                  color: Color(0xFFFFE082),
+                  size: 36,
                 ),
               ),
             ),
@@ -8779,30 +8749,16 @@ Widget _roomButton({
   bool active = false,
   bool danger = false,
 }) {
-  final accent = danger || active
-      ? const Color(0xFFFF6B8A)
-      : const Color(0xFFFFD36A);
-  return Semantics(
-    button: true,
-    label: label.isNotEmpty ? label : 'Room control',
-    child: GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        width: 43,
-        height: 43,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: const Color(0xFF211632),
-          border: Border.all(color: accent.withOpacity(.9), width: 1.25),
-          boxShadow: [
-            BoxShadow(color: accent.withOpacity(.28), blurRadius: 10, spreadRadius: .5),
-            const BoxShadow(color: Color(0x662D174A), blurRadius: 5, offset: Offset(0, 2)),
-          ],
-        ),
-        child: Icon(icon, color: accent, size: 23),
-      ),
+  return GestureDetector(
+    onTap: onTap,
+    child: Icon(
+      icon,
+      color: danger
+          ? Colors.red
+          : active
+              ? Colors.red
+              : Colors.white,
+      size: 28,
     ),
   );
 }
