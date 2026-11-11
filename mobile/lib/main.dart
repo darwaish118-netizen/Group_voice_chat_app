@@ -410,6 +410,14 @@ Future<Map<String, dynamic>> createRoom(
   }
 
     
+  Future<Map<String, dynamic>> getWalletBalance(String token) async {
+    final response = await http.get(
+      Uri.parse('$apiBaseUrl/api/wallet/balance'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    return _handleResponse(response);
+  }
+
   // ROOM GIFTS: catalogue and secure server-side sending.
   Future<List<dynamic>> getGiftCatalog(String token) async {
     final response = await http.get(
@@ -1973,9 +1981,9 @@ final pages = [
       ),
       body: pages[selectedIndex],
 bottomNavigationBar: NavigationBar(
-  backgroundColor: Colors.transparent,
+  backgroundColor: const Color(0xFF160A27),
   surfaceTintColor: Colors.transparent,
-  indicatorColor: const Color(0xFF8E24AA).withOpacity(0.35),
+  indicatorColor: const Color(0xFFE83EAD).withOpacity(0.24),
   elevation: 0,
   selectedIndex: selectedIndex,
         onDestinationSelected:
@@ -2465,10 +2473,9 @@ try {
                 Image.network(cover, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _roomCoverFallback())
               else
                 _roomCoverFallback(),
-              DecoratedBox(decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.black.withOpacity(.38), Colors.transparent, Colors.black.withOpacity(.82)]))),
               if (countryFlag.isNotEmpty)
-                Positioned(left: 7, top: 7, child: Container(padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4), decoration: BoxDecoration(color: Colors.black.withOpacity(.58), borderRadius: BorderRadius.circular(9)), child: Text(countryFlag, style: const TextStyle(fontSize: 15)))),
-              Positioned(right: 7, top: 7, child: Container(padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4), decoration: BoxDecoration(color: Colors.black.withOpacity(.62), borderRadius: BorderRadius.circular(9)), child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.people_alt_rounded, size: 13, color: Colors.white), const SizedBox(width: 3), Text('$members', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold))]))),
+                Positioned(left: 7, top: 7, child: Container(padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4), decoration: const BoxDecoration(), child: Text(countryFlag, style: const TextStyle(fontSize: 15)))),
+              Positioned(right: 7, top: 7, child: Container(padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4), decoration: const BoxDecoration(), child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.people_alt_rounded, size: 13, color: Colors.white), const SizedBox(width: 3), Text('$members', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold))]))),
               Positioned(left: 7, right: 7, bottom: 8, child: Text(name, maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13, shadows: [Shadow(color: Colors.black, blurRadius: 5)]))),
               if (isTop)
                 Positioned(top: 0, left: 0, right: 0, child: Center(child: _uniqueRankBadge(rank))),
@@ -2548,7 +2555,7 @@ try {
                         const SizedBox(width: 8),
                         _headerAction(Icons.emoji_events_rounded, _openRanking, 'Ranking'),
                       ]),
-                      SizedBox(height: 140, child: PageView.builder(
+                      SizedBox(height: 118, child: PageView.builder(
                         controller: _bannerController,
                         itemCount: 3,
                         onPageChanged: (index) => setState(() => _bannerIndex = index),
@@ -2562,7 +2569,7 @@ try {
                           color: const Color(0xFF28103D),
                           initialValue: _selectedCountry,
                           onSelected: (value) => setState(() { _selectedCountry = value; _selectedTab = 0; }),
-                          itemBuilder: (_) => ['All', 'Pakistan', 'India', 'United Arab Emirates', 'Saudi Arabia', 'Bangladesh', 'United Kingdom', 'United States', 'Germany'].map((c) => PopupMenuItem(value: c, child: Text(c, style: const TextStyle(color: Colors.white)))).toList(),
+                          itemBuilder: (_) => const ['All','Afghanistan','Albania','Algeria','Andorra','Angola','Antigua and Barbuda','Argentina','Armenia','Australia','Austria','Azerbaijan','Bahamas','Bahrain','Bangladesh','Barbados','Belarus','Belgium','Belize','Benin','Bhutan','Bolivia','Bosnia and Herzegovina','Botswana','Brazil','Brunei','Bulgaria','Burkina Faso','Burundi','Cambodia','Cameroon','Canada','Cape Verde','Central African Republic','Chad','Chile','China','Colombia','Comoros','Congo','Costa Rica','Croatia','Cuba','Cyprus','Czechia','Denmark','Djibouti','Dominica','Dominican Republic','DR Congo','Ecuador','Egypt','El Salvador','Equatorial Guinea','Eritrea','Estonia','Eswatini','Ethiopia','Fiji','Finland','France','Gabon','Gambia','Georgia','Germany','Ghana','Greece','Grenada','Guatemala','Guinea','Guinea-Bissau','Guyana','Haiti','Honduras','Hungary','Iceland','India','Indonesia','Iran','Iraq','Ireland','Israel','Italy','Jamaica','Japan','Jordan','Kazakhstan','Kenya','Kiribati','Kosovo','Kuwait','Kyrgyzstan','Laos','Latvia','Lebanon','Lesotho','Liberia','Libya','Liechtenstein','Lithuania','Luxembourg','Madagascar','Malawi','Malaysia','Maldives','Mali','Malta','Marshall Islands','Mauritania','Mauritius','Mexico','Micronesia','Moldova','Monaco','Mongolia','Montenegro','Morocco','Mozambique','Myanmar','Namibia','Nauru','Nepal','Netherlands','New Zealand','Nicaragua','Niger','Nigeria','North Korea','North Macedonia','Norway','Oman','Pakistan','Palau','Palestine','Panama','Papua New Guinea','Paraguay','Peru','Philippines','Poland','Portugal','Qatar','Romania','Russia','Rwanda','Saint Kitts and Nevis','Saint Lucia','Saint Vincent and the Grenadines','Samoa','San Marino','Sao Tome and Principe','Saudi Arabia','Senegal','Serbia','Seychelles','Sierra Leone','Singapore','Slovakia','Slovenia','Solomon Islands','Somalia','South Africa','South Korea','South Sudan','Spain','Sri Lanka','Sudan','Suriname','Sweden','Switzerland','Syria','Taiwan','Tajikistan','Tanzania','Thailand','Timor-Leste','Togo','Tonga','Trinidad and Tobago','Tunisia','Turkey','Turkmenistan','Tuvalu','Uganda','Ukraine','United Arab Emirates','United Kingdom','United States','Uruguay','Uzbekistan','Vanuatu','Vatican City','Venezuela','Vietnam','Yemen','Zambia','Zimbabwe'].map((c) => PopupMenuItem(value: c, child: Text(c, style: const TextStyle(color: Colors.white)))).toList(),
                           child: Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7), decoration: BoxDecoration(color: const Color(0xFF28103D), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFFFD76A).withOpacity(.6))), child: Row(children: [const Icon(Icons.public, color: Color(0xFFFFD76A), size: 16), const SizedBox(width: 5), Text(_selectedCountry == 'All' ? 'All Country' : _selectedCountry, style: const TextStyle(color: Colors.white, fontSize: 11)), const Icon(Icons.arrow_drop_down, color: Colors.white)])),
                         ),
                       ]),
@@ -7468,12 +7475,19 @@ void _showSeatActionSheet({
 
   final actions = <Map<String, dynamic>>[];
 
-  // An empty seat always belongs to the user who taps it.
-  // Do not route moderators/room owners into the disconnected
-  // "Move to this Mic" flow; that flow requires selecting another member.
   if (!isOccupied) {
-    _joinEmptySeat(seatNumber);
-    return;
+    if (_canModerate) {
+      actions.addAll([
+        {'label': 'Join Seat', 'icon': Icons.event_seat_rounded, 'action': 'join_seat'},
+        {'label': 'Move to this Mic', 'icon': Icons.swap_horiz_rounded, 'action': 'move_to_mic'},
+        {'label': 'Invite him/her to take mic', 'icon': Icons.record_voice_over_rounded, 'action': 'invite_to_mic'},
+        {'label': 'Mute Mic', 'icon': Icons.mic_off_rounded, 'action': 'mute_mic'},
+        {'label': 'Block Seat', 'icon': Icons.lock_rounded, 'action': 'block_seat'},
+      ]);
+    } else {
+      _joinEmptySeat(seatNumber);
+      return;
+    }
   } else if (isOwnSeat) {
     _openOwnSeatSheet(seatNumber, member!);
     return;
@@ -7531,6 +7545,10 @@ void _showSeatActionSheet({
               onTap: () {
                 Navigator.pop(sheetContext);
                 final action = item['action'] as String;
+                if (action == 'join_seat') {
+                  _joinEmptySeat(seatNumber);
+                  return;
+                }
                 if (action == 'mute_mic') {
                   _roomMessage('Actual voice mute needs RTC voice integration; it is not enabled yet.');
                   return;
@@ -7835,6 +7853,17 @@ void initState() {
       debugPrint('Room gift catalogue load failed: $e');
     }
     if (!mounted) return;
+    var walletCoins = int.tryParse('${currentRoomUser?['coins'] ?? 0}') ?? 0;
+    try {
+      final walletResult = await api.getWalletBalance(widget.token);
+      final wallet = walletResult['wallet'];
+      if (wallet is Map) {
+        walletCoins = int.tryParse('${wallet['coins'] ?? walletCoins}') ?? walletCoins;
+      }
+    } catch (e) {
+      debugPrint('Wallet balance refresh for Gift Box failed: $e');
+    }
+    if (!mounted) return;
 
     // Build recipients from the actual occupied seats first. The members API's
     // currentUser object contains only id/role, so relying on currentRoomUser
@@ -7877,7 +7906,7 @@ void initState() {
     final selectedRecipients = <String>{};
     int quantity = 1;
     bool sending = false;
-    final myCoins = int.tryParse('${currentRoomUser?['coins'] ?? 0}') ?? 0;
+    final myCoins = walletCoins;
 
     await showModalBottomSheet(
       context: context,
