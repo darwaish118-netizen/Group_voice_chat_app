@@ -226,16 +226,27 @@ function drawCategoryGiftRows(){let el=document.getElementById("categoryGiftRows
 async function addServerGiftCategory(){let name=prompt("New gift category name");if(!name||!name.trim())return;let n=name.trim();if(categoryNames().some(x=>x.toLowerCase()===n.toLowerCase())){alert("Category already exists.");return}try{await giftApiRequest("/api/admin/gift-categories",{method:"POST",body:JSON.stringify({category:n})});await loadLiveGifts();await loadGiftCategorySettings();selectGiftCategory(n)}catch(e){giftApiStatus(e.message,true)}}
 async function uploadGiftMedia(file,kind){
  if(!file)return null;
- if(file.size<=0||file.size>100*1024*1024)throw new Error("Gift media file must be between 1 byte and 100 MB.");
+ if(file.size<=0||file.size>100*1024*1024)throw new Error("Gift media file must be between 1 byte and 100 MB. Selected file: "+file.name+" ("+Math.ceil(file.size/1024/1024)+" MB)");
  const c=giftApiConfig();
  const endpoint=c.base+"/api/r2/gift-upload?kind="+encodeURIComponent(kind)+"&filename="+encodeURIComponent(file.name);
- let response;
- try{
-  response=await fetch(endpoint,{method:"POST",headers:{"Authorization":"Bearer "+c.token,"Content-Type":"application/octet-stream"},body:file});
- }catch(e){throw new Error("Gift upload could not reach the MINDO server. Check your connection and retry.");}
- const data=await response.json().catch(()=>({message:"Server returned an unreadable upload response"}));
- if(!response.ok)throw new Error(data.message||("Gift upload failed (HTTP "+response.status+")"));
- if(!data?.media_key)throw new Error("Server stored the file but returned no media key.");
+ // XHR gives Android Chrome reliable upload progress and exposes HTTP/CORS/timeout details.
+ const data=await new Promise((resolve,reject)=>{
+  const xhr=new XMLHttpRequest();
+  xhr.open("POST",endpoint,true);
+  xhr.setRequestHeader("Authorization","Bearer "+c.token);
+  xhr.setRequestHeader("Content-Type","application/octet-stream");
+  xhr.timeout=180000;
+  xhr.upload.onprogress=(event)=>{if(event.lengthComputable){const pct=Math.round(event.loaded/event.total*100);giftApiStatus("Uploading "+kind.replace("gift_","").toUpperCase()+" to MINDO server… "+pct+"%");}};
+  xhr.onload=()=>{let body={};try{body=JSON.parse(xhr.responseText||"{}")}catch(_){body={message:"Server returned an unreadable response (HTTP "+xhr.status+")"}}
+   if(xhr.status<200||xhr.status>=300){reject(new Error((body.message||("Upload failed with HTTP "+xhr.status))+" ["+kind+", "+Math.ceil(file.size/1024)+" KB]"));return;}
+   if(!body.media_key){reject(new Error("MINDO server received the file but returned no media key for "+kind+"."));return;}
+   resolve(body);
+  };
+  xhr.onerror=()=>reject(new Error("Browser could not complete the "+kind+" request. Check admin/server CORS and network. File: "+file.name+", size: "+Math.ceil(file.size/1024)+" KB."));
+  xhr.ontimeout=()=>reject(new Error(kind+" upload timed out after 180 seconds. File: "+file.name+", size: "+Math.ceil(file.size/1024)+" KB."));
+  xhr.onabort=()=>reject(new Error(kind+" upload was cancelled before completion."));
+  xhr.send(file);
+ });
  return data.media_key;
 }
 async function loadGiftCategorySettings(){try{let data=await giftApiRequest("/api/admin/gift-categories");giftCategoryData=(data.categories||[]).map(x=>({id:x.category,name:x.category,targetWeight:Number(x.target_counting_percent),diamondPercent:Number(x.host_diamond_percent),active:true}));drawGiftCategoryTiles();if(!selectedGiftCategory&&giftCategoryData.length)selectGiftCategory(giftCategoryData[0].name)}catch(e){giftApiStatus(e.message,true)}}
