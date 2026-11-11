@@ -1424,6 +1424,7 @@ app.get("/api/rooms", async (req, res) => {
     rooms.created_at,
     users.username AS owner_username,
     users.public_uid AS owner_public_uid,
+    users.country AS owner_country,
     COALESCE(gifts.total_coins, 0)::BIGINT AS total_coins,
     COALESCE(members.member_count, 0)::INTEGER AS member_count
 FROM rooms
