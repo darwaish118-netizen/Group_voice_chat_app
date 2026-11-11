@@ -2485,6 +2485,15 @@ app.get("/api/rooms/:roomId/members", authMiddleware, async (req, res) => {
       });
     }
 
+    const blockedResult = await pool.query(
+      `SELECT seat_number FROM room_seat_blocks WHERE room_id = $1 ORDER BY seat_number`,
+      [req.params.roomId]
+    );
+    const moderatorResult = await pool.query(
+      `SELECT user_id FROM room_moderators WHERE room_id = $1`,
+      [req.params.roomId]
+    );
+
     const seats = [];
 
     for (
@@ -2506,6 +2515,8 @@ app.get("/api/rooms/:roomId/members", authMiddleware, async (req, res) => {
         seat_count: Number(room.seat_count),
       },
       seats,
+      blockedSeats: blockedResult.rows.map((row) => Number(row.seat_number)),
+      moderatorIds: moderatorResult.rows.map((row) => String(row.user_id)),
       currentUser: { id: req.user.id, role: roleResult.rows[0]?.role || "member" },
     });
   } catch (error) {
@@ -3077,6 +3088,32 @@ function walletDbRequired(req, res) {
   }
   return true;
 }
+
+// Shared wallet balance endpoint used by Wallet and the Room Gift Box.
+// Both screens read the same users.coins value to avoid showing stale/zero coins.
+app.get("/api/wallet/balance", authMiddleware, async (req, res) => {
+  if (!walletDbRequired(req, res)) return;
+  try {
+    const result = await pool.query(
+      `SELECT coins, diamonds, wallet_frozen FROM users WHERE id = $1`,
+      [req.user.id]
+    );
+    if (!result.rows.length) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    const row = result.rows[0];
+    res.json({
+      wallet: {
+        coins: Number(row.coins || 0),
+        diamonds: Number(row.diamonds || 0),
+        frozen: Boolean(row.wallet_frozen),
+      },
+    });
+  } catch (error) {
+    console.error("Wallet balance lookup failed:", error);
+    res.status(500).json({ message: "Could not load wallet balance" });
+  }
+});
 
 app.get("/api/wallet/recharge-packages", authMiddleware, async (req, res) => {
   if (!walletDbRequired(req, res)) return;
