@@ -1648,6 +1648,16 @@ async function resolveGiftRows(rows) {
 // so gift uploads do not depend on bucket CORS or public bucket access.
 app.post(
   "/api/r2/gift-upload",
+  (req, res, next) => {
+    console.info("MINDO gift upload request received", {
+      kind: String(req.query.kind || "unknown"),
+      filename: String(req.query.filename || "unknown").slice(0, 120),
+      content_type: req.headers["content-type"] || null,
+      content_length: req.headers["content-length"] || null,
+      origin: req.headers.origin || null,
+    });
+    next();
+  },
   authMiddleware,
   adminMiddleware,
   express.raw({ type: "application/octet-stream", limit: "100mb" }),
