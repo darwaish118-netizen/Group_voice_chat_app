@@ -7468,18 +7468,12 @@ void _showSeatActionSheet({
 
   final actions = <Map<String, dynamic>>[];
 
+  // An empty seat always belongs to the user who taps it.
+  // Do not route moderators/room owners into the disconnected
+  // "Move to this Mic" flow; that flow requires selecting another member.
   if (!isOccupied) {
-    if (_canModerate) {
-      actions.addAll([
-        {'label': 'Move to this Mic', 'icon': Icons.swap_horiz_rounded, 'action': 'move_to_mic'},
-        {'label': 'Invite him/her to take mic', 'icon': Icons.record_voice_over_rounded, 'action': 'invite_to_mic'},
-        {'label': 'Mute Mic', 'icon': Icons.mic_off_rounded, 'action': 'mute_mic'},
-        {'label': 'Block Seat', 'icon': Icons.lock_rounded, 'action': 'block_seat'},
-      ]);
-    } else {
-      _joinEmptySeat(seatNumber);
-      return;
-    }
+    _joinEmptySeat(seatNumber);
+    return;
   } else if (isOwnSeat) {
     _openOwnSeatSheet(seatNumber, member!);
     return;
