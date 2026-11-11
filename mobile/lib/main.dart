@@ -1943,6 +1943,30 @@ final titles = const [
   Widget build(
     BuildContext context,
   ) {
+Widget _mindoNavItem(int index, IconData icon, String label) {
+  final selected = selectedIndex == index;
+  return Expanded(child: InkWell(
+    borderRadius: BorderRadius.circular(18),
+    onTap: () => setState(() => selectedIndex = index),
+    child: AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      decoration: BoxDecoration(
+        color: selected ? const Color(0xFF6B168F).withOpacity(.55) : Colors.transparent,
+        borderRadius: BorderRadius.circular(18),
+        border: selected ? Border.all(color: const Color(0xFFFFD36A), width: 1) : null,
+        boxShadow: selected ? [BoxShadow(color: const Color(0xFFE83EAD).withOpacity(.35), blurRadius: 12)] : const [],
+      ),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, color: const Color(0xFFFFD36A), size: 24),
+        const SizedBox(height: 2),
+        Text(label, maxLines: 1, style: TextStyle(color: selected ? const Color(0xFFFFE08A) : Colors.white, fontSize: 11, fontWeight: selected ? FontWeight.bold : FontWeight.w500)),
+      ]),
+    ),
+  ));
+}
+
 final pages = [
   RoomsScreen(
     token: widget.token,
@@ -1980,42 +2004,22 @@ final pages = [
         centerTitle: true,
       ),
       body: pages[selectedIndex],
-bottomNavigationBar: NavigationBar(
-  backgroundColor: const Color(0xFF160A27),
-  surfaceTintColor: Colors.transparent,
-  indicatorColor: const Color(0xFFE83EAD).withOpacity(0.24),
-  elevation: 0,
-  selectedIndex: selectedIndex,
-        onDestinationSelected:
-            (index) {
-          setState(() {
-            selectedIndex =
-                index;
-          });
-        },
-destinations: const [
-  NavigationDestination(
-    icon: Icon(Icons.groups_outlined),
-    selectedIcon: Icon(Icons.groups),
-    label: 'Rooms',
+bottomNavigationBar: Container(
+  decoration: BoxDecoration(
+    color: const Color(0xFF160A27),
+    border: const Border(top: BorderSide(color: Color(0xFFFFD36A), width: 1.2)),
+    boxShadow: [BoxShadow(color: const Color(0xFFE83EAD).withOpacity(.22), blurRadius: 18, spreadRadius: 1)],
   ),
-  NavigationDestination(
-    icon: Icon(Icons.event_outlined),
-    selectedIcon: Icon(Icons.event),
-    label: 'Events',
-  ),
-  NavigationDestination(
-    icon: Icon(Icons.message_outlined),
-    selectedIcon: Icon(Icons.message),
-    label: 'Messages',
-  ),
-  NavigationDestination(
-    icon: Icon(Icons.person_outline),
-    selectedIcon: Icon(Icons.person),
-    label: 'Profile',
-  ),
-],
-      ),
+  child: SafeArea(top: false, child: Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+    child: Row(children: [
+      _mindoNavItem(0, Icons.groups_rounded, 'Rooms'),
+      _mindoNavItem(1, Icons.event_rounded, 'Events'),
+      _mindoNavItem(2, Icons.message_rounded, 'Messages'),
+      _mindoNavItem(3, Icons.person_rounded, 'Profile'),
+    ]),
+  )),
+),
     );
   }
 }
@@ -2555,7 +2559,7 @@ try {
                         const SizedBox(width: 8),
                         _headerAction(Icons.emoji_events_rounded, _openRanking, 'Ranking'),
                       ]),
-                      SizedBox(height: 118, child: PageView.builder(
+                      SizedBox(height: 108, child: PageView.builder(
                         controller: _bannerController,
                         itemCount: 3,
                         onPageChanged: (index) => setState(() => _bannerIndex = index),
@@ -7394,6 +7398,9 @@ class _VoiceRoomScreenState
   }
 
 final Map<int, Map<String, dynamic>> seatMembers = {};
+final Set<int> _locallyLockedSeats = <int>{};
+final Set<String> _roomModeratorIds = <String>{};
+String? _roomOwnerId;
 String currentRoomRole = 'member';
 String? currentUserId;
 Map<String, dynamic>? currentRoomUser;
@@ -7457,8 +7464,11 @@ Future<void> _runRoomAction(
         if (targetUserId != null) 'targetUserId': targetUserId,
       },
     );
+    if (action == 'block_seat' && seatNumber != null && mounted) {
+      setState(() => _locallyLockedSeats.add(seatNumber));
+    }
     await loadRoomMembers();
-    _roomMessage('Action completed.');
+    _roomMessage(action == 'block_seat' ? 'Seat locked.' : 'Action completed.');
   } catch (e) {
     _roomMessage(e.toString().replaceFirst('Exception: ', ''));
   }
@@ -7479,7 +7489,6 @@ void _showSeatActionSheet({
     if (_canModerate) {
       actions.addAll([
         {'label': 'Join Seat', 'icon': Icons.event_seat_rounded, 'action': 'join_seat'},
-        {'label': 'Move to this Mic', 'icon': Icons.swap_horiz_rounded, 'action': 'move_to_mic'},
         {'label': 'Invite him/her to take mic', 'icon': Icons.record_voice_over_rounded, 'action': 'invite_to_mic'},
         {'label': 'Mute Mic', 'icon': Icons.mic_off_rounded, 'action': 'mute_mic'},
         {'label': 'Block Seat', 'icon': Icons.lock_rounded, 'action': 'block_seat'},
@@ -7557,10 +7566,6 @@ void _showSeatActionSheet({
                   _roomMessage('Mic invitations need the room notification flow; not connected yet.');
                   return;
                 }
-                if (action == 'move_to_mic') {
-                  _roomMessage('Choose a member first to move them to this mic; move flow is not connected yet.');
-                  return;
-                }
                 _runRoomAction(
                   action,
                   seatNumber: seatNumber,
@@ -7626,6 +7631,9 @@ Future<void> loadRoomMembers() async {
     );
 
     final List<dynamic> seats = result['seats'] ?? [];
+    final blockedSeats = (result['blockedSeats'] as List? ?? []).map((e) => int.tryParse('$e')).whereType<int>().toSet();
+    final moderatorIds = (result['moderatorIds'] as List? ?? []).map((e) => '$e').toSet();
+    _roomOwnerId = result['room'] is Map ? result['room']['owner_id']?.toString() : _roomOwnerId;
     final currentUser = result['currentUser'] ?? result['current_user'];
     if (currentUser is Map) {
       currentRoomRole = (currentUser['role'] ?? 'member').toString().toLowerCase();
@@ -7647,6 +7655,12 @@ Future<void> loadRoomMembers() async {
         seatMembers
           ..clear()
           ..addAll(updated);
+        _locallyLockedSeats
+          ..clear()
+          ..addAll(blockedSeats);
+        _roomModeratorIds
+          ..clear()
+          ..addAll(moderatorIds);
       });
     }
   } catch (e) {
@@ -8440,13 +8454,15 @@ actions: [
               padding:
                   const EdgeInsets.all(
                       20),
-              gridDelegate:
-                  const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 5,
-                crossAxisSpacing:
-                    15,
-                mainAxisSpacing:
-                    25,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: MediaQuery.of(context).size.width >= 720
+                    ? 6
+                    : MediaQuery.of(context).size.width >= 520
+                        ? 5
+                        : 4,
+                crossAxisSpacing: MediaQuery.of(context).size.width >= 600 ? 10 : 5,
+                mainAxisSpacing: MediaQuery.of(context).size.width >= 600 ? 18 : 12,
+                childAspectRatio: MediaQuery.of(context).size.width >= 600 ? .88 : .82,
               ),
               itemCount: widget.seatCount,
               itemBuilder:
@@ -8477,9 +8493,15 @@ child: Column(
 
         final memberId = member?['id']?.toString() ?? '';
         return Stack(clipBehavior: Clip.none, alignment: Alignment.center, children: [
-          CircleAvatar(radius: 32, backgroundColor: Colors.deepPurple.shade300,
+          CircleAvatar(radius: MediaQuery.of(context).size.width >= 600 ? 29 : 25, backgroundColor: Colors.deepPurple.shade300,
             backgroundImage: avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
-            child: avatarUrl.isEmpty ? const Icon(Icons.person, color: Colors.white, size: 32) : null),
+            child: avatarUrl.isEmpty ? Icon(Icons.person, color: Colors.white, size: MediaQuery.of(context).size.width >= 600 ? 29 : 25) : null),
+          if (_locallyLockedSeats.contains(index + 1))
+            Positioned(top: -2, right: -2, child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: const BoxDecoration(color: Color(0xFF171225), shape: BoxShape.circle),
+              child: const Icon(Icons.lock, color: Color(0xFFFFD36A), size: 17),
+            )),
           if (memberId.isNotEmpty && _activeReactions[memberId] != null)
             Positioned(top: -34, child: TweenAnimationBuilder<double>(tween: Tween(begin: .5, end: 1), duration: const Duration(milliseconds: 350),
               builder: (_, scale, child) => Transform.scale(scale: scale, child: child),
@@ -8488,27 +8510,33 @@ child: Column(
       },
     ),
     const SizedBox(height: 0),
-    Text(
-      (() {
-        final member = seatMembers[index + 1];
-        final displayName = member?['display_name']?.toString().trim();
-        final username = member?['username']?.toString().trim();
-
-        if (displayName != null && displayName.isNotEmpty) {
-          return displayName;
-        }
-        if (username != null && username.isNotEmpty) {
-          return username;
-        }
-        return speaker;
-      })(),
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: const TextStyle(
-        color: Colors.white,
-        fontSize: 11,
-      ),
-    ),
+    SizedBox(height: 17, width: double.infinity, child: Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        if ((seatMembers[index + 1]?['id']?.toString() == _roomOwnerId) ||
+            (seatMembers[index + 1]?['role']?.toString().toLowerCase() == 'owner') ||
+            (seatMembers[index + 1]?['is_owner'] == true))
+          const Padding(padding: EdgeInsets.only(right: 2), child: Icon(Icons.verified, color: Color(0xFFFFD36A), size: 11)),
+        if (_roomModeratorIds.contains(seatMembers[index + 1]?['id']?.toString()) ||
+            seatMembers[index + 1]?['role']?.toString().toLowerCase() == 'moderator')
+          const Padding(padding: EdgeInsets.only(right: 2), child: Icon(Icons.shield, color: Color(0xFF7DD3FC), size: 11)),
+        Expanded(child: SizedBox(
+          height: 17,
+          child: ScrollingRainbowRoomName(
+            text: (() {
+              final member = seatMembers[index + 1];
+              final displayName = member?['display_name']?.toString().trim();
+              final username = member?['username']?.toString().trim();
+              if (displayName != null && displayName.isNotEmpty) return displayName;
+              if (username != null && username.isNotEmpty) return username;
+              return speaker;
+            })(),
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+          ),
+        )),
+      ],
+    )),
   ],
 ),
 );
@@ -8673,15 +8701,20 @@ Container(
             child: Container(
               width: 58,
               height: 58,
-              decoration: const BoxDecoration(
-                color: Color(0xFF58C900),
+              decoration: BoxDecoration(
+                color: const Color(0xFF241638),
                 shape: BoxShape.circle,
+                border: Border.all(color: const Color(0xFFFFD36A), width: 1.8),
+                boxShadow: const [
+                  BoxShadow(color: Color(0x99B56CFF), blurRadius: 13, spreadRadius: 1),
+                  BoxShadow(color: Color(0x66FFD36A), blurRadius: 7),
+                ],
               ),
               child: const Center(
                 child: Icon(
                   Icons.card_giftcard,
-                  color: Color(0xFFFFE082),
-                  size: 36,
+                  color: Color(0xFFFFD36A),
+                  size: 34,
                 ),
               ),
             ),
@@ -8746,16 +8779,30 @@ Widget _roomButton({
   bool active = false,
   bool danger = false,
 }) {
-  return GestureDetector(
-    onTap: onTap,
-    child: Icon(
-      icon,
-      color: danger
-          ? Colors.red
-          : active
-              ? Colors.red
-              : Colors.white,
-      size: 28,
+  final accent = danger || active
+      ? const Color(0xFFFF6B8A)
+      : const Color(0xFFFFD36A);
+  return Semantics(
+    button: true,
+    label: label.isNotEmpty ? label : 'Room control',
+    child: GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        width: 43,
+        height: 43,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: const Color(0xFF211632),
+          border: Border.all(color: accent.withOpacity(.9), width: 1.25),
+          boxShadow: [
+            BoxShadow(color: accent.withOpacity(.28), blurRadius: 10, spreadRadius: .5),
+            const BoxShadow(color: Color(0x662D174A), blurRadius: 5, offset: Offset(0, 2)),
+          ],
+        ),
+        child: Icon(icon, color: accent, size: 23),
+      ),
     ),
   );
 }
