@@ -7,8 +7,6 @@ const jwt = require("jsonwebtoken");
 const { Pool } = require("pg");
 const { v4: uuidv4 } = require("uuid");
 const crypto = require("crypto");
-const { S3Client, PutObjectCommand, GetObjectCommand } = require("@aws-sdk/client-s3");
-const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 
 function containsRestrictedMindoName(value) {
   if (typeof value !== "string") return false;
@@ -281,8 +279,6 @@ await pool.query(`
   await pool.query(`CREATE INDEX IF NOT EXISTS gift_catalog_active_sort_idx ON gift_catalog(active, sort_order)`);
   await pool.query("ALTER TABLE gift_catalog ADD COLUMN IF NOT EXISTS category VARCHAR(60) NOT NULL DEFAULT 'Popular'");
   await pool.query('ALTER TABLE gift_catalog ADD COLUMN IF NOT EXISTS svga_url TEXT');
-  await pool.query('ALTER TABLE gift_catalog ADD COLUMN IF NOT EXISTS gif_url TEXT');
-  await pool.query('ALTER TABLE gift_catalog ADD COLUMN IF NOT EXISTS mp4_url TEXT');
   await pool.query('ALTER TABLE gift_catalog ADD COLUMN IF NOT EXISTS mp3_url TEXT');
   await pool.query('ALTER TABLE gift_catalog ADD COLUMN IF NOT EXISTS target_counting_percentage NUMERIC(5,2) NOT NULL DEFAULT 100 CHECK (target_counting_percentage BETWEEN 0 AND 100)');
   await pool.query('ALTER TABLE gift_catalog ADD COLUMN IF NOT EXISTS host_diamond_percentage NUMERIC(5,2) NOT NULL DEFAULT 0 CHECK (host_diamond_percentage BETWEEN 0 AND 100)');
@@ -380,7 +376,9 @@ await pool.query(`
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
-  await pool.query(`ALTER TABLE gift_transactions DROP CONSTRAINT IF EXISTS gift_transactions_sender_id_receiver_id_check`);
+  // Self-gifting is an intentional MINDO feature. Remove the legacy table-level
+  // restriction on existing databases as well as omitting it for fresh installs.
+  await pool.query(`ALTER TABLE gift_transactions DROP CONSTRAINT IF EXISTS gift_transactions_check`);
   await pool.query(`ALTER TABLE gift_transactions ADD COLUMN IF NOT EXISTS room_id UUID REFERENCES rooms(id) ON DELETE SET NULL`);
   await pool.query(`ALTER TABLE gift_transactions ADD COLUMN IF NOT EXISTS gift_id UUID REFERENCES gift_catalog(id) ON DELETE SET NULL`);
   await pool.query(`ALTER TABLE gift_transactions ADD COLUMN IF NOT EXISTS gift_name VARCHAR(100)`);
@@ -391,8 +389,6 @@ await pool.query(`
   await pool.query(`
     CREATE OR REPLACE FUNCTION update_user_level_stats_from_gift() RETURNS TRIGGER AS $$
     DECLARE delta BIGINT := 0;
-    DECLARE charm_delta BIGINT := 0;
-    DECLARE target_pct NUMERIC := 100;
     BEGIN
       IF TG_OP = 'INSERT' THEN
         IF NEW.status = 'success' THEN delta := NEW.coin_amount; END IF;
@@ -403,15 +399,12 @@ await pool.query(`
         END IF;
       END IF;
       IF delta <> 0 THEN
-        SELECT COALESCE(target_counting_percentage,100) INTO target_pct
-        FROM gift_catalog WHERE id = NEW.gift_id;
-        charm_delta := FLOOR(delta * COALESCE(target_pct,100) / 100.0);
         INSERT INTO user_level_stats(user_id, wealth_value, charm_value)
         VALUES (NEW.sender_id, GREATEST(delta, 0), 0)
         ON CONFLICT (user_id) DO UPDATE SET wealth_value = GREATEST(0, user_level_stats.wealth_value + delta), updated_at = NOW();
         INSERT INTO user_level_stats(user_id, wealth_value, charm_value)
-        VALUES (NEW.receiver_id, 0, GREATEST(charm_delta, 0))
-        ON CONFLICT (user_id) DO UPDATE SET charm_value = GREATEST(0, user_level_stats.charm_value + charm_delta), updated_at = NOW();
+        VALUES (NEW.receiver_id, 0, GREATEST(delta, 0))
+        ON CONFLICT (user_id) DO UPDATE SET charm_value = GREATEST(0, user_level_stats.charm_value + delta), updated_at = NOW();
       END IF;
       RETURN NEW;
     END;
@@ -1424,7 +1417,6 @@ app.get("/api/rooms", async (req, res) => {
     rooms.created_at,
     users.username AS owner_username,
     users.public_uid AS owner_public_uid,
-    users.country AS owner_country,
     COALESCE(gifts.total_coins, 0)::BIGINT AS total_coins,
     COALESCE(members.member_count, 0)::INTEGER AS member_count
 FROM rooms
@@ -1612,97 +1604,21 @@ app.put("/api/admin/gift-categories/:category/settings", authMiddleware, adminMi
   } finally { client.release(); }
 });
 
-// Private Cloudflare R2 gift media. Object keys are stored in PostgreSQL as r2://<key>.
-// The bucket stays private; only authenticated API responses receive short-lived GET URLs.
-const r2Client = (() => {
-  const accountId = process.env.R2_ACCOUNT_ID;
-  const accessKeyId = process.env.R2_ACCESS_KEY_ID;
-  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
-  if (!accountId || !accessKeyId || !secretAccessKey) return null;
-  return new S3Client({ region: "auto", endpoint: `https://${accountId}.r2.cloudflarestorage.com`, credentials: { accessKeyId, secretAccessKey } });
-})();
-const GIFT_MEDIA_TYPES = {
-  gift_picture: { extensions: ["png", "jpg", "jpeg", "webp"], contentTypes: ["image/png", "image/jpeg", "image/webp"] },
-  gift_gif: { extensions: ["gif"], contentTypes: ["image/gif"] },
-  gift_svga: { extensions: ["svga"], contentTypes: ["application/octet-stream", "application/x-svga"] },
-  gift_mp4: { extensions: ["mp4"], contentTypes: ["video/mp4"] },
-  gift_mp3: { extensions: ["mp3"], contentTypes: ["audio/mpeg", "audio/mp3"] },
-};
-function isR2GiftKey(value) { return typeof value === "string" && value.startsWith("r2://") && value.length > 5; }
-async function resolveGiftMediaUrl(value) {
-  if (!isR2GiftKey(value)) return value || null; // keep legacy Cloudinary/external assets working
-  if (!r2Client || !process.env.R2_BUCKET_NAME) throw new Error("Private R2 storage is not configured");
-  const key = value.slice(5);
-  return getSignedUrl(r2Client, new GetObjectCommand({ Bucket: process.env.R2_BUCKET_NAME, Key: key }), { expiresIn: 300 });
-}
-async function resolveGiftRows(rows) {
-  return Promise.all(rows.map(async row => ({
-    ...row,
-    image_url: await resolveGiftMediaUrl(row.image_url),
-    svga_url: await resolveGiftMediaUrl(row.svga_url),
-    gif_url: await resolveGiftMediaUrl(row.gif_url),
-    mp4_url: await resolveGiftMediaUrl(row.mp4_url),
-    mp3_url: await resolveGiftMediaUrl(row.mp3_url),
-  })));
-}
-// Admin uploads gift bytes through this API. The browser never talks directly to R2,
-// so gift uploads do not depend on bucket CORS or public bucket access.
-app.post(
-  "/api/r2/gift-upload",
-  (req, res, next) => {
-    console.info("MINDO gift upload request received", {
-      kind: String(req.query.kind || "unknown"),
-      filename: String(req.query.filename || "unknown").slice(0, 120),
-      content_type: req.headers["content-type"] || null,
-      content_length: req.headers["content-length"] || null,
-      origin: req.headers.origin || null,
-    });
-    next();
-  },
-  authMiddleware,
-  adminMiddleware,
-  express.raw({ type: "application/octet-stream", limit: "100mb" }),
-  async (req, res) => {
-    try {
-      const bucket = process.env.R2_BUCKET_NAME;
-      if (!r2Client || !bucket) {
-        return res.status(503).json({ message: "Private R2 is not configured. Check R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY and R2_BUCKET_NAME." });
-      }
-      if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
-        return res.status(400).json({ message: "No gift media file was received by the server" });
-      }
-      const kind = String(req.query.kind || "");
-      const config = GIFT_MEDIA_TYPES[kind];
-      if (!config) return res.status(400).json({ message: "Unsupported gift media type" });
-      const filename = String(req.query.filename || "gift").trim();
-      const extension = filename.includes(".") ? filename.split(".").pop().toLowerCase() : "";
-      if (!config.extensions.includes(extension)) {
-        return res.status(400).json({ message: "File extension does not match the selected gift media field" });
-      }
-      const size = req.body.length;
-      if (size > 100 * 1024 * 1024) return res.status(413).json({ message: "Gift media must not exceed 100 MB" });
-      const contentTypeByExtension = {
-        png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "image/webp",
-        gif: "image/gif", svga: "application/octet-stream", mp4: "video/mp4", mp3: "audio/mpeg"
-      };
-      const contentType = contentTypeByExtension[extension];
-      const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-100) || `gift.${extension}`;
-      const key = `mindo-voice-chat/gifts/${Date.now()}-${crypto.randomUUID()}-${safeName}`;
-      await r2Client.send(new PutObjectCommand({
-        Bucket: bucket,
-        Key: key,
-        Body: req.body,
-        ContentLength: size,
-        ContentType: contentType,
-      }));
-      console.info("Private R2 gift media uploaded", { kind, admin_id: req.user.id, bytes: size, key });
-      return res.status(201).json({ media_key: `r2://${key}`, size, content_type: contentType });
-    } catch (error) {
-      console.error("Private R2 gift media upload failed:", error);
-      return res.status(500).json({ message: "Server could not store gift media in private R2" });
-    }
-  }
-);
+app.post("/api/cloudinary/gift-upload-signature", authMiddleware, adminMiddleware, async (req, res) => {
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+  const apiKey = process.env.CLOUDINARY_API_KEY;
+  const apiSecret = process.env.CLOUDINARY_API_SECRET;
+  if (!cloudName || !apiKey || !apiSecret) return res.status(503).json({ message: "Cloudinary is not configured" });
+  const kind = String(req.body.kind || "");
+  const resourceType = kind === "gift_picture" ? "image" : kind === "gift_svga" ? "raw" : kind === "gift_mp3" ? "video" : null;
+  if (!resourceType) return res.status(400).json({ message: "Invalid gift media type" });
+  const timestamp = Math.floor(Date.now() / 1000);
+  const folder = "mindo-voice-chat/gifts";
+  const params = { folder, timestamp };
+  const toSign = Object.keys(params).sort().map(key => `${key}=${params[key]}`).join("&");
+  const signature = crypto.createHash("sha1").update(toSign + apiSecret).digest("hex");
+  res.json({ cloud_name: cloudName, api_key: apiKey, timestamp, folder, signature, resource_type: resourceType });
+});
 
 // Main Admin-only coin issuance and audited test-wallet adjustments.
 app.get("/api/admin/coin-users", authMiddleware, mainAdminMiddleware, async (req, res) => {
@@ -1743,10 +1659,10 @@ app.get("/api/admin/coins/history", authMiddleware, mainAdminMiddleware, async (
 app.get("/api/gifts/catalog", authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, code, name, image_url, svga_url, gif_url, mp4_url, mp3_url, coin_price, category, target_counting_percentage, host_diamond_percentage
+      `SELECT id, code, name, image_url, svga_url, mp3_url, coin_price, category, target_counting_percentage, host_diamond_percentage
        FROM gift_catalog WHERE active = TRUE ORDER BY sort_order, name`
     );
-    res.json({ gifts: await resolveGiftRows(result.rows) });
+    res.json({ gifts: result.rows });
   } catch (error) {
     console.error("Gift catalog failed:", error);
     res.status(500).json({ message: "Could not load gift catalog" });
@@ -1762,8 +1678,6 @@ app.post("/api/admin/gifts", authMiddleware, adminMiddleware, async (req, res) =
   const targetPct = Number(req.body.target_counting_percentage ?? 100);
   const diamondPct = Number(req.body.host_diamond_percentage ?? 0);
   const svgaUrl = String(req.body.svga_url || '').trim() || null;
-  const gifUrl = String(req.body.gif_url || '').trim() || null;
-  const mp4Url = String(req.body.mp4_url || '').trim() || null;
   const mp3Url = String(req.body.mp3_url || '').trim() || null;
   if (!code || !name || !Number.isSafeInteger(coinPrice) || coinPrice <= 0 || !Number.isFinite(targetPct) || targetPct < 0 || targetPct > 100 || !Number.isFinite(diamondPct) || diamondPct < 0 || diamondPct > 100) {
     return res.status(400).json({ message: "Valid code, name and positive coin_price are required" });
@@ -1773,14 +1687,14 @@ app.post("/api/admin/gifts", authMiddleware, adminMiddleware, async (req, res) =
     const effectiveTargetPct = categorySettings.rowCount ? Number(categorySettings.rows[0].target_counting_percent) : targetPct;
     const effectiveDiamondPct = categorySettings.rowCount ? Number(categorySettings.rows[0].host_diamond_percent) : diamondPct;
     const result = await pool.query(
-      `INSERT INTO gift_catalog(code,name,image_url,coin_price,category,active,sort_order,svga_url,gif_url,mp4_url,mp3_url,target_counting_percentage,host_diamond_percentage)
-       VALUES($1,$2,$3,$4,$5,TRUE,$6,$7,$8,$9,$10,$11,$12)
+      `INSERT INTO gift_catalog(code,name,image_url,coin_price,category,active,sort_order,svga_url,mp3_url,target_counting_percentage,host_diamond_percentage)
+       VALUES($1,$2,$3,$4,$5,TRUE,$6,$7,$8,$9,$10)
        ON CONFLICT(code) DO UPDATE SET name=EXCLUDED.name,image_url=EXCLUDED.image_url,
-         coin_price=EXCLUDED.coin_price,category=EXCLUDED.category,svga_url=EXCLUDED.svga_url,gif_url=EXCLUDED.gif_url,mp4_url=EXCLUDED.mp4_url,mp3_url=EXCLUDED.mp3_url,
+         coin_price=EXCLUDED.coin_price,category=EXCLUDED.category,svga_url=EXCLUDED.svga_url,mp3_url=EXCLUDED.mp3_url,
          target_counting_percentage=EXCLUDED.target_counting_percentage,host_diamond_percentage=EXCLUDED.host_diamond_percentage,
          active=TRUE,sort_order=EXCLUDED.sort_order,updated_at=NOW()
-       RETURNING id,code,name,image_url,svga_url,gif_url,mp4_url,mp3_url,coin_price,category,target_counting_percentage,host_diamond_percentage`,
-      [code, name, imageUrl, coinPrice, category, Number(req.body.sort_order) || 0, svgaUrl, gifUrl, mp4Url, mp3Url, effectiveTargetPct, effectiveDiamondPct]
+       RETURNING id,code,name,image_url,svga_url,mp3_url,coin_price,category,target_counting_percentage,host_diamond_percentage`,
+      [code, name, imageUrl, coinPrice, category, Number(req.body.sort_order) || 0, svgaUrl, mp3Url, effectiveTargetPct, effectiveDiamondPct]
     );
     res.status(201).json({ gift: result.rows[0] });
   } catch (error) {
@@ -1793,11 +1707,11 @@ app.post("/api/admin/gifts", authMiddleware, adminMiddleware, async (req, res) =
 app.get("/api/admin/gifts", authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, code, name, image_url, svga_url, gif_url, mp4_url, mp3_url, coin_price, category, target_counting_percentage, host_diamond_percentage, active, sort_order, created_at, updated_at
+      `SELECT id, code, name, image_url, svga_url, mp3_url, coin_price, category, target_counting_percentage, host_diamond_percentage, active, sort_order, created_at, updated_at
        FROM gift_catalog ORDER BY category, sort_order, name`
     );
     const categories = [...new Set(result.rows.map(row => row.category).filter(Boolean))];
-    res.json({ gifts: await resolveGiftRows(result.rows), categories });
+    res.json({ gifts: result.rows, categories });
   } catch (error) {
     console.error("Admin gift list failed:", error);
     res.status(500).json({ message: "Could not load admin gift catalogue" });
@@ -1806,7 +1720,7 @@ app.get("/api/admin/gifts", authMiddleware, adminMiddleware, async (req, res) =>
 
 app.patch("/api/admin/gifts/:giftId", authMiddleware, adminMiddleware, async (req, res) => {
   const { giftId } = req.params;
-  const allowed = ["code", "name", "image_url", "svga_url", "gif_url", "mp4_url", "mp3_url", "coin_price", "category", "target_counting_percentage", "host_diamond_percentage", "active", "sort_order"];
+  const allowed = ["code", "name", "image_url", "svga_url", "mp3_url", "coin_price", "category", "target_counting_percentage", "host_diamond_percentage", "active", "sort_order"];
   const updates = Object.entries(req.body || {}).filter(([key]) => allowed.includes(key));
   if (!updates.length) return res.status(400).json({ message: "No supported gift fields supplied" });
   if (req.body.coin_price !== undefined && (!Number.isSafeInteger(Number(req.body.coin_price)) || Number(req.body.coin_price) <= 0)) {
@@ -1824,7 +1738,7 @@ app.patch("/api/admin/gifts/:giftId", authMiddleware, adminMiddleware, async (re
     const setSql = updates.map(([key], index) => `${key}=$${index + 1}`).join(", ");
     const result = await pool.query(
       `UPDATE gift_catalog SET ${setSql}, updated_at=NOW() WHERE id=$${values.length + 1}
-       RETURNING id, code, name, image_url, svga_url, gif_url, mp4_url, mp3_url, coin_price, category, target_counting_percentage, host_diamond_percentage, active, sort_order`,
+       RETURNING id, code, name, image_url, svga_url, mp3_url, coin_price, category, target_counting_percentage, host_diamond_percentage, active, sort_order`,
       [...values, giftId]
     );
     if (!result.rowCount) return res.status(404).json({ message: "Gift not found" });
@@ -1955,7 +1869,21 @@ app.post("/api/gifts/send", authMiddleware, async (req, res) => {
          giftId, giftResult.rows[0].name, quantity]
       );
       transactions.push(transaction.rows[0]);
-      // Global charm/host target is counted once by gift_level_progress_trigger.
+      // Count eligible received gift coins toward the receiver's global charm/host target.
+      // This is global per user and deliberately independent of room_id.
+      const targetCountedCoins = Math.floor(
+        Number(perRecipient) * Number(giftResult.rows[0].target_counting_percentage) / 100
+      );
+      if (targetCountedCoins > 0) {
+        await client.query(
+          `INSERT INTO user_level_stats(user_id, charm_value, wealth_value, updated_at)
+           VALUES($1,$2,0,NOW())
+           ON CONFLICT(user_id) DO UPDATE SET
+             charm_value = user_level_stats.charm_value + EXCLUDED.charm_value,
+             updated_at = NOW()`,
+          [receiver.id, targetCountedCoins]
+        );
+      }
       // Credit host diamonds atomically with the sender debit and gift record.
       // Formula: gift coins x target-counting % x host-diamond %.
       const diamondCredit = Math.floor(
@@ -2018,7 +1946,7 @@ app.get("/api/rooms/:roomId/gifts/events", authMiddleware, async (req, res) => {
               su.public_uid AS sender_uid, su.avatar_url AS sender_avatar,
               ru.display_name AS receiver_name, ru.username AS receiver_username,
               ru.public_uid AS receiver_uid, ru.avatar_url AS receiver_avatar,
-              gc.image_url AS gift_image, gc.svga_url, gc.gif_url, gc.mp4_url, gc.mp3_url, gc.coin_price
+              gc.image_url AS gift_image, gc.svga_url, gc.mp3_url, gc.coin_price
        FROM gift_transactions gt
        JOIN users su ON su.id=gt.sender_id
        JOIN users ru ON ru.id=gt.receiver_id
@@ -2029,15 +1957,7 @@ app.get("/api/rooms/:roomId/gifts/events", authMiddleware, async (req, res) => {
        LIMIT 30`,
       [roomId]
     );
-    const events = await Promise.all(result.rows.map(async row => ({
-      ...row,
-      gift_image: await resolveGiftMediaUrl(row.gift_image),
-      svga_url: await resolveGiftMediaUrl(row.svga_url),
-      gif_url: await resolveGiftMediaUrl(row.gif_url),
-      mp4_url: await resolveGiftMediaUrl(row.mp4_url),
-      mp3_url: await resolveGiftMediaUrl(row.mp3_url),
-    })));
-    res.json({ events });
+    res.json({ events: result.rows });
   } catch (error) {
     console.error("Room gift events failed:", error);
     res.status(500).json({ message: "Could not load room gift events" });
@@ -2485,15 +2405,6 @@ app.get("/api/rooms/:roomId/members", authMiddleware, async (req, res) => {
       });
     }
 
-    const blockedResult = await pool.query(
-      `SELECT seat_number FROM room_seat_blocks WHERE room_id = $1 ORDER BY seat_number`,
-      [req.params.roomId]
-    );
-    const moderatorResult = await pool.query(
-      `SELECT user_id FROM room_moderators WHERE room_id = $1`,
-      [req.params.roomId]
-    );
-
     const seats = [];
 
     for (
@@ -2515,8 +2426,6 @@ app.get("/api/rooms/:roomId/members", authMiddleware, async (req, res) => {
         seat_count: Number(room.seat_count),
       },
       seats,
-      blockedSeats: blockedResult.rows.map((row) => Number(row.seat_number)),
-      moderatorIds: moderatorResult.rows.map((row) => String(row.user_id)),
       currentUser: { id: req.user.id, role: roleResult.rows[0]?.role || "member" },
     });
   } catch (error) {
@@ -3088,32 +2997,6 @@ function walletDbRequired(req, res) {
   }
   return true;
 }
-
-// Shared wallet balance endpoint used by Wallet and the Room Gift Box.
-// Both screens read the same users.coins value to avoid showing stale/zero coins.
-app.get("/api/wallet/balance", authMiddleware, async (req, res) => {
-  if (!walletDbRequired(req, res)) return;
-  try {
-    const result = await pool.query(
-      `SELECT coins, diamonds, wallet_frozen FROM users WHERE id = $1`,
-      [req.user.id]
-    );
-    if (!result.rows.length) {
-      return res.status(404).json({ message: "User not found" });
-    }
-    const row = result.rows[0];
-    res.json({
-      wallet: {
-        coins: Number(row.coins || 0),
-        diamonds: Number(row.diamonds || 0),
-        frozen: Boolean(row.wallet_frozen),
-      },
-    });
-  } catch (error) {
-    console.error("Wallet balance lookup failed:", error);
-    res.status(500).json({ message: "Could not load wallet balance" });
-  }
-});
 
 app.get("/api/wallet/recharge-packages", authMiddleware, async (req, res) => {
   if (!walletDbRequired(req, res)) return;
