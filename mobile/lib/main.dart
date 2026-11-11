@@ -7412,8 +7412,11 @@ void _showSeatActionSheet({
 
   if (!isOccupied) {
     if (_canModerate) {
+      // Moderators and owners can also sit on an empty seat themselves.
+      // Moving another member requires selecting an occupied member first,
+      // so it must not be offered from an empty-seat action sheet.
       actions.addAll([
-        {'label': 'Move to this Mic', 'icon': Icons.swap_horiz_rounded, 'action': 'move_to_mic'},
+        {'label': 'Join this Seat', 'icon': Icons.event_seat_rounded, 'action': 'join_this_seat'},
         {'label': 'Invite him/her to take mic', 'icon': Icons.record_voice_over_rounded, 'action': 'invite_to_mic'},
         {'label': 'Mute Mic', 'icon': Icons.mic_off_rounded, 'action': 'mute_mic'},
         {'label': 'Block Seat', 'icon': Icons.lock_rounded, 'action': 'block_seat'},
@@ -7487,8 +7490,8 @@ void _showSeatActionSheet({
                   _roomMessage('Mic invitations need the room notification flow; not connected yet.');
                   return;
                 }
-                if (action == 'move_to_mic') {
-                  _roomMessage('Choose a member first to move them to this mic; move flow is not connected yet.');
+                if (action == 'join_this_seat') {
+                  _joinEmptySeat(seatNumber);
                   return;
                 }
                 _runRoomAction(
@@ -7910,7 +7913,7 @@ void initState() {
                 ? const Center(child: Text('No gifts in this category yet', style: TextStyle(color: Colors.white60)))
                 : GridView.builder(
                     padding: const EdgeInsets.only(bottom: 8),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 4, crossAxisSpacing: 8, mainAxisSpacing: 8, childAspectRatio: .76),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 4, crossAxisSpacing: 8, mainAxisSpacing: 8, childAspectRatio: .70),
                     itemCount: filtered.length,
                     itemBuilder: (_, i) {
                       final gift = filtered[i];
@@ -7918,7 +7921,7 @@ void initState() {
                       final image = '${gift['image_url'] ?? ''}';
                       final price = int.tryParse('${gift['coin_price']}') ?? 0;
                       return InkWell(onTap: () => refresh(() => selectedGift = gift), child: Container(
-                        padding: const EdgeInsets.all(6),
+                        padding: const EdgeInsets.all(3),
                         decoration: BoxDecoration(color: chosen ? const Color(0xFF3B3040) : const Color(0xFF292137), borderRadius: BorderRadius.circular(12), border: Border.all(color: chosen ? const Color(0xFF8BE044) : const Color(0xFF59452F), width: chosen ? 2.2 : 1)),
                         child: Column(children: [
                           Expanded(child: image.startsWith('https://') ? Image.network(image, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Icon(Icons.card_giftcard, color: Color(0xFFD7B66D), size: 34)) : const Icon(Icons.card_giftcard, color: Color(0xFFD7B66D), size: 34)),
