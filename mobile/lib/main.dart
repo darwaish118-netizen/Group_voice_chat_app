@@ -30,8 +30,12 @@ class VoiceChatApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         colorSchemeSeed: Colors.deepPurple,
-        scaffoldBackgroundColor:
-            const Color(0xFFF7F5FA),
+        scaffoldBackgroundColor: const Color(0xFFF7F5FA),
+        splashFactory: NoSplash.splashFactory,
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        hoverColor: Colors.transparent,
+        focusColor: Colors.transparent,
       ),
       home: const AuthGate(),
     );
@@ -2307,7 +2311,7 @@ try {
   }
 
   String _roomCountry(Map<String, dynamic> room) =>
-      (room['country'] ?? room['owner_country'] ?? '').toString();
+      (room['owner_country'] ?? room['country'] ?? room['owner_location'] ?? '').toString().trim();
 
   int _roomMembers(Map<String, dynamic> room) {
     for (final key in ['member_count', 'members_count', 'online_count', 'current_users']) {
@@ -2327,13 +2331,19 @@ try {
 
   String _flag(String country) {
     const flags = {
-      'Pakistan': '🇵🇰', 'India': '🇮🇳', 'United Arab Emirates': '🇦🇪',
-      'United Kingdom': '🇬🇧', 'Saudi Arabia': '🇸🇦', 'Bangladesh': '🇧🇩',
-      'Nepal': '🇳🇵', 'Qatar': '🇶🇦', 'Kuwait': '🇰🇼', 'Oman': '🇴🇲',
-      'Bahrain': '🇧🇭', 'United States': '🇺🇸', 'Canada': '🇨🇦',
-      'Australia': '🇦🇺', 'Germany': '🇩🇪', 'France': '🇫🇷', 'Turkey': '🇹🇷',
+      'Pakistan': '🇵🇰', 'PK': '🇵🇰', 'India': '🇮🇳', 'IN': '🇮🇳',
+      'United Arab Emirates': '🇦🇪', 'UAE': '🇦🇪', 'AE': '🇦🇪',
+      'United Kingdom': '🇬🇧', 'UK': '🇬🇧', 'GB': '🇬🇧',
+      'Saudi Arabia': '🇸🇦', 'SA': '🇸🇦', 'Bangladesh': '🇧🇩', 'BD': '🇧🇩',
+      'Nepal': '🇳🇵', 'NP': '🇳🇵', 'Qatar': '🇶🇦', 'QA': '🇶🇦',
+      'Kuwait': '🇰🇼', 'KW': '🇰🇼', 'Oman': '🇴🇲', 'OM': '🇴🇲',
+      'Bahrain': '🇧🇭', 'BH': '🇧🇭', 'United States': '🇺🇸', 'US': '🇺🇸',
+      'Canada': '🇨🇦', 'CA': '🇨🇦', 'Australia': '🇦🇺', 'AU': '🇦🇺',
+      'Germany': '🇩🇪', 'DE': '🇩🇪', 'France': '🇫🇷', 'FR': '🇫🇷',
+      'Turkey': '🇹🇷', 'Türkiye': '🇹🇷', 'TR': '🇹🇷',
     };
-    return flags[country] ?? '🌍';
+    final normalized = country.trim();
+    return flags[normalized] ?? flags[normalized.toUpperCase()] ?? '';
   }
 
   Future<void> _openSearch() async {
@@ -2419,6 +2429,9 @@ try {
     final cover = room['cover_image_url']?.toString() ?? '';
     final name = (room['name'] ?? 'Voice Room').toString();
     final country = _roomCountry(room);
+    final countryFlag = (room['country_flag']?.toString().trim().isNotEmpty == true)
+        ? room['country_flag'].toString().trim()
+        : _flag('${room['owner_country_code'] ?? room['country_code'] ?? country}');
     final members = _roomMembers(room);
     final id = room['id']?.toString() ?? '';
     final ownerUid = room['owner_public_uid']?.toString() ?? '';
@@ -2453,15 +2466,44 @@ try {
               else
                 _roomCoverFallback(),
               DecoratedBox(decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.black.withOpacity(.38), Colors.transparent, Colors.black.withOpacity(.82)]))),
-              Positioned(left: 7, top: 7, child: Container(padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4), decoration: BoxDecoration(color: Colors.black.withOpacity(.58), borderRadius: BorderRadius.circular(9)), child: Text(_flag(country), style: const TextStyle(fontSize: 15)))),
+              if (countryFlag.isNotEmpty)
+                Positioned(left: 7, top: 7, child: Container(padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4), decoration: BoxDecoration(color: Colors.black.withOpacity(.58), borderRadius: BorderRadius.circular(9)), child: Text(countryFlag, style: const TextStyle(fontSize: 15)))),
               Positioned(right: 7, top: 7, child: Container(padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4), decoration: BoxDecoration(color: Colors.black.withOpacity(.62), borderRadius: BorderRadius.circular(9)), child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.people_alt_rounded, size: 13, color: Colors.white), const SizedBox(width: 3), Text('$members', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold))]))),
               Positioned(left: 7, right: 7, bottom: 8, child: Text(name, maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13, shadows: [Shadow(color: Colors.black, blurRadius: 5)]))),
               if (isTop)
-                Positioned(top: -1, left: 0, right: 0, child: Center(child: Container(padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 3), decoration: BoxDecoration(color: frameColor, borderRadius: const BorderRadius.vertical(bottom: Radius.circular(9)), boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 5)]), child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.workspace_premium, size: 13, color: Color(0xFF32133F)), const SizedBox(width: 3), Text('TOP $rank', style: const TextStyle(color: Color(0xFF32133F), fontWeight: FontWeight.w900, fontSize: 10))])))),
+                Positioned(top: 0, left: 0, right: 0, child: Center(child: _uniqueRankBadge(rank))),
             ]),
           ),
         ),
       ),
+    );
+  }
+
+
+  Widget _uniqueRankBadge(int rank) {
+    final isFirst = rank == 1;
+    final isSecond = rank == 2;
+    final colors = isFirst
+        ? const [Color(0xFFFFF1A8), Color(0xFFFFB800), Color(0xFF9B5B00)]
+        : isSecond
+            ? const [Color(0xFFEAF8FF), Color(0xFF8EDBFF), Color(0xFF3979B8)]
+            : const [Color(0xFFFFE0C2), Color(0xFFD58A54), Color(0xFF80401F)];
+    final icon = isFirst ? Icons.workspace_premium : isSecond ? Icons.diamond : Icons.military_tech;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(colors: colors),
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(13)),
+        border: Border.all(color: Colors.white.withOpacity(.8), width: 1),
+        boxShadow: [BoxShadow(color: colors.first.withOpacity(.55), blurRadius: 12, spreadRadius: 1)],
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, size: 15, color: const Color(0xFF32133F)),
+        const SizedBox(width: 4),
+        Text('TOP $rank', style: const TextStyle(color: Color(0xFF32133F), fontWeight: FontWeight.w900, fontSize: 10, letterSpacing: .7)),
+        const SizedBox(width: 3),
+        Icon(Icons.auto_awesome, size: 11, color: const Color(0xFF32133F).withOpacity(.85)),
+      ]),
     );
   }
 
@@ -2494,32 +2536,19 @@ try {
                     padding: const EdgeInsets.fromLTRB(14, 7, 14, 0),
                     child: Column(children: [
                       Row(children: [
-                        Container(width: 43, height: 43, decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: const Color(0xFFFFD76A), width: 1.5), gradient: const LinearGradient(colors: [Color(0xFF8D32C7), Color(0xFF24103C)]), boxShadow: [BoxShadow(color: const Color(0xFFE83EAD).withOpacity(.35), blurRadius: 12)]), child: const Center(child: Text('M', style: TextStyle(color: Color(0xFFFFD76A), fontSize: 25, fontWeight: FontWeight.w900)))),
+                        Expanded(
+                          child: Row(children: [
+                            _homeTabButton('Popular', 0),
+                            const SizedBox(width: 7),
+                            _homeTabButton('Follow', 2),
+                          ]),
+                        ),
                         const SizedBox(width: 8),
-                        const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('MINDO', style: TextStyle(color: Color(0xFFFFD76A), fontSize: 19, fontWeight: FontWeight.w900, letterSpacing: 2)), Text('VOICE CHAT', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 2.5))])),
                         _headerAction(Icons.search_rounded, _openSearch, 'Search'),
-                        const SizedBox(width: 9),
+                        const SizedBox(width: 8),
                         _headerAction(Icons.emoji_events_rounded, _openRanking, 'Ranking'),
                       ]),
-                      const SizedBox(height: 13),
-                      Row(children: [
-                        for (int i = 0; i < 3; i++)
-                          Expanded(child: GestureDetector(
-                            onTap: () => setState(() => _selectedTab = i),
-                            child: Container(
-                              margin: EdgeInsets.only(right: i == 2 ? 0 : 7),
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(20),
-                                gradient: _selectedTab == i ? const LinearGradient(colors: [Color(0xFFE83EAD), Color(0xFF7927B5)]) : null,
-                                color: _selectedTab == i ? null : const Color(0xFF241332),
-                                border: Border.all(color: _selectedTab == i ? const Color(0xFFFFD76A) : Colors.white12),
-                              ),
-                              child: Center(child: Text(['Popular', 'Explore', 'Follow'][i], style: TextStyle(color: _selectedTab == i ? Colors.white : Colors.white70, fontWeight: FontWeight.w800))),
-                            ),
-                          )),
-                      ]),
-                      SizedBox(height: 150, child: PageView.builder(
+                      SizedBox(height: 140, child: PageView.builder(
                         controller: _bannerController,
                         itemCount: 3,
                         onPageChanged: (index) => setState(() => _bannerIndex = index),
@@ -2532,9 +2561,9 @@ try {
                         PopupMenuButton<String>(
                           color: const Color(0xFF28103D),
                           initialValue: _selectedCountry,
-                          onSelected: (value) => setState(() { _selectedCountry = value; _selectedTab = 1; }),
+                          onSelected: (value) => setState(() { _selectedCountry = value; _selectedTab = 0; }),
                           itemBuilder: (_) => ['All', 'Pakistan', 'India', 'United Arab Emirates', 'Saudi Arabia', 'Bangladesh', 'United Kingdom', 'United States', 'Germany'].map((c) => PopupMenuItem(value: c, child: Text(c, style: const TextStyle(color: Colors.white)))).toList(),
-                          child: Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7), decoration: BoxDecoration(color: const Color(0xFF28103D), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFFFD76A).withOpacity(.6))), child: Row(children: [const Icon(Icons.public, color: Color(0xFFFFD76A), size: 16), const SizedBox(width: 5), Text(_selectedCountry, style: const TextStyle(color: Colors.white, fontSize: 11)), const Icon(Icons.arrow_drop_down, color: Colors.white)])),
+                          child: Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7), decoration: BoxDecoration(color: const Color(0xFF28103D), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFFFD76A).withOpacity(.6))), child: Row(children: [const Icon(Icons.public, color: Color(0xFFFFD76A), size: 16), const SizedBox(width: 5), Text(_selectedCountry == 'All' ? 'All Country' : _selectedCountry, style: const TextStyle(color: Colors.white, fontSize: 11)), const Icon(Icons.arrow_drop_down, color: Colors.white)])),
                         ),
                       ]),
                       const SizedBox(height: 9),
@@ -2565,6 +2594,35 @@ try {
       ),
     );
   }
+
+  Widget _homeTabButton(String label, int tab) => Expanded(
+    child: GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => setState(() => _selectedTab = tab),
+      child: Container(
+        height: 46,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          gradient: _selectedTab == tab
+              ? const LinearGradient(colors: [Color(0xFFE83EAD), Color(0xFF7927B5)])
+              : null,
+          color: _selectedTab == tab ? null : const Color(0xFF241332),
+          border: Border.all(
+            color: _selectedTab == tab ? const Color(0xFFFFD76A) : Colors.white12,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: _selectedTab == tab ? Colors.white : Colors.white70,
+            fontWeight: FontWeight.w800,
+            fontSize: 13,
+          ),
+        ),
+      ),
+    ),
+  );
 
   Widget _headerAction(IconData icon, VoidCallback onTap, String tooltip) => Container(
     decoration: BoxDecoration(shape: BoxShape.circle, gradient: const LinearGradient(colors: [Color(0xFF8C2CC2), Color(0xFF32134C)]), border: Border.all(color: const Color(0xFFFFD76A), width: 1.2), boxShadow: [BoxShadow(color: const Color(0xFFE83EAD).withOpacity(.3), blurRadius: 9)]),
@@ -7412,11 +7470,8 @@ void _showSeatActionSheet({
 
   if (!isOccupied) {
     if (_canModerate) {
-      // Moderators and owners can also sit on an empty seat themselves.
-      // Moving another member requires selecting an occupied member first,
-      // so it must not be offered from an empty-seat action sheet.
       actions.addAll([
-        {'label': 'Join this Seat', 'icon': Icons.event_seat_rounded, 'action': 'join_this_seat'},
+        {'label': 'Move to this Mic', 'icon': Icons.swap_horiz_rounded, 'action': 'move_to_mic'},
         {'label': 'Invite him/her to take mic', 'icon': Icons.record_voice_over_rounded, 'action': 'invite_to_mic'},
         {'label': 'Mute Mic', 'icon': Icons.mic_off_rounded, 'action': 'mute_mic'},
         {'label': 'Block Seat', 'icon': Icons.lock_rounded, 'action': 'block_seat'},
@@ -7490,8 +7545,8 @@ void _showSeatActionSheet({
                   _roomMessage('Mic invitations need the room notification flow; not connected yet.');
                   return;
                 }
-                if (action == 'join_this_seat') {
-                  _joinEmptySeat(seatNumber);
+                if (action == 'move_to_mic') {
+                  _roomMessage('Choose a member first to move them to this mic; move flow is not connected yet.');
                   return;
                 }
                 _runRoomAction(
@@ -7787,19 +7842,31 @@ void initState() {
     }
     if (!mounted) return;
 
-    final occupied = seatMembers.values
-        .where((m) => m['public_uid'] != null && '${m['public_uid']}'.isNotEmpty)
-        .toList();
+    // Build recipients from the actual occupied seats first. The members API's
+    // currentUser object contains only id/role, so relying on currentRoomUser
+    // for public_uid hides the sender when they are already seated.
+    final occupied = seatMembers.entries
+        .map((entry) => <String, dynamic>{...entry.value, '_seat_number': entry.key})
+        .toList()
+      ..sort((a, b) => (int.tryParse('${a['_seat_number']}') ?? 0)
+          .compareTo(int.tryParse('${b['_seat_number']}') ?? 0));
     final recipientMembers = <Map<String, dynamic>>[];
-    final own = currentRoomUser;
-    if (own != null && own['public_uid'] != null && '${own['public_uid']}'.isNotEmpty) {
-      recipientMembers.add({...own, '_is_self': true});
-    }
+    String recipientUid(Map<String, dynamic> member) =>
+        '${member['public_uid'] ?? member['publicUid'] ?? member['uid'] ?? ''}'.trim();
+
     for (final member in occupied) {
-      if (currentUserId == null || '${member['id']}' != currentUserId) {
-        if (!recipientMembers.any((m) => '${m['public_uid']}' == '${member['public_uid']}')) {
-          recipientMembers.add(member);
-        }
+      final uid = recipientUid(member);
+      if (uid.isEmpty) continue;
+      final isSelf = currentUserId != null && '${member['id']}' == currentUserId;
+      if (!recipientMembers.any((m) => recipientUid(m) == uid)) {
+        recipientMembers.add({...member, '_is_self': isSelf});
+      }
+    }
+    final own = currentRoomUser;
+    if (own != null) {
+      final uid = recipientUid(own);
+      if (uid.isNotEmpty && !recipientMembers.any((m) => recipientUid(m) == uid)) {
+        recipientMembers.insert(0, {...own, '_is_self': true});
       }
     }
 
@@ -7817,7 +7884,6 @@ void initState() {
     int quantity = 1;
     bool sending = false;
     final myCoins = int.tryParse('${currentRoomUser?['coins'] ?? 0}') ?? 0;
-    final myLevel = int.tryParse('${currentRoomUser?['level'] ?? 1}') ?? 1;
 
     await showModalBottomSheet(
       context: context,
@@ -7842,9 +7908,9 @@ void initState() {
         final total = selectedPrice * quantity * selectedCount;
 
         Widget recipientChip(Map<String, dynamic> member) {
-          final uid = '${member['public_uid']}';
+          final uid = recipientUid(member);
           final self = member['_is_self'] == true;
-          final label = self ? 'You' : '${member['seat_number'] ?? member['seat'] ?? member['display_name'] ?? member['username'] ?? 'User'}';
+          final label = self ? 'You' : '${member['display_name'] ?? member['username'] ?? 'User'}';
           final avatar = '${member['avatar_url'] ?? ''}';
           final chosen = selectedRecipients.contains(uid);
           return Padding(
@@ -7854,13 +7920,13 @@ void initState() {
                 if (chosen) { selectedRecipients.remove(uid); } else { selectedRecipients.add(uid); }
               }),
               child: SizedBox(
-                width: 52,
+                width: 60,
                 child: Column(children: [
                   Container(
                     padding: const EdgeInsets.all(2),
                     decoration: BoxDecoration(shape: BoxShape.circle,
                       border: Border.all(color: chosen ? const Color(0xFF8BE044) : const Color(0xFFD7B66D), width: chosen ? 2.5 : 1.2)),
-                    child: CircleAvatar(radius: 19, backgroundColor: const Color(0xFF49365F),
+                    child: CircleAvatar(radius: 21, backgroundColor: const Color(0xFF49365F),
                       backgroundImage: avatar.startsWith('https://') ? NetworkImage(avatar) : null,
                       child: avatar.startsWith('https://') ? null : const Icon(Icons.person, color: Colors.white, size: 20)),
                   ),
@@ -7882,21 +7948,27 @@ void initState() {
               Row(children: [
                 InkWell(onTap: () => refresh(() {
                   if (selectedRecipients.length == recipientMembers.length) { selectedRecipients.clear(); }
-                  else { selectedRecipients..clear()..addAll(recipientMembers.map((m) => '${m['public_uid']}')); }
-                }), child: Container(padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8), decoration: BoxDecoration(color: const Color(0xFF332641), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFD7B66D))), child: const Column(children: [Icon(Icons.mic, color: Color(0xFFF5D58E), size: 19), Text('Mic All', style: TextStyle(color: Colors.white, fontSize: 9))]))),
+                  else { selectedRecipients..clear()..addAll(recipientMembers.map(recipientUid).where((uid) => uid.isNotEmpty)); }
+                }), child: Container(padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8), decoration: BoxDecoration(color: const Color(0xFF332641), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFD7B66D))), child: const Column(children: [Icon(Icons.groups_rounded, color: Color(0xFFF5D58E), size: 19), Text('All', style: TextStyle(color: Colors.white, fontSize: 9))]))),
                 const SizedBox(width: 8),
                 Expanded(child: SizedBox(height: 62, child: ListView(scrollDirection: Axis.horizontal, children: recipientMembers.map(recipientChip).toList()))),
                 IconButton(tooltip: 'Profile', onPressed: () {}, icon: const Icon(Icons.account_circle_outlined, color: Color(0xFFF5D58E), size: 28)),
                 IconButton(onPressed: () => Navigator.pop(sheetContext), icon: const Icon(Icons.close, color: Colors.white70)),
               ]),
-              const SizedBox(height: 5),
+              const SizedBox(height: 7),
               Row(children: [
-                Text('LV $myLevel', style: const TextStyle(color: Color(0xFFF5D58E), fontWeight: FontWeight.bold, fontSize: 11)),
-                const SizedBox(width: 9),
-                Expanded(child: ClipRRect(borderRadius: BorderRadius.circular(8), child: const LinearProgressIndicator(value: .62, minHeight: 6, backgroundColor: Color(0xFF40334D), color: Color(0xFFD7B66D)))),
-                Text('Details', style: TextStyle(color: Colors.amber.shade100, fontSize: 10)),
+                Text('LV ${int.tryParse('${currentRoomUser?['level'] ?? currentRoomUser?['wealth_level'] ?? 1}') ?? 1}', style: const TextStyle(color: Color(0xFFF5D58E), fontSize: 12, fontWeight: FontWeight.w900)),
+                const SizedBox(width: 8),
+                Expanded(child: ClipRRect(borderRadius: BorderRadius.circular(10), child: LinearProgressIndicator(
+                  minHeight: 8,
+                  value: ((double.tryParse('${currentRoomUser?['level_progress'] ?? currentRoomUser?['progress'] ?? 0}') ?? 0).clamp(0.0, 1.0)),
+                  backgroundColor: const Color(0xFF493650),
+                  valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFE8BE63)),
+                ))),
+                const SizedBox(width: 8),
+                const Text('Details', style: TextStyle(color: Color(0xFFF5D58E), fontSize: 11)),
               ]),
-              const SizedBox(height: 10),
+              const SizedBox(height: 9),
               // Fixed category row.
               Row(children: categories.map((c) => Expanded(child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 2),
@@ -7913,7 +7985,7 @@ void initState() {
                 ? const Center(child: Text('No gifts in this category yet', style: TextStyle(color: Colors.white60)))
                 : GridView.builder(
                     padding: const EdgeInsets.only(bottom: 8),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 4, crossAxisSpacing: 8, mainAxisSpacing: 8, childAspectRatio: .70),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 4, crossAxisSpacing: 8, mainAxisSpacing: 8, childAspectRatio: .60),
                     itemCount: filtered.length,
                     itemBuilder: (_, i) {
                       final gift = filtered[i];
@@ -7950,9 +8022,8 @@ void initState() {
                     refresh(() => sending = false);
                     _roomMessage(e.toString().replaceFirst('Exception: ', ''));
                   }
-                }, style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF83D63C), foregroundColor: const Color(0xFF18220F), disabledBackgroundColor: Colors.white12, padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11))), child: Text(sending ? 'Sending…' : 'SEND', style: const TextStyle(fontWeight: FontWeight.w900, letterSpacing: .5))),
+                }, style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF83D63C), foregroundColor: const Color(0xFF18220F), disabledBackgroundColor: const Color(0xFF42652F), disabledForegroundColor: Colors.white70, padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11))), child: Text(sending ? 'Sending…' : 'SEND', style: const TextStyle(fontWeight: FontWeight.w900, letterSpacing: .5))),
               ]),
-              if (selectedGift != null) Padding(padding: const EdgeInsets.only(top: 4), child: Text('Selected: ${selectedGift!['name']} · $total coins · $selectedCount recipient(s)', style: const TextStyle(color: Color(0xFFD7B66D), fontSize: 9))),
             ]),
           ),
         ));
@@ -8393,7 +8464,7 @@ child: Column(
         ]);
       },
     ),
-    const SizedBox(height: 7),
+    const SizedBox(height: 0),
     Text(
       (() {
         final member = seatMembers[index + 1];
@@ -8415,14 +8486,6 @@ child: Column(
         fontSize: 11,
       ),
     ),
-    if (seatMembers[index + 1] != null) ...[
-      const SizedBox(height: 3),
-      Row(mainAxisSize: MainAxisSize.min, children: [
-        _roomLevelBadge('W', seatMembers[index + 1]?['wealth_level'], iconUrl: seatMembers[index + 1]?['wealth_level_icon_url']?.toString()),
-        const SizedBox(width: 3),
-        _roomLevelBadge('C', seatMembers[index + 1]?['charm_level'], iconUrl: seatMembers[index + 1]?['charm_level_icon_url']?.toString()),
-      ]),
-    ],
   ],
 ),
 );
