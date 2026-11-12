@@ -35,11 +35,17 @@ jobs:
         run: |
           sed -i '/<manifest /a\    <uses-permission android:name="android.permission.INTERNET"/>' android/app/src/main/AndroidManifest.xml
 
-      - name: Disable crashing image_picker Android release lint task
+      - name: Flutter version
+        run: flutter --version
+
+      - name: Get dependencies
+        working-directory: mobile
+        run: flutter pub get
+
+      - name: Skip crashing lint tasks in third-party Android plugins
         working-directory: mobile
         shell: bash
         run: |
-          GRADLE_FILE=""
           if [ -f android/build.gradle ]; then
             GRADLE_FILE="android/build.gradle"
           elif [ -f android/build.gradle.kts ]; then
@@ -51,24 +57,24 @@ jobs:
 
           cat >> "$GRADLE_FILE" <<'GRADLE'
 
-          // Work around the upstream lint detector crash in image_picker_android.
+          // Some third-party Android plugin lint detectors crash with NoSuchMethodError
+          // in the current CI Android Lint toolchain. Keep the app module's lint intact.
           subprojects {
               tasks.configureEach {
-                  if (project.path == ":image_picker_android" && name == "lintVitalAnalyzeRelease") {
+                  if (project.path != ":app" && name.startsWith("lint")) {
                       enabled = false
                   }
               }
           }
           GRADLE
 
-          echo "Applied targeted lint workaround in $GRADLE_FILE"
+          echo "Disabled lint tasks only in third-party Android plugin modules: $GRADLE_FILE"
 
-      - name: Flutter version
-        run: flutter --version
 
-      - name: Get dependencies
-        working-directory: mobile
-        run: flutter pub get
+
+
+
+
 
       - name: Build APK
         working-directory: mobile
