@@ -2261,24 +2261,54 @@ app.get("/api/rankings/users", authMiddleware, async (req, res) => {
   if (!["daily", "weekly", "monthly"].includes(period)) {
     return res.status(400).json({ message: "period must be daily, weekly or monthly" });
   }
-  const dateFilter = period === "daily"
-    ? "date_trunc('day', NOW())"
-    : period === "weekly"
-      ? "date_trunc('week', NOW())"
-      : "date_trunc('month', NOW())";
+
+  // Period boundaries are calculated in KSA local time, then converted to
+  // timestamptz instants for comparison with gift_transactions.created_at.
+  const truncUnit = period === "daily" ? "day" : period === "weekly" ? "week" : "month";
   const userColumn = category === "wealth" ? "gt.sender_id" : "gt.receiver_id";
   try {
     const result = await pool.query(`
-      SELECT u.id, u.username, u.display_name, u.avatar_url, u.public_uid,
-        COALESCE(SUM(gt.coin_amount), 0)::BIGINT AS total_coins
-      FROM gift_transactions gt
-      JOIN users u ON u.id = ${userColumn}
-      WHERE gt.status = 'success' AND gt.created_at >= ${dateFilter}
-      GROUP BY u.id
-      ORDER BY total_coins DESC, u.created_at ASC
-      LIMIT 100
-    `);
-    res.json({ category, period, ranking: result.rows });
+      WITH period_bounds AS (
+        SELECT
+          (date_trunc('${truncUnit}', NOW() AT TIME ZONE 'Asia/Riyadh'))
+            AT TIME ZONE 'Asia/Riyadh' AS period_start,
+          ((date_trunc('${truncUnit}', NOW() AT TIME ZONE 'Asia/Riyadh')
+            + INTERVAL '1 ${truncUnit}') AT TIME ZONE 'Asia/Riyadh') AS period_end
+      ), user_totals AS (
+        SELECT u.id, u.username, u.display_name, u.avatar_url, u.public_uid,
+          u.created_at,
+          COALESCE(SUM(gt.coin_amount), 0)::BIGINT AS total_coins
+        FROM gift_transactions gt
+        JOIN users u ON u.id = ${userColumn}
+        CROSS JOIN period_bounds pb
+        WHERE gt.status = 'success'
+          AND gt.created_at >= pb.period_start
+          AND gt.created_at < pb.period_end
+        GROUP BY u.id
+      ), ranked_users AS (
+        SELECT id, username, display_name, avatar_url, public_uid, total_coins,
+          ROW_NUMBER() OVER (ORDER BY total_coins DESC, created_at ASC, id ASC)::INTEGER AS rank
+        FROM user_totals
+      )
+      SELECT
+        (SELECT period_start FROM period_bounds) AS period_start,
+        (SELECT period_end FROM period_bounds) AS period_end,
+        COALESCE((
+          SELECT json_agg(row_to_json(top_users) ORDER BY top_users.rank)
+          FROM (SELECT * FROM ranked_users ORDER BY rank LIMIT 50) top_users
+        ), '[]'::json) AS ranking,
+        (SELECT row_to_json(my_user) FROM ranked_users my_user WHERE my_user.id = $1) AS my_rank
+    `, [req.user.id]);
+    const row = result.rows[0] || {};
+    res.json({
+      category,
+      period,
+      timezone: "Asia/Riyadh",
+      period_start: row.period_start,
+      period_end: row.period_end,
+      ranking: row.ranking || [],
+      my_rank: row.my_rank || null,
+    });
   } catch (error) {
     console.error("Global user ranking failed:", error);
     res.status(500).json({ message: "Could not load global user ranking" });
