@@ -3330,17 +3330,21 @@ app.post("/api/coins/demo", authMiddleware, async (req, res) => {
 // Start Server
 // -------------------------
 
-async function startServer() {
-  try {
-    await initDatabase();
+// Bind the HTTP port immediately so Render can detect the service.
+// Database initialization runs after the server is listening.
+const httpServer = app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Group Voice Chat API running on port ${PORT}`);
 
-    app.listen(PORT, "0.0.0.0", () => {
-      console.log(`Group Voice Chat API running on port ${PORT}`);
+  initDatabase()
+    .then(() => {
+      console.log("Database initialization completed.");
+    })
+    .catch((error) => {
+      console.error("Database initialization failed:", error);
     });
-  } catch (error) {
-    console.error("Server startup failed:", error);
-    process.exit(1);
-  }
-}
+});
 
-startServer();
+httpServer.on("error", (error) => {
+  console.error("HTTP server failed to start:", error);
+  process.exit(1);
+});
