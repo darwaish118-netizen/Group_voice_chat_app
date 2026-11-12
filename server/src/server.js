@@ -381,6 +381,7 @@ await pool.query(`
     )
   `);
   await pool.query(`ALTER TABLE gift_transactions DROP CONSTRAINT IF EXISTS gift_transactions_sender_id_receiver_id_check`);
+  await pool.query(`ALTER TABLE gift_transactions DROP CONSTRAINT IF EXISTS gift_transactions_check`);
   await pool.query(`ALTER TABLE gift_transactions ADD COLUMN IF NOT EXISTS room_id UUID REFERENCES rooms(id) ON DELETE SET NULL`);
   await pool.query(`ALTER TABLE gift_transactions ADD COLUMN IF NOT EXISTS gift_id UUID REFERENCES gift_catalog(id) ON DELETE SET NULL`);
   await pool.query(`ALTER TABLE gift_transactions ADD COLUMN IF NOT EXISTS gift_name VARCHAR(100)`);
@@ -1958,6 +1959,9 @@ app.post("/api/gifts/send", authMiddleware, async (req, res) => {
       // Global charm/host target is counted once by gift_level_progress_trigger.
       // Credit host diamonds atomically with the sender debit and gift record.
       // Formula: gift coins x target-counting % x host-diamond %.
+      const targetCountedCoins = Math.floor(
+        Number(perRecipient) * Number(giftResult.rows[0].target_counting_percentage) / 100
+      );
       const diamondCredit = Math.floor(
         Number(perRecipient) * Number(giftResult.rows[0].target_counting_percentage) *
         Number(giftResult.rows[0].host_diamond_percentage) / 10000
