@@ -7480,7 +7480,7 @@ void _showSeatActionSheet({
   } else if (!isOccupied) {
     if (_canModerate) {
       actions.addAll([
-        {'label': 'Move to this Mic', 'icon': Icons.swap_horiz_rounded, 'action': 'move_to_mic'},
+        {'label': 'Join Seat', 'icon': Icons.event_seat_rounded, 'action': 'join_seat'},
         {'label': 'Invite him/her to take mic', 'icon': Icons.record_voice_over_rounded, 'action': 'invite_to_mic'},
         {'label': 'Mute Mic', 'icon': Icons.mic_off_rounded, 'action': 'mute_mic'},
         {'label': 'Block Seat', 'icon': Icons.lock_rounded, 'action': 'block_seat'},
@@ -7554,8 +7554,8 @@ void _showSeatActionSheet({
                   _roomMessage('Mic invitations need the room notification flow; not connected yet.');
                   return;
                 }
-                if (action == 'move_to_mic') {
-                  _roomMessage('Choose a member first to move them to this mic; move flow is not connected yet.');
+                if (action == 'join_seat') {
+                  _joinEmptySeat(seatNumber);
                   return;
                 }
                 _runRoomAction(
@@ -7900,7 +7900,6 @@ void initState() {
     Map<String, dynamic>? selectedGift;
     final selectedRecipients = <String>{};
     int quantity = 1;
-    bool sending = false;
     int myCoins = int.tryParse('${currentRoomUser?['coins'] ?? 0}') ?? 0;
     try {
       final profile = await api.me(widget.token);
@@ -8035,20 +8034,25 @@ void initState() {
                 Expanded(child: Row(children: [const Icon(Icons.monetization_on, color: Color(0xFFF5D58E), size: 20), const SizedBox(width: 4), Flexible(child: Text('$myCoins', overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFFFFE3A5), fontWeight: FontWeight.bold, fontSize: 12))), IconButton(onPressed: () {}, icon: const Icon(Icons.add_circle_outline, color: Color(0xFFD7B66D), size: 18), padding: EdgeInsets.zero, constraints: const BoxConstraints(minWidth: 26, minHeight: 28))])),
                 Container(padding: const EdgeInsets.symmetric(horizontal: 5), decoration: BoxDecoration(color: const Color(0xFF302541), borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFFD7B66D))), child: DropdownButtonHideUnderline(child: DropdownButton<int>(value: quantity, dropdownColor: const Color(0xFF302541), style: const TextStyle(color: Colors.white, fontSize: 12), items: [1, 5, 7, 10, 17, 20, 50, 100, 177].map((n) => DropdownMenuItem(value: n, child: Text('$n'))).toList(), onChanged: (v) => refresh(() => quantity = v ?? 1)))),
                 const SizedBox(width: 8),
-                ElevatedButton(onPressed: sending || selectedGift == null || selectedRecipients.isEmpty ? null : () async {
-                  refresh(() => sending = true);
+                ElevatedButton(onPressed: selectedGift == null || selectedRecipients.isEmpty ? null : () async {
+                  // Snapshot this tap's selection. Every deliberate tap creates its own
+                  // idempotency key and request; no busy state disables rapid gifting.
+                  final giftIdForTap = '${selectedGift!['id']}';
+                  final recipientsForTap = List<String>.from(selectedRecipients);
+                  final quantityForTap = quantity;
+                  final tapKey = 'gift-${DateTime.now().microsecondsSinceEpoch}-${identityHashCode(Object())}';
                   try {
-                    final result = await api.sendRoomGift(widget.token, giftId: '${selectedGift!['id']}', roomId: widget.roomId, receiverUids: selectedRecipients.toList(), quantity: quantity, idempotencyKey: 'gift-${DateTime.now().microsecondsSinceEpoch}');
+                    final result = await api.sendRoomGift(widget.token, giftId: giftIdForTap, roomId: widget.roomId, receiverUids: recipientsForTap, quantity: quantityForTap, idempotencyKey: tapKey);
                     if (!mounted) return;
-                    Navigator.pop(sheetContext);
-                    final spent = result['total_debit'] ?? total;
+                    final spent = result['total_debit'] ?? (total * recipientsForTap.length);
                     _roomMessage('Gift sent successfully! $spent Coins used.');
+                    await loadRoomMembers();
                     _pollRoomGiftEvents();
                   } catch (e) {
-                    refresh(() => sending = false);
+                    if (!mounted) return;
                     _roomMessage(e.toString().replaceFirst('Exception: ', ''));
                   }
-                }, style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF83D63C), foregroundColor: const Color(0xFF18220F), disabledBackgroundColor: const Color(0xFF42652F), disabledForegroundColor: Colors.white70, padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11))), child: Text(sending ? 'Sending…' : 'SEND', style: const TextStyle(fontWeight: FontWeight.w900, letterSpacing: .5))),
+                }, style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF83D63C), foregroundColor: const Color(0xFF18220F), disabledBackgroundColor: const Color(0xFF42652F), disabledForegroundColor: Colors.white70, padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11))), child: const Text('SEND', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: .5))),
               ]),
             ]),
           ),
@@ -8436,15 +8440,15 @@ actions: [
               ],
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 7),
           Expanded(
             child:
                 GridView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 5,
                 crossAxisSpacing: 4,
-                mainAxisSpacing: 12,
+                mainAxisSpacing: 6,
                 childAspectRatio: 0.72,
               ),
               itemCount: widget.seatCount,
