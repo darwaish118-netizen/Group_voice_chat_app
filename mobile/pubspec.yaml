@@ -17,6 +17,7 @@ dependencies:
   shared_preferences: ^2.3.2
   audioplayers: ^6.6.0
   flutter_svga_easyplayer: ^0.2.0
+  video_player: ^2.14.1
 
 dev_dependencies:
   flutter_test:
