@@ -10068,7 +10068,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
               : _error != null
                 ? Center(child: Padding(padding: const EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, children: [
                     const Icon(Icons.emoji_events_rounded, color: _royalGold, size: 48), const SizedBox(height: 10),
-                    const Text('${_category.toUpperCase()} ranking could not be loaded.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    Text('${_category.toUpperCase()} ranking could not be loaded.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 7), Text(_error!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white70, fontSize: 11)),
                     const SizedBox(height: 12), OutlinedButton.icon(onPressed: _load, icon: const Icon(Icons.refresh), label: const Text('Retry')),
                   ])))
