@@ -1997,41 +1997,135 @@ final pages = [
         centerTitle: true,
       ),
       body: pages[selectedIndex],
-bottomNavigationBar: NavigationBar(
-  backgroundColor: Colors.transparent,
-  surfaceTintColor: Colors.transparent,
-  indicatorColor: const Color(0xFF8E24AA).withOpacity(0.35),
-  elevation: 0,
-  selectedIndex: selectedIndex,
-        onDestinationSelected:
-            (index) {
-          setState(() {
-            selectedIndex =
-                index;
-          });
-        },
-destinations: const [
-  NavigationDestination(
-    icon: Icon(Icons.groups_outlined),
-    selectedIcon: Icon(Icons.groups),
-    label: 'Rooms',
+bottomNavigationBar: SafeArea(
+  top: false,
+  child: Container(
+    padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
+    decoration: BoxDecoration(
+      gradient: const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Color(0xFF21102F), Color(0xFF100719)],
+      ),
+      border: const Border(
+        top: BorderSide(color: Color(0xFF75408D), width: 1.1),
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: const Color(0xFFB5179E).withOpacity(0.18),
+          blurRadius: 20,
+          offset: const Offset(0, -5),
+        ),
+      ],
+    ),
+    child: Row(
+      children: [
+        _buildMindoNavItem(0, 'Rooms', Icons.groups_rounded,
+            const [Color(0xFFFFC857), Color(0xFFFF8A3D)]),
+        _buildMindoNavItem(1, 'Events', Icons.event_available_rounded,
+            const [Color(0xFF48D7FF), Color(0xFF397BFF)]),
+        _buildMindoNavItem(2, 'Messages', Icons.forum_rounded,
+            const [Color(0xFFE879F9), Color(0xFF9B5CFF)]),
+        _buildMindoNavItem(3, 'Profile', Icons.account_circle_rounded,
+            const [Color(0xFF55E6B5), Color(0xFF16A887)]),
+      ],
+    ),
   ),
-  NavigationDestination(
-    icon: Icon(Icons.event_outlined),
-    selectedIcon: Icon(Icons.event),
-    label: 'Events',
-  ),
-  NavigationDestination(
-    icon: Icon(Icons.message_outlined),
-    selectedIcon: Icon(Icons.message),
-    label: 'Messages',
-  ),
-  NavigationDestination(
-    icon: Icon(Icons.person_outline),
-    selectedIcon: Icon(Icons.person),
-    label: 'Profile',
-  ),
-],
+),
+    );
+  }
+
+  Widget _buildMindoNavItem(
+    int index,
+    String label,
+    IconData icon,
+    List<Color> colors,
+  ) {
+    final isSelected = selectedIndex == index;
+    return Expanded(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: () => setState(() => selectedIndex = index),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          margin: const EdgeInsets.symmetric(horizontal: 3),
+          padding: EdgeInsets.symmetric(
+            vertical: isSelected ? 7 : 5,
+            horizontal: 2,
+          ),
+          decoration: BoxDecoration(
+            gradient: isSelected
+                ? LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      colors[0].withOpacity(0.28),
+                      colors[1].withOpacity(0.13),
+                    ],
+                  )
+                : null,
+            color: isSelected ? null : const Color(0xFF2A1A36),
+            borderRadius: BorderRadius.circular(17),
+            border: Border.all(
+              color: isSelected
+                  ? colors[0].withOpacity(0.75)
+                  : Colors.white.withOpacity(0.07),
+              width: isSelected ? 1.1 : 0.7,
+            ),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: colors[0].withOpacity(0.22),
+                      blurRadius: 12,
+                      spreadRadius: 0.5,
+                    ),
+                  ]
+                : [],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 38,
+                height: 34,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: isSelected
+                        ? colors
+                        : [
+                            colors[0].withOpacity(0.24),
+                            colors[1].withOpacity(0.18),
+                          ],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: colors[0].withOpacity(isSelected ? 0.9 : 0.28),
+                  ),
+                ),
+                child: Icon(
+                  icon,
+                  size: isSelected ? 22 : 20,
+                  color: isSelected ? const Color(0xFF190D22) : colors[0],
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: isSelected ? colors[0] : const Color(0xFFD8C9E0),
+                  fontSize: 11,
+                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                  letterSpacing: 0.15,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -2476,7 +2570,7 @@ try {
       child: AspectRatio(
         aspectRatio: 1,
         child: Container(
-          margin: EdgeInsets.only(top: isTop ? 13 : 2),
+          // Keep every room cover exactly the same size; rank badges overlay the cover.
           padding: const EdgeInsets.all(3),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(17),
@@ -2506,28 +2600,35 @@ try {
 
 
   Widget _uniqueRankBadge(int rank) {
-    final isFirst = rank == 1;
-    final isSecond = rank == 2;
-    final colors = isFirst
-        ? const [Color(0xFFFFF1A8), Color(0xFFFFB800), Color(0xFF9B5B00)]
-        : isSecond
-            ? const [Color(0xFFEAF8FF), Color(0xFF8EDBFF), Color(0xFF3979B8)]
-            : const [Color(0xFFFFE0C2), Color(0xFFD58A54), Color(0xFF80401F)];
-    final icon = isFirst ? Icons.workspace_premium : isSecond ? Icons.diamond : Icons.military_tech;
+    final colors = rank == 1
+        ? const [Color(0xFFFFF1A8), Color(0xFFFFC928), Color(0xFF9B5B00)]
+        : rank == 2
+            ? const [Color(0xFFF4FBFF), Color(0xFFB8DDF4), Color(0xFF547FA8)]
+            : const [Color(0xFFFFE5CE), Color(0xFFD99A68), Color(0xFF87451F)];
+    final crownColor = rank == 1
+        ? const Color(0xFF7A4300)
+        : rank == 2
+            ? const Color(0xFF294D70)
+            : const Color(0xFF663315);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 5),
       decoration: BoxDecoration(
         gradient: LinearGradient(colors: colors),
-        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(13)),
-        border: Border.all(color: Colors.white.withOpacity(.8), width: 1),
-        boxShadow: [BoxShadow(color: colors.first.withOpacity(.55), blurRadius: 12, spreadRadius: 1)],
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(14)),
+        border: Border.all(color: Colors.white.withOpacity(.9), width: 1.1),
+        boxShadow: [
+          BoxShadow(color: colors.first.withOpacity(.58), blurRadius: 13, spreadRadius: 1),
+          BoxShadow(color: Colors.black.withOpacity(.22), blurRadius: 4, offset: const Offset(0, 2)),
+        ],
       ),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(icon, size: 15, color: const Color(0xFF32133F)),
-        const SizedBox(width: 4),
-        Text('TOP $rank', style: const TextStyle(color: Color(0xFF32133F), fontWeight: FontWeight.w900, fontSize: 10, letterSpacing: .7)),
-        const SizedBox(width: 3),
-        Icon(Icons.auto_awesome, size: 11, color: const Color(0xFF32133F).withOpacity(.85)),
+        Icon(Icons.auto_awesome, size: 11, color: crownColor.withOpacity(.8)),
+        const SizedBox(width: 5),
+        Text('👑', style: const TextStyle(fontSize: 16, height: 1.0)),
+        const SizedBox(width: 5),
+        Text('TOP $rank', style: TextStyle(color: crownColor, fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: .8, shadows: const [Shadow(color: Colors.white70, blurRadius: 2)])),
+        const SizedBox(width: 5),
+        Icon(Icons.auto_awesome, size: 11, color: crownColor.withOpacity(.8)),
       ]),
     );
   }
@@ -2573,7 +2674,7 @@ try {
                         const SizedBox(width: 8),
                         _headerAction(Icons.emoji_events_rounded, _openRanking, 'Ranking'),
                       ]),
-                      SizedBox(height: 140, child: PageView.builder(
+                      SizedBox(height: 130, child: PageView.builder(
                         controller: _bannerController,
                         itemCount: 3,
                         onPageChanged: (index) => setState(() => _bannerIndex = index),
@@ -9910,22 +10011,31 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
     final hasUser = user.isNotEmpty;
     final first = rank == 1;
     final accent = rank == 1 ? const Color(0xFFFFC52E)
-        : rank == 2 ? const Color(0xFF8CCBFF) : const Color(0xFFFF9AC5);
+        : rank == 2 ? const Color(0xFFB9D8F4) : const Color(0xFFCD8B58);
     final panelColors = rank == 1
         ? const [Color(0xFF75400D), Color(0xFF2B1307)]
-        : rank == 2 ? const [Color(0xFF29466A), Color(0xFF171323)]
-        : const [Color(0xFF6C2948), Color(0xFF24101C)];
+        : rank == 2 ? const [Color(0xFF40536A), Color(0xFF171323)]
+        : const [Color(0xFF70452D), Color(0xFF24101C)];
+    final avatarSize = first ? 68.0 : 55.0;
     return Expanded(
       child: Padding(
-        padding: EdgeInsets.only(top: first ? 0 : 30),
+        padding: EdgeInsets.only(top: first ? 0 : 25),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Text('#$rank', style: TextStyle(color: first ? _royalLight : Colors.white,
-            fontWeight: FontWeight.w900, fontSize: first ? 22 : 18, shadows: const [Shadow(color: Colors.black, blurRadius: 6)])),
-          const SizedBox(height: 5),
-          Stack(alignment: Alignment.center, children: [
-            Icon(Icons.air, size: first ? 108 : 88, color: accent.withOpacity(.75)),
-            _avatarImage(user, first ? 70 : 56, rank: rank),
-          ]),
+          // The rank number sits above the crown, as in the Golden Royal reference.
+          Text('#$rank', style: TextStyle(color: _royalLight,
+            fontWeight: FontWeight.w900, fontSize: first ? 22 : 19,
+            shadows: const [Shadow(color: Colors.black, blurRadius: 7)])),
+          SizedBox(height: first ? 1 : 3),
+          SizedBox(height: first ? 112 : 96, child: Stack(alignment: Alignment.center, clipBehavior: Clip.none, children: [
+            Positioned(left: 0, child: Transform.rotate(angle: -0.42,
+              child: Icon(Icons.air, size: first ? 48 : 40, color: accent.withOpacity(.95)))),
+            Positioned(right: 0, child: Transform.rotate(angle: 0.42,
+              child: Icon(Icons.air, size: first ? 48 : 40, color: accent.withOpacity(.95)))),
+            Positioned(top: 0, child: Icon(Icons.workspace_premium_rounded,
+              size: first ? 35 : 29, color: accent,
+              shadows: [Shadow(color: accent.withOpacity(.8), blurRadius: 10)])),
+            Positioned(bottom: 0, child: _avatarImage(user, avatarSize, rank: rank)),
+          ])),
           const SizedBox(height: 5),
           Container(width: double.infinity, padding: const EdgeInsets.fromLTRB(5, 8, 5, 9),
             decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: panelColors),
@@ -9935,7 +10045,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
             child: Column(children: [
               Text('TOP $rank', style: TextStyle(color: accent, fontWeight: FontWeight.w900, fontSize: first ? 13 : 11)),
               const SizedBox(height: 3),
-              Text(hasUser ? _displayName(user) : 'Awaiting User', maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center,
+              Text(hasUser ? _displayName(user) : 'MINDO', maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: first ? 13 : 11)),
               if (hasUser)
                 Text('Lv.${user['level'] ?? 1}  •  ${user['country'] ?? ''}', maxLines: 1, overflow: TextOverflow.ellipsis,
@@ -10255,12 +10365,10 @@ class _GlobalRoomRankingScreenState extends State<GlobalRoomRankingScreen> {
     return Scaffold(
       backgroundColor: _deep,
       appBar: AppBar(backgroundColor: _deep, foregroundColor: _gold, elevation: 0,
-        title: const Text('GLOBAL ROOM RANKING', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1, fontSize: 16)), centerTitle: true),
+        title: const SizedBox.shrink(), centerTitle: true),
       body: Container(decoration: const BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
         colors: [Color(0xFF32152D), Color(0xFF1A0C22), Color(0xFF100A19)])),
         child: Column(children: [
-          const Padding(padding: EdgeInsets.fromLTRB(14, 10, 14, 5), child: Text('TOP ROOMS BY GIFT COINS SENT',
-            style: TextStyle(color: Color(0xFFFFD98A), fontWeight: FontWeight.w900, letterSpacing: 1.2))),
           Padding(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8), child: Row(children: [
             _periodButton('DAILY', 'daily'), const SizedBox(width: 8), _periodButton('WEEKLY', 'weekly'), const SizedBox(width: 8), _periodButton('MONTHLY', 'monthly'),
           ])),
