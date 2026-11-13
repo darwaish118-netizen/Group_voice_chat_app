@@ -17,7 +17,6 @@ dependencies:
   shared_preferences: ^2.3.2
   audioplayers: ^6.6.0
   flutter_svga_easyplayer: ^0.2.0
-  video_player: ^2.10.0
 
 dev_dependencies:
   flutter_test:
@@ -33,9 +32,5 @@ flutter:
     - assets/auth_background_new.png
     - assets/Royal Blue and Gold Fantasy Stage.png
     - assets/Futuristic Gold Carbon Fiber Frame.png
-    - assets/ranking/wealth/backgrounds/
-    - assets/ranking/wealth/frames/
-    - assets/ranking/wealth/stage/
-    - assets/ranking/wealth/decorations/
 
 
