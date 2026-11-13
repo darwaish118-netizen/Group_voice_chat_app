@@ -9850,8 +9850,8 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
         child: ClipOval(
           child: url.isNotEmpty
               ? Image.network(url, fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Image.asset('assets/mindo_logo.png', fit: BoxFit.cover))
-              : Image.asset('assets/mindo_logo.png', fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Image.asset('assets/ChatGPT Image Oct 8, 2026, 11_35_07 PM.png', fit: BoxFit.cover))
+              : Image.asset('assets/ChatGPT Image Oct 8, 2026, 11_35_07 PM.png', fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => Container(color: const Color(0xFF321807),
                     alignment: Alignment.center, child: const Text('M', style: TextStyle(
                       color: Color(0xFFFFD15B), fontSize: 28, fontWeight: FontWeight.w900)))),
