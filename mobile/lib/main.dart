@@ -269,6 +269,21 @@ Future<Map<String, dynamic>> createRoom(
     return _handleResponse(response);
   }
 
+  Future<Map<String, dynamic>> getGlobalUserRanking(
+    String token,
+    String category,
+    String period,
+  ) async {
+    final uri = Uri.parse('$apiBaseUrl/api/rankings/users').replace(
+      queryParameters: {'category': category, 'period': period},
+    );
+    final response = await http.get(
+      uri,
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    return _handleResponse(response);
+  }
+
   Future<Map<String, dynamic>> getRoomRanking(
     String token,
     String roomId,
@@ -2381,7 +2396,7 @@ try {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => GlobalRoomRankingScreen(token: widget.token),
+        builder: (_) => GlobalWealthRankingScreen(token: widget.token),
       ),
     );
   }
@@ -9700,6 +9715,294 @@ class _RoomMembersScreenState extends State<RoomMembersScreen> {
   }
 }
 
+
+// ============================================================
+// MINDO GLOBAL WEALTH RANKING
+// Top 50 global gift senders; TOP 1-3 use supplied podium/frame assets.
+// ============================================================
+class GlobalWealthRankingScreen extends StatefulWidget {
+  final String token;
+  const GlobalWealthRankingScreen({super.key, required this.token});
+
+  @override
+  State<GlobalWealthRankingScreen> createState() => _GlobalWealthRankingScreenState();
+}
+
+class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
+  static const Color _gold = Color(0xFFFFD76A);
+  String _period = 'daily';
+  bool _loading = true;
+  String? _error;
+  List<Map<String, dynamic>> _ranking = [];
+  Map<String, dynamic>? _myRank;
+  DateTime? _periodEnd;
+  Timer? _countdownTimer;
+  Duration _remaining = Duration.zero;
+
+  String get _backgroundAsset => switch (_period) {
+    'daily' => 'assets/ranking/wealth/backgrounds/wealth_purple_background.png',
+    'weekly' => 'assets/ranking/wealth/backgrounds/wealth_green_background.png',
+    _ => 'assets/ranking/wealth/backgrounds/wealth_gold_background.png',
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) => _updateCountdown());
+  }
+
+  @override
+  void dispose() {
+    _countdownTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    if (mounted) setState(() { _loading = true; _error = null; });
+    try {
+      final result = await api.getGlobalUserRanking(widget.token, 'wealth', _period);
+      final raw = result['ranking'];
+      final list = raw is List
+          ? raw.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList()
+          : <Map<String, dynamic>>[];
+      final me = result['my_rank'];
+      final endRaw = result['period_end']?.toString();
+      final end = endRaw == null ? null : DateTime.tryParse(endRaw)?.toLocal();
+      if (!mounted) return;
+      setState(() {
+        _ranking = list.take(50).toList();
+        _myRank = me is Map ? Map<String, dynamic>.from(me) : null;
+        _periodEnd = end;
+        _loading = false;
+      });
+      _updateCountdown();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() { _error = e.toString().replaceFirst('Exception: ', ''); _loading = false; });
+    }
+  }
+
+  void _updateCountdown() {
+    final end = _periodEnd;
+    if (end == null || !mounted) return;
+    final next = end.difference(DateTime.now());
+    setState(() => _remaining = next.isNegative ? Duration.zero : next);
+  }
+
+  int _coins(Map<String, dynamic> user) {
+    final value = user['total_coins'] ?? user['coins_sent'] ?? 0;
+    return value is num ? value.toInt() : int.tryParse(value.toString()) ?? 0;
+  }
+
+  String _compact(int value) {
+    if (value >= 1000000) return '${(value / 1000000).toStringAsFixed(value % 1000000 == 0 ? 0 : 1)}M';
+    if (value >= 1000) return '${(value / 1000).toStringAsFixed(value % 1000 == 0 ? 0 : 1)}K';
+    return value.toString();
+  }
+
+  String _countdownText() {
+    final d = _remaining.inDays;
+    final h = _remaining.inHours.remainder(24).toString().padLeft(2, '0');
+    final m = _remaining.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final s = _remaining.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return d > 0 ? '${d}d  $h:$m:$s' : '$h:$m:$s';
+  }
+
+  String _displayName(Map<String, dynamic> user) =>
+      (user['display_name'] ?? user['username'] ?? 'MINDO User').toString();
+
+  String _avatar(Map<String, dynamic> user) => (user['avatar_url'] ?? '').toString();
+
+  Widget _avatarImage(Map<String, dynamic> user, double size, {String? frameAsset}) {
+    final url = _avatar(user);
+    return SizedBox(
+      width: size + 16, height: size + 16,
+      child: Stack(alignment: Alignment.center, children: [
+        CircleAvatar(
+          radius: size / 2,
+          backgroundColor: Colors.white24,
+          backgroundImage: url.isNotEmpty ? NetworkImage(url) : null,
+          child: url.isEmpty ? Icon(Icons.person_rounded, color: Colors.white70, size: size * .55) : null,
+        ),
+        if (frameAsset != null)
+          Positioned.fill(child: Image.asset(frameAsset, fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => const SizedBox.shrink())),
+      ]),
+    );
+  }
+
+  Widget _periodButton(String label, String value) {
+    final selected = _period == value;
+    return Expanded(child: GestureDetector(
+      onTap: () { if (_period == value) return; setState(() => _period = value); _load(); },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFFFFD76A) : Colors.black.withOpacity(.30),
+          borderRadius: BorderRadius.circular(13),
+          border: Border.all(color: selected ? const Color(0xFFFFF0B5) : Colors.white38),
+        ),
+        child: Text(label, textAlign: TextAlign.center,
+          style: TextStyle(color: selected ? const Color(0xFF44220C) : Colors.white,
+            fontWeight: FontWeight.w900, fontSize: 12)),
+      ),
+    ));
+  }
+
+  Widget _podiumUser(int rank, Map<String, dynamic> user) {
+    final first = rank == 1;
+    final frame = 'assets/ranking/wealth/frames/wealth_top${rank}_frame.png';
+    final stage = 'assets/ranking/wealth/stage/wealth_top${rank}_podium.png';
+    final avatarSize = first ? 76.0 : 62.0;
+    return Expanded(child: Padding(
+      padding: EdgeInsets.only(top: first ? 0 : 25),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Text('#$rank', style: TextStyle(color: rank == 1 ? const Color(0xFFFFE99A) : Colors.white,
+          fontWeight: FontWeight.w900, fontSize: first ? 19 : 16)),
+        const SizedBox(height: 3),
+        _avatarImage(user, avatarSize, frameAsset: frame),
+        const SizedBox(height: 4),
+        Text(_displayName(user), maxLines: 1, overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 11)),
+        Text('${_compact(_coins(user))} coins', style: const TextStyle(color: Color(0xFFFFE7A1), fontSize: 10, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 4),
+        SizedBox(height: first ? 88 : 70, width: double.infinity,
+          child: Image.asset(stage, fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => Container(
+              margin: const EdgeInsets.symmetric(horizontal: 8),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(colors: rank == 1
+                  ? [const Color(0xFFFFD76A), const Color(0xFF9B5B16)]
+                  : rank == 2 ? [const Color(0xFFE7E9F0), const Color(0xFF69758C)]
+                  : [const Color(0xFFD18A56), const Color(0xFF75401F)]),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(12))),
+              child: Center(child: Text('$rank', style: const TextStyle(color: Colors.white, fontSize: 25, fontWeight: FontWeight.w900))),
+            )),
+      ]),
+    ));
+  }
+
+  Widget _userRow(int index, Map<String, dynamic> user) {
+    final rank = index + 4;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(.30), borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withOpacity(.18))),
+      child: Row(children: [
+        SizedBox(width: 30, child: Text('$rank', textAlign: TextAlign.center,
+          style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900))),
+        const SizedBox(width: 7),
+        CircleAvatar(radius: 21, backgroundColor: Colors.white24,
+          backgroundImage: _avatar(user).isNotEmpty ? NetworkImage(_avatar(user)) : null,
+          child: _avatar(user).isEmpty ? const Icon(Icons.person, color: Colors.white70) : null),
+        const SizedBox(width: 10),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(_displayName(user), maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13)),
+          Text('ID: ${user['public_uid'] ?? '—'}', style: const TextStyle(color: Colors.white70, fontSize: 10)),
+        ])),
+        const Icon(Icons.monetization_on_rounded, color: Color(0xFFFFE08A), size: 17),
+        const SizedBox(width: 4),
+        Text(_compact(_coins(user)), style: const TextStyle(color: Color(0xFFFFE7A1), fontWeight: FontWeight.w900, fontSize: 12)),
+      ]),
+    );
+  }
+
+  Widget _myRankPanel() {
+    final mine = _myRank;
+    final rank = mine?['rank']?.toString() ?? '—';
+    final coins = mine == null ? 0 : _coins(mine);
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 14),
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(.48), borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: const Color(0xFFFFD76A).withOpacity(.8))),
+      child: Row(children: [
+        const Icon(Icons.person_pin_circle_rounded, color: Color(0xFFFFE08A), size: 25),
+        const SizedBox(width: 8),
+        const Expanded(child: Text('MY RANK', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12))),
+        Text('#$rank', style: const TextStyle(color: Color(0xFFFFE08A), fontWeight: FontWeight.w900, fontSize: 16)),
+        const SizedBox(width: 12),
+        Text('${_compact(coins)} coins', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 11)),
+      ]),
+    );
+  }
+
+  void _openRoomRanking() {
+    Navigator.push(context, MaterialPageRoute(
+      builder: (_) => GlobalRoomRankingScreen(token: widget.token)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final top = _ranking.take(3).toList();
+    final rest = _ranking.length > 3 ? _ranking.skip(3).toList() : <Map<String, dynamic>>[];
+    return Scaffold(
+      backgroundColor: const Color(0xFF241044),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent, foregroundColor: Colors.white, elevation: 0,
+        title: const Text('GLOBAL WEALTH RANKING', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15, letterSpacing: .7)),
+        centerTitle: true,
+        actions: [IconButton(tooltip: 'Global Room Ranking', onPressed: _openRoomRanking,
+          icon: const Icon(Icons.meeting_room_rounded))],
+      ),
+      extendBodyBehindAppBar: true,
+      body: Stack(fit: StackFit.expand, children: [
+        Image.asset(_backgroundAsset, fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => const DecoratedBox(decoration: BoxDecoration(
+            gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
+              colors: [Color(0xFF582080), Color(0xFF1A0D2B)])))),
+        SafeArea(child: Column(children: [
+          const SizedBox(height: 5),
+          Padding(padding: const EdgeInsets.symmetric(horizontal: 14), child: Row(children: [
+            _periodButton('DAILY', 'daily'), const SizedBox(width: 8),
+            _periodButton('WEEKLY', 'weekly'), const SizedBox(width: 8),
+            _periodButton('MONTHLY', 'monthly'),
+          ])),
+          const SizedBox(height: 8),
+          Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+            decoration: BoxDecoration(color: Colors.black.withOpacity(.32), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white24)),
+            child: Text('ENDS IN  ${_countdownText()}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: .8))),
+          Expanded(child: _loading
+            ? const Center(child: CircularProgressIndicator(color: _gold))
+            : _error != null
+              ? Center(child: Padding(padding: const EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  const Icon(Icons.emoji_events_rounded, color: _gold, size: 48),
+                  const SizedBox(height: 10),
+                  const Text('Wealth ranking could not be loaded.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 7), Text(_error!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                  const SizedBox(height: 12), OutlinedButton.icon(onPressed: _load, icon: const Icon(Icons.refresh), label: const Text('Retry')),
+                ])))
+              : _ranking.isEmpty
+                ? const Center(child: Text('No successful gift sending recorded for this period yet.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white70)))
+                : RefreshIndicator(color: _gold, onRefresh: _load, child: ListView(padding: const EdgeInsets.fromLTRB(12, 12, 12, 8), children: [
+                    if (top.isNotEmpty) ...[
+                      Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                        if (top.length > 1) _podiumUser(2, top[1]),
+                        const SizedBox(width: 5),
+                        _podiumUser(1, top[0]),
+                        const SizedBox(width: 5),
+                        if (top.length > 2) _podiumUser(3, top[2]),
+                      ]),
+                      const SizedBox(height: 10),
+                    ],
+                    Container(padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
+                      decoration: BoxDecoration(color: Colors.black.withOpacity(.34), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white24)),
+                      child: const Text('RANK 4–50', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, letterSpacing: 1))),
+                    const SizedBox(height: 9),
+                    ...rest.asMap().entries.map((e) => _userRow(e.key, e.value)),
+                  ]))),
+          _myRankPanel(),
+        ])),
+      ]),
+    );
+  }
+}
 
 // ============================================================
 // MINDO GLOBAL ROOM RANKING
