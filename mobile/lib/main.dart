@@ -9856,57 +9856,101 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
     final frame = 'assets/ranking/wealth/frames/wealth_top${rank}_frame.png';
     final stage = 'assets/ranking/wealth/stage/wealth_top${rank}_podium.png';
     final avatarSize = first ? 76.0 : 62.0;
-    return Expanded(child: Padding(
-      padding: EdgeInsets.only(top: first ? 0 : 25),
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Text('#$rank', style: TextStyle(color: rank == 1 ? const Color(0xFFFFE99A) : Colors.white,
-          fontWeight: FontWeight.w900, fontSize: first ? 19 : 16)),
-        const SizedBox(height: 3),
-        _avatarImage(user, avatarSize, frameAsset: frame),
-        const SizedBox(height: 4),
-        Text(_displayName(user), maxLines: 1, overflow: TextOverflow.ellipsis,
-        SizedBox(
-          height: first ? 88 : 70,
-          width: double.infinity,
-          child: Image.asset(
-            stage,
-            fit: BoxFit.contain,
-            errorBuilder: (_, __, ___) => Container(
-              margin: const EdgeInsets.symmetric(horizontal: 8),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: rank == 1
-                      ? [
-                          const Color(0xFFFFD76A),
-                          const Color(0xFF9B5B16),
-                        ]
-                      : rank == 2
-                          ? [
-                              const Color(0xFFE7E9F0),
-                              const Color(0xFF69758C),
-                            ]
-                          : [
-                              const Color(0xFFD18A56),
-                              const Color(0xFF75401F),
-                            ],
-                ),
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(12),
-                ),
+
+    return Expanded(
+      child: Padding(
+        padding: EdgeInsets.only(top: first ? 0 : 25),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '#$rank',
+              style: TextStyle(
+                color: rank == 1 ? const Color(0xFFFFE99A) : Colors.white,
+                fontWeight: FontWeight.w900,
+                fontSize: first ? 19 : 16,
               ),
-              child: Center(
-                child: Text(
-                  '$rank',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 25,
-                    fontWeight: FontWeight.w900,
+            ),
+            const SizedBox(height: 3),
+            _avatarImage(user, avatarSize, frameAsset: frame),
+            const SizedBox(height: 4),
+            Text(
+              _displayName(user),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+                fontSize: 11,
+              ),
+            ),
+            Text(
+              'ID: ${user['public_uid'] ?? '—'}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 9,
+              ),
+            ),
+            Text(
+              '${_compact(_coins(user))} coins',
+              style: const TextStyle(
+                color: Color(0xFFFFE7A1),
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 4),
+            SizedBox(
+              height: first ? 88 : 70,
+              width: double.infinity,
+              child: Image.asset(
+                stage,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 8),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: rank == 1
+                          ? [
+                              const Color(0xFFFFD76A),
+                              const Color(0xFF9B5B16),
+                            ]
+                          : rank == 2
+                              ? [
+                                  const Color(0xFFE7E9F0),
+                                  const Color(0xFF69758C),
+                                ]
+                              : [
+                                  const Color(0xFFD18A56),
+                                  const Color(0xFF75401F),
+                                ],
+                    ),
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(12),
+                    ),
+                  ),
+                  child: Center(
+                    child: Text(
+                      '$rank',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 25,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
+          ],
         ),
+      ),
+    );
+  }
 
   Widget _userRow(int index, Map<String, dynamic> user) {
     final rank = index + 4;
