@@ -269,6 +269,16 @@ Future<Map<String, dynamic>> createRoom(
     return _handleResponse(response);
   }
 
+  Future<Map<String, dynamic>> getGlobalAgencyRanking(
+    String token,
+    String period,
+  ) async {
+    final uri = Uri.parse('$apiBaseUrl/api/rankings/agencies')
+        .replace(queryParameters: {'period': period});
+    final response = await http.get(uri, headers: {'Authorization': 'Bearer $token'});
+    return _handleResponse(response);
+  }
+
   Future<Map<String, dynamic>> getGlobalUserRanking(
     String token,
     String category,
@@ -9731,6 +9741,7 @@ class GlobalWealthRankingScreen extends StatefulWidget {
 class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
   static const Color _gold = Color(0xFFFFD76A);
   String _period = 'daily';
+  String _category = 'wealth';
   bool _loading = true;
   String? _error;
   List<Map<String, dynamic>> _ranking = [];
@@ -9761,7 +9772,9 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
   Future<void> _load() async {
     if (mounted) setState(() { _loading = true; _error = null; });
     try {
-      final result = await api.getGlobalUserRanking(widget.token, 'wealth', _period);
+      final result = _category == 'agency'
+          ? await api.getGlobalAgencyRanking(widget.token, _period)
+          : await api.getGlobalUserRanking(widget.token, _category, _period);
       final raw = result['ranking'];
       final list = raw is List
           ? raw.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList()
@@ -9810,7 +9823,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
   }
 
   String _displayName(Map<String, dynamic> user) =>
-      (user['display_name'] ?? user['username'] ?? 'MINDO User').toString();
+      (user['display_name'] ?? user['username'] ?? user['name'] ?? 'MINDO User').toString();
 
   String _avatar(Map<String, dynamic> user) => (user['avatar_url'] ?? '').toString();
 
@@ -9837,13 +9850,41 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
         child: ClipOval(
           child: url.isNotEmpty
               ? Image.network(url, fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(color: Colors.brown.shade800,
-                    alignment: Alignment.center, child: Icon(Icons.person, color: Colors.white, size: size * .55)))
-              : Container(color: Colors.brown.shade800, alignment: Alignment.center,
-                  child: Icon(Icons.person, color: Colors.white, size: size * .55)),
+                  errorBuilder: (_, __, ___) => Image.asset('assets/mindo_logo.png', fit: BoxFit.cover))
+              : Image.asset('assets/mindo_logo.png', fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(color: const Color(0xFF321807),
+                    alignment: Alignment.center, child: const Text('M', style: TextStyle(
+                      color: Color(0xFFFFD15B), fontSize: 28, fontWeight: FontWeight.w900)))),
         ),
       ),
     );
+  }
+
+  Widget _categoryButton(String label, String value) {
+    final selected = _category == value;
+    return Expanded(child: GestureDetector(
+      onTap: () {
+        if (value == 'room') {
+          _openRoomRanking();
+          return;
+        }
+        if (_category == value) return;
+        setState(() => _category = value);
+        _load();
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(vertical: 9),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFFFFD76A) : const Color(0xFF241006),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: selected ? const Color(0xFFFFF0B5) : const Color(0xFFB47A2B), width: 1.2),
+        ),
+        child: Text(label, textAlign: TextAlign.center,
+          style: TextStyle(color: selected ? const Color(0xFF44220C) : Colors.white,
+            fontWeight: FontWeight.w900, fontSize: 11)),
+      ),
+    ));
   }
 
   Widget _periodButton(String label, String value) {
@@ -9866,6 +9907,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
   }
 
   Widget _podiumUser(int rank, Map<String, dynamic> user) {
+    final hasUser = user.isNotEmpty;
     final first = rank == 1;
     final accent = rank == 1 ? const Color(0xFFFFC52E)
         : rank == 2 ? const Color(0xFF8CCBFF) : const Color(0xFFFF9AC5);
@@ -9893,17 +9935,19 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
             child: Column(children: [
               Text('TOP $rank', style: TextStyle(color: accent, fontWeight: FontWeight.w900, fontSize: first ? 13 : 11)),
               const SizedBox(height: 3),
-              Text(_displayName(user), maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center,
+              Text(hasUser ? _displayName(user) : 'Awaiting User', maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: first ? 13 : 11)),
-              Text('Lv.${user['level'] ?? 1}  •  ${user['country'] ?? ''}', maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.white70, fontSize: 9)),
+              if (hasUser)
+                Text('Lv.${user['level'] ?? 1}  •  ${user['country'] ?? ''}', maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white70, fontSize: 9)),
               const SizedBox(height: 3),
-              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                const Icon(Icons.monetization_on, color: Color(0xFFFFD34F), size: 15),
-                const SizedBox(width: 3),
-                Flexible(child: Text(_compact(_coins(user)), maxLines: 1, style: TextStyle(color: _royalLight,
-                  fontWeight: FontWeight.w900, fontSize: first ? 14 : 12))),
-              ]),
+              if (hasUser)
+                Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  const Icon(Icons.monetization_on, color: Color(0xFFFFD34F), size: 15),
+                  const SizedBox(width: 3),
+                  Flexible(child: Text(_compact(_coins(user)), maxLines: 1, style: TextStyle(color: _royalLight,
+                    fontWeight: FontWeight.w900, fontSize: first ? 14 : 12))),
+                ]),
             ])),
           Container(height: first ? 15 : 9, width: double.infinity,
             decoration: BoxDecoration(gradient: LinearGradient(colors: [accent, const Color(0xFF6B3108), accent]),
@@ -9988,10 +10032,9 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
         backgroundColor: const Color(0xFF321807), foregroundColor: _royalLight, elevation: 0,
         title: const Column(mainAxisSize: MainAxisSize.min, children: [
           Text('MINDO VOICE CHAT', style: TextStyle(color: Color(0xFFFFD15B), fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 1.4)),
-          Text('GLOBAL WEALTH RANKING', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 15, letterSpacing: .8)),
+          Text('GLOBAL RANKING', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 15, letterSpacing: .8)),
         ]),
         centerTitle: true,
-        actions: [IconButton(tooltip: 'Global Room Ranking', onPressed: _openRoomRanking, icon: const Icon(Icons.emoji_events_rounded, color: _royalGold))],
       ),
       body: Container(
         decoration: const BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
@@ -10004,6 +10047,12 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
             decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFFFFE9A0), Color(0xFF8C4B12), Color(0xFFFFD15B)])))),
           SafeArea(child: Column(children: [
             Padding(padding: const EdgeInsets.fromLTRB(14, 9, 14, 7), child: Row(children: [
+              _categoryButton('WEALTH', 'wealth'), const SizedBox(width: 6),
+              _categoryButton('CHARM', 'charm'), const SizedBox(width: 6),
+              _categoryButton('ROOM', 'room'), const SizedBox(width: 6),
+              _categoryButton('AGENCY', 'agency'),
+            ])),
+            Padding(padding: const EdgeInsets.fromLTRB(14, 2, 14, 7), child: Row(children: [
               _periodButton('DAILY', 'daily'), const SizedBox(width: 8),
               _periodButton('WEEKLY', 'weekly'), const SizedBox(width: 8),
               _periodButton('MONTHLY', 'monthly'),
@@ -10019,23 +10068,19 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
               : _error != null
                 ? Center(child: Padding(padding: const EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, children: [
                     const Icon(Icons.emoji_events_rounded, color: _royalGold, size: 48), const SizedBox(height: 10),
-                    const Text('Wealth ranking could not be loaded.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    const Text('${_category.toUpperCase()} ranking could not be loaded.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 7), Text(_error!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white70, fontSize: 11)),
                     const SizedBox(height: 12), OutlinedButton.icon(onPressed: _load, icon: const Icon(Icons.refresh), label: const Text('Retry')),
                   ])))
-                : _ranking.isEmpty
-                  ? const Center(child: Text('No successful gift sending recorded for this period yet.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white70)))
-                  : RefreshIndicator(color: _royalGold, onRefresh: _load, child: ListView(padding: const EdgeInsets.fromLTRB(13, 8, 13, 10), children: [
-                      if (top.isNotEmpty) ...[
+                : RefreshIndicator(color: _royalGold, onRefresh: _load, child: ListView(padding: const EdgeInsets.fromLTRB(13, 8, 13, 10), children: [
                         Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                          if (top.length > 1) _podiumUser(2, top[1]),
-                          if (top.length > 1) const SizedBox(width: 5),
-                          _podiumUser(1, top[0]),
-                          if (top.length > 2) const SizedBox(width: 5),
-                          if (top.length > 2) _podiumUser(3, top[2]),
+                          _podiumUser(2, top.length > 1 ? top[1] : <String, dynamic>{}),
+                          const SizedBox(width: 5),
+                          _podiumUser(1, top.isNotEmpty ? top[0] : <String, dynamic>{}),
+                          const SizedBox(width: 5),
+                          _podiumUser(3, top.length > 2 ? top[2] : <String, dynamic>{}),
                         ]),
                         const SizedBox(height: 13),
-                      ],
                       if (rest.isNotEmpty) ...[
                         Container(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
                           decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFF63350D), Color(0xFF2A1408)]),
