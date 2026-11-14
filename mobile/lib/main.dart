@@ -3175,19 +3175,6 @@ try {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(13),
             color: const Color(0xFF28103D),
-            boxShadow: [
-              BoxShadow(
-                color: (rank == 1
-                    ? const Color(0xFFFFD45C)
-                    : rank == 2
-                        ? const Color(0xFFCA8BFF)
-                        : rank == 3
-                            ? const Color(0xFFE8A04B)
-                            : const Color(0xFF9B54D5)).withOpacity(.30),
-                blurRadius: 12,
-                spreadRadius: 1,
-              ),
-            ],
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(10),
@@ -3198,7 +3185,7 @@ try {
                 Padding(
                   // Slightly reduce the cover height so it sits inside the
                   // top and bottom edges of the decorative frame.
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 19),
+                  padding: const EdgeInsets.fromLTRB(12, 24, 12, 12),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(9),
                     child: cover.isNotEmpty
@@ -3331,17 +3318,32 @@ try {
           : CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
-                SliverToBoxAdapter(
-                  child: SafeArea(bottom: false, child: Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 7, 14, 0),
-                    child: Column(children: [
-                      Row(children: [
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _RoomsPinnedHeaderDelegate(
+                    extent: MediaQuery.of(context).padding.top + 55,
+                    child: Container(
+                      color: const Color(0xFF10051F),
+                      padding: EdgeInsets.fromLTRB(
+                        14,
+                        MediaQuery.of(context).padding.top + 7,
+                        14,
+                        0,
+                      ),
+                      child: Row(children: [
                         SizedBox(width: 118, child: _homeTabButton('Mine', 1)),
                         const Spacer(),
                         _headerAction(Icons.search_rounded, _openSearch, 'Search'),
                         const SizedBox(width: 8),
                         _headerAction(Icons.emoji_events_rounded, _openRanking, 'Ranking'),
                       ]),
+                    ),
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: SafeArea(bottom: false, child: Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 7, 14, 0),
+                    child: Column(children: [
                       if (_selectedTab == 0) ...[
                         SizedBox(height: 130, child: PageView.builder(controller: _bannerController, itemCount: 3, onPageChanged: (index) => setState(() => _bannerIndex = index), itemBuilder: (_, index) => _bannerCard(index))),
                         Row(mainAxisAlignment: MainAxisAlignment.center, children: List.generate(3, (index) => AnimatedContainer(duration: const Duration(milliseconds: 180), margin: const EdgeInsets.symmetric(horizontal: 3), width: _bannerIndex == index ? 18 : 6, height: 6, decoration: BoxDecoration(color: _bannerIndex == index ? const Color(0xFFFFD76A) : Colors.white38, borderRadius: BorderRadius.circular(5))))),
@@ -3480,6 +3482,33 @@ try {
   void didChangeDependencies() {
     super.didChangeDependencies();
   }
+}
+
+class _RoomsPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final Widget child;
+  final double extent;
+
+  const _RoomsPinnedHeaderDelegate({
+    required this.child,
+    required this.extent,
+  });
+
+  @override
+  double get minExtent => extent;
+
+  @override
+  double get maxExtent => extent;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) => child;
+
+  @override
+  bool shouldRebuild(covariant _RoomsPinnedHeaderDelegate oldDelegate) =>
+      oldDelegate.extent != extent || oldDelegate.child != child;
 }
 
 // ============================================================
