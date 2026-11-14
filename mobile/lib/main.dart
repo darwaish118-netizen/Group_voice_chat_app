@@ -2293,6 +2293,11 @@ class _RoomsScreenState
   bool _mineDataLoading = true;
   bool _myRoomLoadSucceeded = false;
   String _accountCountry = '';
+  int _selectedTab = 0;
+  String _selectedCountry = 'All';
+  String _searchQuery = '';
+  final PageController _bannerController = PageController();
+  int _bannerIndex = 0;
 
   @override
   void initState() {
@@ -2510,6 +2515,92 @@ try {
       ),
     );
   }
+
+  Future<void> _openSearch() async {
+    final controller = TextEditingController();
+    final query = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF211033),
+        title: const Text('Search rooms', style: TextStyle(color: Colors.white)),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          style: const TextStyle(color: Colors.white),
+          decoration: const InputDecoration(
+            hintText: 'Room name or ID',
+            hintStyle: TextStyle(color: Colors.white54),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context, controller.text.trim()), child: const Text('Search')),
+        ],
+      ),
+    );
+    if (query != null && mounted) {
+      setState(() {
+        _searchQuery = query.toLowerCase();
+        _selectedTab = 0;
+      });
+    }
+  }
+
+  Future<void> _openRanking() async {
+    if (!mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => GlobalWealthRankingScreen(token: widget.token),
+      ),
+    );
+  }
+
+  Widget _bannerCard(int index) {
+    const gradients = [
+      [Color(0xFF7A1DAB), Color(0xFFE83EAD)],
+      [Color(0xFF174D91), Color(0xFF8129B8)],
+      [Color(0xFF9A4A13), Color(0xFF7026A8)],
+    ];
+    final colors = gradients[index % gradients.length];
+    final titles = ['COUNTRY EVENT', 'MINDO SPECIAL EVENT', 'WEEKLY CHALLENGE'];
+    final subtitles = ['Meet friends • Join the celebration', 'Play together • Win rewards', 'New rankings every week'];
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 10),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(colors: colors, begin: Alignment.topLeft, end: Alignment.bottomRight),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFFFD76A), width: 1.2),
+        boxShadow: [BoxShadow(color: colors.first.withOpacity(.35), blurRadius: 14)],
+      ),
+      child: Stack(
+        children: [
+          Positioned(right: 12, top: 3, child: Icon(index == 0 ? Icons.public : Icons.celebration, size: 76, color: Colors.white.withOpacity(.15))),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 14, 90, 14),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
+              Text(titles[index % titles.length], style: const TextStyle(color: Color(0xFFFFE08A), fontWeight: FontWeight.w900, letterSpacing: 1.2, fontSize: 16)),
+              const SizedBox(height: 6),
+              Text(subtitles[index % subtitles.length], style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+            ]),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _toggleFollowRoom(Map<String, dynamic> room) async {
+    final id = room['id']?.toString() ?? '';
+    if (id.isEmpty) return;
+    try {
+      await api.toggleRoomFollow(widget.token, id);
+      await loadMineData();
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Room follow list updated')));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+    }
+  }
+
 
   String _roomCountry(Map<String, dynamic> room) =>
       (room['owner_country'] ?? room['country'] ?? room['owner_location'] ?? '').toString().trim();
@@ -2808,6 +2899,326 @@ try {
     if (code == null || code.length != 2) return '🌍';
     return String.fromCharCodes(code.codeUnits.map((unit) => 0x1F1E6 + unit - 65));
   }
+
+  Future<void> _openCountryPicker() async {
+    final countries = <String>[
+      'All',
+      "Afghanistan",
+      "Albania",
+      "Algeria",
+      "American Samoa",
+      "Andorra",
+      "Angola",
+      "Anguilla",
+      "Antarctica",
+      "Antigua and Barbuda",
+      "Argentina",
+      "Armenia",
+      "Aruba",
+      "Australia",
+      "Austria",
+      "Azerbaijan",
+      "Bahamas",
+      "Bahrain",
+      "Bangladesh",
+      "Barbados",
+      "Belarus",
+      "Belgium",
+      "Belize",
+      "Benin",
+      "Bermuda",
+      "Bhutan",
+      "Bolivia",
+      "Bolivia, Plurinational State of",
+      "Bonaire, Sint Eustatius and Saba",
+      "Bosnia and Herzegovina",
+      "Botswana",
+      "Bouvet Island",
+      "Brazil",
+      "British Indian Ocean Territory",
+      "Brunei",
+      "Brunei Darussalam",
+      "Bulgaria",
+      "Burkina Faso",
+      "Burundi",
+      "Cabo Verde",
+      "Cambodia",
+      "Cameroon",
+      "Canada",
+      "Cayman Islands",
+      "Central African Republic",
+      "Chad",
+      "Chile",
+      "China",
+      "Christmas Island",
+      "Cocos (Keeling) Islands",
+      "Colombia",
+      "Comoros",
+      "Congo",
+      "Congo, The Democratic Republic of the",
+      "Cook Islands",
+      "Costa Rica",
+      "Croatia",
+      "Cuba",
+      "Curaçao",
+      "Cyprus",
+      "Czechia",
+      "Côte d'Ivoire",
+      "Denmark",
+      "Djibouti",
+      "Dominica",
+      "Dominican Republic",
+      "Ecuador",
+      "Egypt",
+      "El Salvador",
+      "Equatorial Guinea",
+      "Eritrea",
+      "Estonia",
+      "Eswatini",
+      "Ethiopia",
+      "Falkland Islands (Malvinas)",
+      "Faroe Islands",
+      "Fiji",
+      "Finland",
+      "France",
+      "French Guiana",
+      "French Polynesia",
+      "French Southern Territories",
+      "Gabon",
+      "Gambia",
+      "Georgia",
+      "Germany",
+      "Ghana",
+      "Gibraltar",
+      "Greece",
+      "Greenland",
+      "Grenada",
+      "Guadeloupe",
+      "Guam",
+      "Guatemala",
+      "Guernsey",
+      "Guinea",
+      "Guinea-Bissau",
+      "Guyana",
+      "Haiti",
+      "Heard Island and McDonald Islands",
+      "Holy See (Vatican City State)",
+      "Honduras",
+      "Hong Kong",
+      "Hungary",
+      "Iceland",
+      "India",
+      "Indonesia",
+      "Iran",
+      "Iran, Islamic Republic of",
+      "Iraq",
+      "Ireland",
+      "Isle of Man",
+      "Israel",
+      "Italy",
+      "Jamaica",
+      "Japan",
+      "Jersey",
+      "Jordan",
+      "Kazakhstan",
+      "Kenya",
+      "Kiribati",
+      "Korea, Democratic People's Republic of",
+      "Korea, Republic of",
+      "Kosovo",
+      "Kuwait",
+      "Kyrgyzstan",
+      "Lao People's Democratic Republic",
+      "Laos",
+      "Latvia",
+      "Lebanon",
+      "Lesotho",
+      "Liberia",
+      "Libya",
+      "Liechtenstein",
+      "Lithuania",
+      "Luxembourg",
+      "Macao",
+      "Madagascar",
+      "Malawi",
+      "Malaysia",
+      "Maldives",
+      "Mali",
+      "Malta",
+      "Marshall Islands",
+      "Martinique",
+      "Mauritania",
+      "Mauritius",
+      "Mayotte",
+      "Mexico",
+      "Micronesia, Federated States of",
+      "Moldova",
+      "Moldova, Republic of",
+      "Monaco",
+      "Mongolia",
+      "Montenegro",
+      "Montserrat",
+      "Morocco",
+      "Mozambique",
+      "Myanmar",
+      "Namibia",
+      "Nauru",
+      "Nepal",
+      "Netherlands",
+      "New Caledonia",
+      "New Zealand",
+      "Nicaragua",
+      "Niger",
+      "Nigeria",
+      "Niue",
+      "Norfolk Island",
+      "North Korea",
+      "North Macedonia",
+      "Northern Mariana Islands",
+      "Norway",
+      "Oman",
+      "Pakistan",
+      "Palau",
+      "Palestine",
+      "Palestine, State of",
+      "Panama",
+      "Papua New Guinea",
+      "Paraguay",
+      "Peru",
+      "Philippines",
+      "Pitcairn",
+      "Poland",
+      "Portugal",
+      "Puerto Rico",
+      "Qatar",
+      "Romania",
+      "Russia",
+      "Russian Federation",
+      "Rwanda",
+      "Réunion",
+      "Saint Barthélemy",
+      "Saint Helena, Ascension and Tristan da Cunha",
+      "Saint Kitts and Nevis",
+      "Saint Lucia",
+      "Saint Martin (French part)",
+      "Saint Pierre and Miquelon",
+      "Saint Vincent and the Grenadines",
+      "Samoa",
+      "San Marino",
+      "Sao Tome and Principe",
+      "Saudi Arabia",
+      "Senegal",
+      "Serbia",
+      "Seychelles",
+      "Sierra Leone",
+      "Singapore",
+      "Sint Maarten (Dutch part)",
+      "Slovakia",
+      "Slovenia",
+      "Solomon Islands",
+      "Somalia",
+      "South Africa",
+      "South Georgia and the South Sandwich Islands",
+      "South Korea",
+      "South Sudan",
+      "Spain",
+      "Sri Lanka",
+      "Sudan",
+      "Suriname",
+      "Svalbard and Jan Mayen",
+      "Sweden",
+      "Switzerland",
+      "Syria",
+      "Syrian Arab Republic",
+      "Taiwan",
+      "Taiwan, Province of China",
+      "Tajikistan",
+      "Tanzania",
+      "Tanzania, United Republic of",
+      "Thailand",
+      "Timor-Leste",
+      "Togo",
+      "Tokelau",
+      "Tonga",
+      "Trinidad and Tobago",
+      "Tunisia",
+      "Turkey",
+      "Turkmenistan",
+      "Turks and Caicos Islands",
+      "Tuvalu",
+      "Türkiye",
+      "UAE",
+      "Uganda",
+      "UK",
+      "Ukraine",
+      "United Arab Emirates",
+      "United Kingdom",
+      "United States",
+      "United States Minor Outlying Islands",
+      "United States of America",
+      "Uruguay",
+      "USA",
+      "Uzbekistan",
+      "Vanuatu",
+      "Venezuela, Bolivarian Republic of",
+      "Viet Nam",
+      "Vietnam",
+      "Virgin Islands, British",
+      "Virgin Islands, U.S.",
+      "Wallis and Futuna",
+      "Western Sahara",
+      "Yemen",
+      "Zambia",
+      "Zimbabwe",
+      "Åland Islands"
+    ];
+    final searchController = TextEditingController();
+    String query = '';
+    final selected = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          backgroundColor: const Color(0xFF241332),
+          title: const Text('All Country', style: TextStyle(color: Colors.white)),
+          content: SizedBox(
+            width: double.maxFinite,
+            height: MediaQuery.of(dialogContext).size.height * .62,
+            child: Column(children: [
+              TextField(
+                controller: searchController,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'Search country...',
+                  hintStyle: const TextStyle(color: Colors.white60),
+                  prefixIcon: const Icon(Icons.search, color: Color(0xFFFFD76A)),
+                  filled: true,
+                  fillColor: const Color(0xFF351747),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                onChanged: (value) => setDialogState(() => query = value.trim().toLowerCase()),
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: ListView(
+                  children: countries.where((country) => country.toLowerCase().contains(query)).map((country) => ListTile(
+                    dense: true,
+                    leading: Text(country == 'All' ? '🌍' : _flag(country), style: const TextStyle(fontSize: 21)),
+                    title: Text(country == 'All' ? 'All Country' : country, style: const TextStyle(color: Colors.white)),
+                    trailing: _selectedCountry == country ? const Icon(Icons.check, color: Color(0xFFFFD76A)) : null,
+                    onTap: () => Navigator.pop(dialogContext, country),
+                  )).toList(),
+                ),
+              ),
+            ]),
+          ),
+        ),
+      ),
+    );
+    searchController.dispose();
+    if (selected != null && mounted) setState(() => _selectedCountry = selected);
+  }
+
+  String _countryFlag(String country) => _flag(country);
 
   Widget _mineRoomTile(Map<String, dynamic> room) {
     final cover = (room['cover_image_url'] ?? '').toString();
@@ -3130,6 +3541,12 @@ try {
     child: IconButton(tooltip: tooltip, onPressed: onTap, icon: Icon(icon, color: const Color(0xFFFFE08A), size: 22)),
   );
 
+
+  @override
+  void dispose() {
+    _bannerController.dispose();
+    super.dispose();
+  }
 
   @override
   void didChangeDependencies() {
