@@ -1439,6 +1439,7 @@ app.get("/api/me/rooms", authMiddleware, async (req, res) => {
     const result = await pool.query(`
       SELECT r.id, r.name, r.owner_id, r.seat_count, r.cover_image_url,
              r.created_at, u.public_uid AS owner_public_uid,
+             u.avatar_url AS owner_avatar_url, u.country AS owner_country,
              COALESCE(m.member_count, 0)::INTEGER AS member_count
       FROM rooms r
       JOIN users u ON u.id = r.owner_id
@@ -1472,6 +1473,7 @@ app.get("/api/me/room-follows", authMiddleware, async (req, res) => {
     const result = await pool.query(`
       SELECT r.id, r.name, r.owner_id, r.seat_count, r.cover_image_url,
              r.created_at, u.public_uid AS owner_public_uid,
+             u.country AS owner_country, u.avatar_url AS owner_avatar_url,
              COALESCE(m.member_count, 0)::INTEGER AS member_count
       FROM room_follows f
       JOIN rooms r ON r.id = f.room_id
@@ -1517,6 +1519,7 @@ app.get("/api/me/room-latest", authMiddleware, async (req, res) => {
     const result = await pool.query(`
       SELECT r.id, r.name, r.owner_id, r.seat_count, r.cover_image_url,
              r.created_at, u.public_uid AS owner_public_uid,
+             u.country AS owner_country, u.avatar_url AS owner_avatar_url,
              COALESCE(m.member_count, 0)::INTEGER AS member_count
       FROM room_visit_history h
       JOIN rooms r ON r.id = h.room_id
