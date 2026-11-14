@@ -3133,9 +3133,9 @@ try {
               children: [
                 // Room cover stays behind the transparent center of the decorative frame.
                 Padding(
-                  padding: EdgeInsets.all(isRanked ? 16 : 8),
+                  padding: const EdgeInsets.all(16),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(isRanked ? 9 : 8),
+                    borderRadius: BorderRadius.circular(9),
                     child: cover.isNotEmpty
                         ? Image.network(cover, fit: BoxFit.cover,
                             errorBuilder: (_, __, ___) => _roomCoverFallback())
@@ -3157,8 +3157,8 @@ try {
                 ),
                 if (countryFlag.isNotEmpty)
                   Positioned(
-                    left: isRanked ? 27 : 12,
-                    top: isRanked ? 43 : 28,
+                    left: 27,
+                    top: 43,
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                       decoration: BoxDecoration(
@@ -3169,8 +3169,8 @@ try {
                     ),
                   ),
                 Positioned(
-                  right: isRanked ? 27 : 12,
-                  top: isRanked ? 43 : 28,
+                  right: 27,
+                  top: 43,
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                     decoration: BoxDecoration(
@@ -3189,7 +3189,7 @@ try {
                 Positioned(
                   left: 23,
                   right: 23,
-                  bottom: isRanked ? 31 : 18,
+                  bottom: 31,
                   child: Text(
                     name,
                     maxLines: 2,
