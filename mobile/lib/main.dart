@@ -2293,11 +2293,6 @@ class _RoomsScreenState
   bool _mineDataLoading = true;
   bool _myRoomLoadSucceeded = false;
   String _accountCountry = '';
-  int _selectedTab = 0;
-  String _selectedCountry = 'All';
-  String _searchQuery = '';
-  final PageController _bannerController = PageController();
-  int _bannerIndex = 0;
 
   @override
   void initState() {
@@ -2515,92 +2510,6 @@ try {
       ),
     );
   }
-
-  Future<void> _openSearch() async {
-    final controller = TextEditingController();
-    final query = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF211033),
-        title: const Text('Search rooms', style: TextStyle(color: Colors.white)),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          style: const TextStyle(color: Colors.white),
-          decoration: const InputDecoration(
-            hintText: 'Room name or ID',
-            hintStyle: TextStyle(color: Colors.white54),
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(context, controller.text.trim()), child: const Text('Search')),
-        ],
-      ),
-    );
-    if (query != null && mounted) {
-      setState(() {
-        _searchQuery = query.toLowerCase();
-        _selectedTab = 0;
-      });
-    }
-  }
-
-  Future<void> _openRanking() async {
-    if (!mounted) return;
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => GlobalWealthRankingScreen(token: widget.token),
-      ),
-    );
-  }
-
-  Widget _bannerCard(int index) {
-    const gradients = [
-      [Color(0xFF7A1DAB), Color(0xFFE83EAD)],
-      [Color(0xFF174D91), Color(0xFF8129B8)],
-      [Color(0xFF9A4A13), Color(0xFF7026A8)],
-    ];
-    final colors = gradients[index % gradients.length];
-    final titles = ['COUNTRY EVENT', 'MINDO SPECIAL EVENT', 'WEEKLY CHALLENGE'];
-    final subtitles = ['Meet friends • Join the celebration', 'Play together • Win rewards', 'New rankings every week'];
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 10),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(colors: colors, begin: Alignment.topLeft, end: Alignment.bottomRight),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFFFD76A), width: 1.2),
-        boxShadow: [BoxShadow(color: colors.first.withOpacity(.35), blurRadius: 14)],
-      ),
-      child: Stack(
-        children: [
-          Positioned(right: 12, top: 3, child: Icon(index == 0 ? Icons.public : Icons.celebration, size: 76, color: Colors.white.withOpacity(.15))),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 14, 90, 14),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
-              Text(titles[index % titles.length], style: const TextStyle(color: Color(0xFFFFE08A), fontWeight: FontWeight.w900, letterSpacing: 1.2, fontSize: 16)),
-              const SizedBox(height: 6),
-              Text(subtitles[index % subtitles.length], style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
-            ]),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _toggleFollowRoom(Map<String, dynamic> room) async {
-    final id = room['id']?.toString() ?? '';
-    if (id.isEmpty) return;
-    try {
-      await api.toggleRoomFollow(widget.token, id);
-      await loadMineData();
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Room follow list updated')));
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
-    }
-  }
-
 
   String _roomCountry(Map<String, dynamic> room) =>
       (room['owner_country'] ?? room['country'] ?? room['owner_location'] ?? '').toString().trim();
@@ -2900,326 +2809,6 @@ try {
     return String.fromCharCodes(code.codeUnits.map((unit) => 0x1F1E6 + unit - 65));
   }
 
-  Future<void> _openCountryPicker() async {
-    final countries = <String>[
-      'All',
-      "Afghanistan",
-      "Albania",
-      "Algeria",
-      "American Samoa",
-      "Andorra",
-      "Angola",
-      "Anguilla",
-      "Antarctica",
-      "Antigua and Barbuda",
-      "Argentina",
-      "Armenia",
-      "Aruba",
-      "Australia",
-      "Austria",
-      "Azerbaijan",
-      "Bahamas",
-      "Bahrain",
-      "Bangladesh",
-      "Barbados",
-      "Belarus",
-      "Belgium",
-      "Belize",
-      "Benin",
-      "Bermuda",
-      "Bhutan",
-      "Bolivia",
-      "Bolivia, Plurinational State of",
-      "Bonaire, Sint Eustatius and Saba",
-      "Bosnia and Herzegovina",
-      "Botswana",
-      "Bouvet Island",
-      "Brazil",
-      "British Indian Ocean Territory",
-      "Brunei",
-      "Brunei Darussalam",
-      "Bulgaria",
-      "Burkina Faso",
-      "Burundi",
-      "Cabo Verde",
-      "Cambodia",
-      "Cameroon",
-      "Canada",
-      "Cayman Islands",
-      "Central African Republic",
-      "Chad",
-      "Chile",
-      "China",
-      "Christmas Island",
-      "Cocos (Keeling) Islands",
-      "Colombia",
-      "Comoros",
-      "Congo",
-      "Congo, The Democratic Republic of the",
-      "Cook Islands",
-      "Costa Rica",
-      "Croatia",
-      "Cuba",
-      "Curaçao",
-      "Cyprus",
-      "Czechia",
-      "Côte d'Ivoire",
-      "Denmark",
-      "Djibouti",
-      "Dominica",
-      "Dominican Republic",
-      "Ecuador",
-      "Egypt",
-      "El Salvador",
-      "Equatorial Guinea",
-      "Eritrea",
-      "Estonia",
-      "Eswatini",
-      "Ethiopia",
-      "Falkland Islands (Malvinas)",
-      "Faroe Islands",
-      "Fiji",
-      "Finland",
-      "France",
-      "French Guiana",
-      "French Polynesia",
-      "French Southern Territories",
-      "Gabon",
-      "Gambia",
-      "Georgia",
-      "Germany",
-      "Ghana",
-      "Gibraltar",
-      "Greece",
-      "Greenland",
-      "Grenada",
-      "Guadeloupe",
-      "Guam",
-      "Guatemala",
-      "Guernsey",
-      "Guinea",
-      "Guinea-Bissau",
-      "Guyana",
-      "Haiti",
-      "Heard Island and McDonald Islands",
-      "Holy See (Vatican City State)",
-      "Honduras",
-      "Hong Kong",
-      "Hungary",
-      "Iceland",
-      "India",
-      "Indonesia",
-      "Iran",
-      "Iran, Islamic Republic of",
-      "Iraq",
-      "Ireland",
-      "Isle of Man",
-      "Israel",
-      "Italy",
-      "Jamaica",
-      "Japan",
-      "Jersey",
-      "Jordan",
-      "Kazakhstan",
-      "Kenya",
-      "Kiribati",
-      "Korea, Democratic People's Republic of",
-      "Korea, Republic of",
-      "Kosovo",
-      "Kuwait",
-      "Kyrgyzstan",
-      "Lao People's Democratic Republic",
-      "Laos",
-      "Latvia",
-      "Lebanon",
-      "Lesotho",
-      "Liberia",
-      "Libya",
-      "Liechtenstein",
-      "Lithuania",
-      "Luxembourg",
-      "Macao",
-      "Madagascar",
-      "Malawi",
-      "Malaysia",
-      "Maldives",
-      "Mali",
-      "Malta",
-      "Marshall Islands",
-      "Martinique",
-      "Mauritania",
-      "Mauritius",
-      "Mayotte",
-      "Mexico",
-      "Micronesia, Federated States of",
-      "Moldova",
-      "Moldova, Republic of",
-      "Monaco",
-      "Mongolia",
-      "Montenegro",
-      "Montserrat",
-      "Morocco",
-      "Mozambique",
-      "Myanmar",
-      "Namibia",
-      "Nauru",
-      "Nepal",
-      "Netherlands",
-      "New Caledonia",
-      "New Zealand",
-      "Nicaragua",
-      "Niger",
-      "Nigeria",
-      "Niue",
-      "Norfolk Island",
-      "North Korea",
-      "North Macedonia",
-      "Northern Mariana Islands",
-      "Norway",
-      "Oman",
-      "Pakistan",
-      "Palau",
-      "Palestine",
-      "Palestine, State of",
-      "Panama",
-      "Papua New Guinea",
-      "Paraguay",
-      "Peru",
-      "Philippines",
-      "Pitcairn",
-      "Poland",
-      "Portugal",
-      "Puerto Rico",
-      "Qatar",
-      "Romania",
-      "Russia",
-      "Russian Federation",
-      "Rwanda",
-      "Réunion",
-      "Saint Barthélemy",
-      "Saint Helena, Ascension and Tristan da Cunha",
-      "Saint Kitts and Nevis",
-      "Saint Lucia",
-      "Saint Martin (French part)",
-      "Saint Pierre and Miquelon",
-      "Saint Vincent and the Grenadines",
-      "Samoa",
-      "San Marino",
-      "Sao Tome and Principe",
-      "Saudi Arabia",
-      "Senegal",
-      "Serbia",
-      "Seychelles",
-      "Sierra Leone",
-      "Singapore",
-      "Sint Maarten (Dutch part)",
-      "Slovakia",
-      "Slovenia",
-      "Solomon Islands",
-      "Somalia",
-      "South Africa",
-      "South Georgia and the South Sandwich Islands",
-      "South Korea",
-      "South Sudan",
-      "Spain",
-      "Sri Lanka",
-      "Sudan",
-      "Suriname",
-      "Svalbard and Jan Mayen",
-      "Sweden",
-      "Switzerland",
-      "Syria",
-      "Syrian Arab Republic",
-      "Taiwan",
-      "Taiwan, Province of China",
-      "Tajikistan",
-      "Tanzania",
-      "Tanzania, United Republic of",
-      "Thailand",
-      "Timor-Leste",
-      "Togo",
-      "Tokelau",
-      "Tonga",
-      "Trinidad and Tobago",
-      "Tunisia",
-      "Turkey",
-      "Turkmenistan",
-      "Turks and Caicos Islands",
-      "Tuvalu",
-      "Türkiye",
-      "UAE",
-      "Uganda",
-      "UK",
-      "Ukraine",
-      "United Arab Emirates",
-      "United Kingdom",
-      "United States",
-      "United States Minor Outlying Islands",
-      "United States of America",
-      "Uruguay",
-      "USA",
-      "Uzbekistan",
-      "Vanuatu",
-      "Venezuela, Bolivarian Republic of",
-      "Viet Nam",
-      "Vietnam",
-      "Virgin Islands, British",
-      "Virgin Islands, U.S.",
-      "Wallis and Futuna",
-      "Western Sahara",
-      "Yemen",
-      "Zambia",
-      "Zimbabwe",
-      "Åland Islands"
-    ];
-    final searchController = TextEditingController();
-    String query = '';
-    final selected = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (dialogContext, setDialogState) => AlertDialog(
-          backgroundColor: const Color(0xFF241332),
-          title: const Text('All Country', style: TextStyle(color: Colors.white)),
-          content: SizedBox(
-            width: double.maxFinite,
-            height: MediaQuery.of(dialogContext).size.height * .62,
-            child: Column(children: [
-              TextField(
-                controller: searchController,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  hintText: 'Search country...',
-                  hintStyle: const TextStyle(color: Colors.white60),
-                  prefixIcon: const Icon(Icons.search, color: Color(0xFFFFD76A)),
-                  filled: true,
-                  fillColor: const Color(0xFF351747),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-                ),
-                onChanged: (value) => setDialogState(() => query = value.trim().toLowerCase()),
-              ),
-              const SizedBox(height: 8),
-              Expanded(
-                child: ListView(
-                  children: countries.where((country) => country.toLowerCase().contains(query)).map((country) => ListTile(
-                    dense: true,
-                    leading: Text(country == 'All' ? '🌍' : _flag(country), style: const TextStyle(fontSize: 21)),
-                    title: Text(country == 'All' ? 'All Country' : country, style: const TextStyle(color: Colors.white)),
-                    trailing: _selectedCountry == country ? const Icon(Icons.check, color: Color(0xFFFFD76A)) : null,
-                    onTap: () => Navigator.pop(dialogContext, country),
-                  )).toList(),
-                ),
-              ),
-            ]),
-          ),
-        ),
-      ),
-    );
-    searchController.dispose();
-    if (selected != null && mounted) setState(() => _selectedCountry = selected);
-  }
-
-  String _countryFlag(String country) => _flag(country);
-
   Widget _mineRoomTile(Map<String, dynamic> room) {
     final cover = (room['cover_image_url'] ?? '').toString();
     final name = (room['name'] ?? 'Voice Room').toString();
@@ -3309,6 +2898,13 @@ try {
     });
   }
 
+  String _homeRoomFrameAsset(int rank) {
+    if (rank == 1) return 'assets/room_frames/MINDO_TOP1_FRAME.png';
+    if (rank == 2) return 'assets/room_frames/MINDO_TOP2_FRAME.png';
+    if (rank == 3) return 'assets/room_frames/a_detailed_ornate_square_decorative_frame_badge_in.png';
+    return 'assets/room_frames/MINDO_ROYAL_GOLD_RED_FRAME.png';
+  }
+
   Widget _roomCard(Map<String, dynamic> room, int rank) {
     final cover = room['cover_image_url']?.toString() ?? '';
     final name = (room['name'] ?? 'Voice Room').toString();
@@ -3319,8 +2915,9 @@ try {
     final members = _roomMembers(room);
     final id = room['id']?.toString() ?? '';
     final ownerUid = room['owner_public_uid']?.toString() ?? '';
-    final isTop = rank >= 1 && rank <= 3;
-    final frameColor = rank == 1 ? const Color(0xFFFFD45C) : rank == 2 ? const Color(0xFF9EDBFF) : const Color(0xFFD99A68);
+    final frameAsset = _homeRoomFrameAsset(rank);
+    final isRanked = rank >= 1 && rank <= 3;
+
     return GestureDetector(
       onTap: () async {
         try {
@@ -3342,34 +2939,116 @@ try {
       child: AspectRatio(
         aspectRatio: 1,
         child: Container(
-          // Keep every room cover exactly the same size; rank badges overlay the cover.
-          padding: const EdgeInsets.all(3),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(17),
-            gradient: LinearGradient(colors: isTop ? [frameColor, const Color(0xFFFF4FD8), frameColor] : [const Color(0xFF9B54D5), const Color(0xFF392052), const Color(0xFFB84DEB)]),
-            boxShadow: [BoxShadow(color: (isTop ? frameColor : const Color(0xFF9B54D5)).withOpacity(.32), blurRadius: 11)],
+            borderRadius: BorderRadius.circular(13),
+            color: const Color(0xFF28103D),
+            boxShadow: [
+              BoxShadow(
+                color: (rank == 1
+                    ? const Color(0xFFFFD45C)
+                    : rank == 2
+                        ? const Color(0xFFCA8BFF)
+                        : rank == 3
+                            ? const Color(0xFFE8A04B)
+                            : const Color(0xFF9B54D5)).withOpacity(.30),
+                blurRadius: 12,
+                spreadRadius: 1,
+              ),
+            ],
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(14),
-            child: Stack(fit: StackFit.expand, children: [
-              if (cover.isNotEmpty)
-                Image.network(cover, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _roomCoverFallback())
-              else
-                _roomCoverFallback(),
-              DecoratedBox(decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.black.withOpacity(.38), Colors.transparent, Colors.black.withOpacity(.82)]))),
-              if (countryFlag.isNotEmpty)
-                Positioned(left: 7, top: 7, child: Container(padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4), decoration: BoxDecoration(color: Colors.black.withOpacity(.58), borderRadius: BorderRadius.circular(9)), child: Text(countryFlag, style: const TextStyle(fontSize: 15)))),
-              Positioned(right: 7, top: 7, child: Container(padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4), decoration: BoxDecoration(color: Colors.black.withOpacity(.62), borderRadius: BorderRadius.circular(9)), child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.people_alt_rounded, size: 13, color: Colors.white), const SizedBox(width: 3), Text('$members', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold))]))),
-              Positioned(left: 7, right: 7, bottom: 8, child: Text(name, maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13, shadows: [Shadow(color: Colors.black, blurRadius: 5)]))),
-              if (isTop)
-                Positioned(top: 0, left: 0, right: 0, child: Center(child: _uniqueRankBadge(rank))),
-            ]),
+            borderRadius: BorderRadius.circular(10),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                // Room cover stays behind the transparent center of the decorative frame.
+                if (cover.isNotEmpty)
+                  Image.network(cover, fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => _roomCoverFallback())
+                else
+                  _roomCoverFallback(),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withOpacity(.20),
+                        Colors.transparent,
+                        Colors.black.withOpacity(.55),
+                      ],
+                    ),
+                  ),
+                ),
+                if (countryFlag.isNotEmpty)
+                  Positioned(
+                    left: isRanked ? 27 : 12,
+                    top: isRanked ? 43 : 28,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(.62),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(countryFlag, style: const TextStyle(fontSize: 14)),
+                    ),
+                  ),
+                Positioned(
+                  right: isRanked ? 27 : 12,
+                  top: isRanked ? 43 : 28,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(.64),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      const Icon(Icons.people_alt_rounded, size: 12, color: Colors.white),
+                      const SizedBox(width: 3),
+                      Text('$members', style: const TextStyle(
+                        color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold,
+                      )),
+                    ]),
+                  ),
+                ),
+                Positioned(
+                  left: 23,
+                  right: 23,
+                  bottom: isRanked ? 31 : 18,
+                  child: Text(
+                    name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 12,
+                      shadows: [
+                        Shadow(color: Colors.black, blurRadius: 6),
+                        Shadow(color: Colors.black, blurRadius: 3),
+                      ],
+                    ),
+                  ),
+                ),
+                // The PNG itself contains TOP 1 / TOP 2 / TOP 3 lettering.
+                // Rank 4+ uses the same royal border without a rank label.
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: Image.asset(
+                      frameAsset,
+                      fit: BoxFit.fill,
+                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
-
 
   Widget _uniqueRankBadge(int rank) {
     final colors = rank == 1
@@ -3449,69 +3128,20 @@ try {
                         SizedBox(height: 130, child: PageView.builder(controller: _bannerController, itemCount: 3, onPageChanged: (index) => setState(() => _bannerIndex = index), itemBuilder: (_, index) => _bannerCard(index))),
                         Row(mainAxisAlignment: MainAxisAlignment.center, children: List.generate(3, (index) => AnimatedContainer(duration: const Duration(milliseconds: 180), margin: const EdgeInsets.symmetric(horizontal: 3), width: _bannerIndex == index ? 18 : 6, height: 6, decoration: BoxDecoration(color: _bannerIndex == index ? const Color(0xFFFFD76A) : Colors.white38, borderRadius: BorderRadius.circular(5))))),
                         const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            const Text(
-                              'Popular Rooms',
-                              maxLines: 1,
-                              style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900),
-                            ),
-                            const Spacer(),
-                            if (_accountCountry.isNotEmpty)
-                              InkWell(
-                                onTap: () {
-                                  setState(() {
-                                    _selectedTab = 0;
-                                    _selectedCountry = _accountCountry;
-                                  });
-                                },
-                                borderRadius: BorderRadius.circular(10),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 7),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(_flag(_accountCountry), style: const TextStyle(fontSize: 22)),
-                                      const SizedBox(width: 5),
-                                      ConstrainedBox(
-                                        constraints: const BoxConstraints(maxWidth: 82),
-                                        child: Text(
-                                          _accountCountry,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(color: Color(0xFFFFD76A), fontSize: 13, fontWeight: FontWeight.w900),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
+                        Row(children: [
+                          const Expanded(child: Text('Popular Rooms', style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900))),
+                          if (_accountCountry.isNotEmpty) ...[
+                            Text(_flag(_accountCountry), style: const TextStyle(fontSize: 18)),
+                            const SizedBox(width: 5),
+                            Flexible(child: Text(_accountCountry, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFFFFD76A), fontSize: 11, fontWeight: FontWeight.w800))),
                             const SizedBox(width: 7),
-                            InkWell(
-                              onTap: _openCountryPicker,
-                              borderRadius: BorderRadius.circular(12),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 10),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF28103D),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: const Color(0xFFFFD76A).withOpacity(.6)),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(Icons.public, color: Color(0xFFFFD76A), size: 16),
-                                    const SizedBox(width: 4),
-                                    Text(_selectedCountry == 'All' ? 'All Country' : _selectedCountry,
-                                      style: const TextStyle(color: Colors.white, fontSize: 11),
-                                    ),
-                                    const Icon(Icons.arrow_drop_down, color: Colors.white),
-                                  ],
-                                ),
-                              ),
-                            ),
                           ],
-                        ),
+                          InkWell(
+                            onTap: _openCountryPicker,
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9), decoration: BoxDecoration(color: const Color(0xFF28103D), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFFFD76A).withOpacity(.6))), child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.public, color: Color(0xFFFFD76A), size: 16), const SizedBox(width: 5), Text(_selectedCountry == 'All' ? 'All Country' : _selectedCountry, style: const TextStyle(color: Colors.white, fontSize: 11)), const Icon(Icons.arrow_drop_down, color: Colors.white)])),
+                          ),
+                        ]),
                         const SizedBox(height: 9),
                       ] else ...[
                         const SizedBox(height: 20),
@@ -3590,12 +3220,6 @@ try {
     child: IconButton(tooltip: tooltip, onPressed: onTap, icon: Icon(icon, color: const Color(0xFFFFE08A), size: 22)),
   );
 
-
-  @override
-  void dispose() {
-    _bannerController.dispose();
-    super.dispose();
-  }
 
   @override
   void didChangeDependencies() {
