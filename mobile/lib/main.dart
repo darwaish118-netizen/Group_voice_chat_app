@@ -1935,6 +1935,8 @@ class HomeScreen
 class _HomeScreenState
     extends State<HomeScreen> with WidgetsBindingObserver {
   int selectedIndex = 0;
+  final GlobalKey<_RoomsScreenState> _roomsScreenKey =
+      GlobalKey<_RoomsScreenState>();
   Timer? _globalPresenceTimer;
 
   @override
@@ -1995,6 +1997,7 @@ final titles = const [
   ) {
 final pages = [
   RoomsScreen(
+    key: _roomsScreenKey,
     token: widget.token,
   ),
   const EventsScreen(),
@@ -2078,7 +2081,14 @@ bottomNavigationBar: SafeArea(
     return Expanded(
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
-        onTap: () => setState(() => selectedIndex = index),
+        onTap: () {
+          if (index == 0 && selectedIndex == 0) {
+            // Rooms is already selected; return its inner Mine tab to Popular.
+            _roomsScreenKey.currentState?.showPopularHome();
+          } else {
+            setState(() => selectedIndex = index);
+          }
+        },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeOutCubic,
@@ -2305,6 +2315,17 @@ class _RoomsScreenState
     super.initState();
     loadRooms();
     loadMineData();
+  }
+
+  // Called by the main bottom navigation when Rooms is tapped again.
+  void showPopularHome() {
+    if (!mounted) return;
+    setState(() {
+      _selectedTab = 0;
+      _selectedCountry = 'All';
+      _mineTab = 0;
+      _searchQuery = '';
+    });
   }
 
   Future<void> loadMineData() async {
@@ -2871,7 +2892,49 @@ try {
   }
 
   Future<void> _openCountryPicker() async {
-    final countrySet = <String>{};
+    // Show a complete country list even when a country has no rooms yet.
+    // Also retain any additional country names returned by the server.
+    const allCountries = <String>[
+      'Afghanistan', 'Albania', 'Algeria', 'Andorra', 'Angola',
+      'Antigua and Barbuda', 'Argentina', 'Armenia', 'Australia', 'Austria',
+      'Azerbaijan', 'Bahamas', 'Bahrain', 'Bangladesh', 'Barbados',
+      'Belarus', 'Belgium', 'Belize', 'Benin', 'Bhutan', 'Bolivia',
+      'Bosnia and Herzegovina', 'Botswana', 'Brazil', 'Brunei', 'Bulgaria',
+      'Burkina Faso', 'Burundi', 'Cabo Verde', 'Cambodia', 'Cameroon',
+      'Canada', 'Central African Republic', 'Chad', 'Chile', 'China',
+      'Colombia', 'Comoros', 'Congo', 'Costa Rica', 'Cote d\'Ivoire',
+      'Croatia', 'Cuba', 'Cyprus', 'Czechia', 'Democratic Republic of the Congo',
+      'Denmark', 'Djibouti', 'Dominica', 'Dominican Republic', 'Ecuador',
+      'Egypt', 'El Salvador', 'Equatorial Guinea', 'Eritrea', 'Estonia',
+      'Eswatini', 'Ethiopia', 'Fiji', 'Finland', 'France', 'Gabon',
+      'Gambia', 'Georgia', 'Germany', 'Ghana', 'Greece', 'Grenada',
+      'Guatemala', 'Guinea', 'Guinea-Bissau', 'Guyana', 'Haiti', 'Honduras',
+      'Hungary', 'Iceland', 'India', 'Indonesia', 'Iran', 'Iraq', 'Ireland',
+      'Israel', 'Italy', 'Jamaica', 'Japan', 'Jordan', 'Kazakhstan', 'Kenya',
+      'Kiribati', 'Kuwait', 'Kyrgyzstan', 'Laos', 'Latvia', 'Lebanon',
+      'Lesotho', 'Liberia', 'Libya', 'Liechtenstein', 'Lithuania',
+      'Luxembourg', 'Madagascar', 'Malawi', 'Malaysia', 'Maldives', 'Mali',
+      'Malta', 'Marshall Islands', 'Mauritania', 'Mauritius', 'Mexico',
+      'Micronesia', 'Moldova', 'Monaco', 'Mongolia', 'Montenegro', 'Morocco',
+      'Mozambique', 'Myanmar', 'Namibia', 'Nauru', 'Nepal', 'Netherlands',
+      'New Zealand', 'Nicaragua', 'Niger', 'Nigeria', 'North Korea',
+      'North Macedonia', 'Norway', 'Oman', 'Pakistan', 'Palau', 'Palestine',
+      'Panama', 'Papua New Guinea', 'Paraguay', 'Peru', 'Philippines',
+      'Poland', 'Portugal', 'Qatar', 'Romania', 'Russia', 'Rwanda',
+      'Saint Kitts and Nevis', 'Saint Lucia',
+      'Saint Vincent and the Grenadines', 'Samoa', 'San Marino',
+      'Sao Tome and Principe', 'Saudi Arabia', 'Senegal', 'Serbia',
+      'Seychelles', 'Sierra Leone', 'Singapore', 'Slovakia', 'Slovenia',
+      'Solomon Islands', 'Somalia', 'South Africa', 'South Korea',
+      'South Sudan', 'Spain', 'Sri Lanka', 'Sudan', 'Suriname', 'Sweden',
+      'Switzerland', 'Syria', 'Taiwan', 'Tajikistan', 'Tanzania', 'Thailand',
+      'Timor-Leste', 'Togo', 'Tonga', 'Trinidad and Tobago', 'Tunisia',
+      'Turkey', 'Turkmenistan', 'Tuvalu', 'Uganda', 'Ukraine',
+      'United Arab Emirates', 'United Kingdom', 'United States', 'Uruguay',
+      'Uzbekistan', 'Vanuatu', 'Vatican City', 'Venezuela', 'Vietnam',
+      'Yemen', 'Zambia', 'Zimbabwe',
+    ];
+    final countrySet = <String>{...allCountries};
     for (final item in rooms) {
       if (item is Map) {
         final value = _roomCountry(Map<String, dynamic>.from(item));
@@ -3133,7 +3196,9 @@ try {
               children: [
                 // Room cover stays behind the transparent center of the decorative frame.
                 Padding(
-                  padding: const EdgeInsets.all(12),
+                  // Slightly reduce the cover height so it sits inside the
+                  // top and bottom edges of the decorative frame.
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 19),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(9),
                     child: cover.isNotEmpty
@@ -3393,7 +3458,7 @@ try {
           style: TextStyle(
             color: _selectedTab == tab ? Colors.white : Colors.white70,
             fontWeight: FontWeight.w800,
-            fontSize: 13,
+            fontSize: label == 'Mine' ? 17 : 13,
           ),
         ),
       ),
