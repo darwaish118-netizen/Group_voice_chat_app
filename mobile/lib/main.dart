@@ -3133,7 +3133,7 @@ try {
               children: [
                 // Room cover stays behind the transparent center of the decorative frame.
                 Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(12),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(9),
                     child: cover.isNotEmpty
@@ -3142,49 +3142,30 @@ try {
                         : _roomCoverFallback(),
                   ),
                 ),
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.black.withOpacity(.20),
-                        Colors.transparent,
-                        Colors.black.withOpacity(.55),
-                      ],
-                    ),
-                  ),
-                ),
                 if (countryFlag.isNotEmpty)
                   Positioned(
                     left: 27,
-                    top: 43,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(.62),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(countryFlag, style: const TextStyle(fontSize: 14)),
+                    top: 34,
+                    child: Text(
+                      countryFlag,
+                      style: const TextStyle(fontSize: 17),
                     ),
                   ),
                 Positioned(
                   right: 27,
-                  top: 43,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(.64),
-                      borderRadius: BorderRadius.circular(8),
+                  top: 34,
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    const Icon(Icons.people_alt_rounded, size: 15, color: Colors.white),
+                    const SizedBox(width: 4),
+                    Text(
+                      '$members',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                    child: Row(mainAxisSize: MainAxisSize.min, children: [
-                      const Icon(Icons.people_alt_rounded, size: 12, color: Colors.white),
-                      const SizedBox(width: 3),
-                      Text('$members', style: const TextStyle(
-                        color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold,
-                      )),
-                    ]),
-                  ),
+                  ]),
                 ),
                 Positioned(
                   left: 23,
@@ -3210,10 +3191,13 @@ try {
                 // Rank 4+ uses the same royal border without a rank label.
                 Positioned.fill(
                   child: IgnorePointer(
-                    child: Image.asset(
-                      frameAsset,
-                      fit: BoxFit.fill,
-                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                    child: Transform.scale(
+                      scale: 1.04,
+                      child: Image.asset(
+                        frameAsset,
+                        fit: BoxFit.fill,
+                        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                      ),
                     ),
                   ),
                 ),
