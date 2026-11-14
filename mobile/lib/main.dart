@@ -1935,7 +1935,6 @@ class HomeScreen
 class _HomeScreenState
     extends State<HomeScreen> with WidgetsBindingObserver {
   int selectedIndex = 0;
-  int _roomsHomeReturnToken = 0;
   Timer? _globalPresenceTimer;
 
   @override
@@ -1996,7 +1995,6 @@ final titles = const [
   ) {
 final pages = [
   RoomsScreen(
-    key: ValueKey(_roomsHomeReturnToken),
     token: widget.token,
   ),
   const EventsScreen(),
@@ -2080,12 +2078,7 @@ bottomNavigationBar: SafeArea(
     return Expanded(
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
-        onTap: () => setState(() {
-          if (index == 0 && selectedIndex == 0) {
-            _roomsHomeReturnToken++;
-          }
-          selectedIndex = index;
-        }),
+        onTap: () => setState(() => selectedIndex = index),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeOutCubic,
@@ -2300,12 +2293,6 @@ class _RoomsScreenState
   bool _mineDataLoading = true;
   bool _myRoomLoadSucceeded = false;
   String _accountCountry = '';
-  String _selectedCountry = 'All';
-  String _searchQuery = '';
-  int _selectedTab = 0;
-  int _bannerIndex = 0;
-  final PageController _bannerController = PageController();
-
 
   @override
   void initState() {
@@ -2822,170 +2809,6 @@ try {
     return String.fromCharCodes(code.codeUnits.map((unit) => 0x1F1E6 + unit - 65));
   }
 
-
-  String _countryFlag(String country) => _flag(country);
-
-  Future<void> _openSearch() async {
-    final controller = TextEditingController(text: _searchQuery);
-    final result = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: const Color(0xFF241332),
-        title: const Text('Search Rooms', style: TextStyle(color: Colors.white)),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          style: const TextStyle(color: Colors.white),
-          decoration: InputDecoration(
-            hintText: 'Enter room name or ID',
-            hintStyle: const TextStyle(color: Colors.white54),
-            enabledBorder: const UnderlineInputBorder(
-              borderSide: BorderSide(color: Color(0xFFFFD76A)),
-            ),
-            focusedBorder: const UnderlineInputBorder(
-              borderSide: BorderSide(color: Color(0xFFFFD76A), width: 2),
-            ),
-          ),
-          onSubmitted: (value) => Navigator.pop(dialogContext, value),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(dialogContext, controller.text),
-            child: const Text('Search'),
-          ),
-        ],
-      ),
-    );
-    controller.dispose();
-    if (!mounted || result == null) return;
-    setState(() {
-      _searchQuery = result.trim().toLowerCase();
-      _selectedTab = 0;
-    });
-  }
-
-  void _openRanking() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => GlobalWealthRankingScreen(token: widget.token),
-      ),
-    );
-  }
-
-  Future<void> _openCountryPicker() async {
-    final countrySet = <String>{};
-    for (final item in rooms) {
-      if (item is Map) {
-        final value = _roomCountry(Map<String, dynamic>.from(item));
-        if (value.isNotEmpty) countrySet.add(value);
-      }
-    }
-    final countries = countrySet.toList()..sort();
-    final selected = await showModalBottomSheet<String>(
-      context: context,
-      backgroundColor: const Color(0xFF241332),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
-      ),
-      builder: (sheetContext) => SafeArea(
-        child: ListView(
-          shrinkWrap: true,
-          children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(18, 18, 18, 10),
-              child: Text(
-                'Explore by Country',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.public, color: Color(0xFFFFD76A)),
-              title: const Text('All Country', style: TextStyle(color: Colors.white)),
-              trailing: _selectedCountry == 'All'
-                  ? const Icon(Icons.check, color: Color(0xFFFFD76A))
-                  : null,
-              onTap: () => Navigator.pop(sheetContext, 'All'),
-            ),
-            ...countries.map((country) => ListTile(
-              leading: Text(_countryFlag(country), style: const TextStyle(fontSize: 20)),
-              title: Text(country, style: const TextStyle(color: Colors.white)),
-              trailing: _selectedCountry == country
-                  ? const Icon(Icons.check, color: Color(0xFFFFD76A))
-                  : null,
-              onTap: () => Navigator.pop(sheetContext, country),
-            )),
-          ],
-        ),
-      ),
-    );
-    if (!mounted || selected == null) return;
-    setState(() {
-      _selectedCountry = selected;
-      _selectedTab = 0;
-    });
-  }
-
-  Widget _bannerCard(int index) {
-    const titles = ['Welcome to MINDO', 'Discover Popular Rooms', 'Connect with Friends'];
-    const subtitles = [
-      'Your voice, your community',
-      'Join rooms loved by the community',
-      'Meet people and enjoy live conversations',
-    ];
-    const icons = [Icons.graphic_eq_rounded, Icons.public_rounded, Icons.people_alt_rounded];
-    const gradients = [
-      [Color(0xFF6D238F), Color(0xFF241044)],
-      [Color(0xFFB34B83), Color(0xFF35105D)],
-      [Color(0xFF235A83), Color(0xFF241044)],
-    ];
-    final i = index.clamp(0, 2).toInt();
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 7, horizontal: 2),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: gradients[i],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFFFD76A).withOpacity(.65)),
-        boxShadow: [
-          BoxShadow(color: gradients[i][0].withOpacity(.3), blurRadius: 12),
-        ],
-      ),
-      child: Row(
-        children: [
-          Icon(icons[i], color: const Color(0xFFFFD76A), size: 42),
-          const SizedBox(width: 15),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(titles[i], style: const TextStyle(
-                  color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900,
-                )),
-                const SizedBox(height: 5),
-                Text(subtitles[i], maxLines: 2, overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white70, fontSize: 12)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _mineRoomTile(Map<String, dynamic> room) {
     final cover = (room['cover_image_url'] ?? '').toString();
     final name = (room['name'] ?? 'Voice Room').toString();
@@ -3139,16 +2962,11 @@ try {
               fit: StackFit.expand,
               children: [
                 // Room cover stays behind the transparent center of the decorative frame.
-                Padding(
-                  padding: EdgeInsets.all(isRanked ? 16 : 10),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(isRanked ? 9 : 8),
-                    child: cover.isNotEmpty
-                        ? Image.network(cover, fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => _roomCoverFallback())
-                        : _roomCoverFallback(),
-                  ),
-                ),
+                if (cover.isNotEmpty)
+                  Image.network(cover, fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => _roomCoverFallback())
+                else
+                  _roomCoverFallback(),
                 DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -3166,48 +2984,30 @@ try {
                   Positioned(
                     left: isRanked ? 27 : 12,
                     top: isRanked ? 43 : 28,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
-                      child: Text(
-                        countryFlag,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          shadows: [
-                            Shadow(color: Colors.black87, blurRadius: 3),
-                            Shadow(color: Colors.black54, blurRadius: 6),
-                          ],
-                        ),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(.62),
+                        borderRadius: BorderRadius.circular(8),
                       ),
+                      child: Text(countryFlag, style: const TextStyle(fontSize: 14)),
                     ),
                   ),
                 Positioned(
                   right: isRanked ? 27 : 12,
                   top: isRanked ? 43 : 28,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(.64),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                     child: Row(mainAxisSize: MainAxisSize.min, children: [
-                      const Icon(
-                        Icons.people_alt_rounded,
-                        size: 15,
-                        color: Colors.white,
-                        shadows: [
-                          Shadow(color: Colors.black87, blurRadius: 3),
-                          Shadow(color: Colors.black54, blurRadius: 6),
-                        ],
-                      ),
+                      const Icon(Icons.people_alt_rounded, size: 12, color: Colors.white),
                       const SizedBox(width: 3),
-                      Text(
-                        '$members',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          shadows: [
-                            Shadow(color: Colors.black87, blurRadius: 3),
-                            Shadow(color: Colors.black54, blurRadius: 6),
-                          ],
-                        ),
-                      ),
+                      Text('$members', style: const TextStyle(
+                        color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold,
+                      )),
                     ]),
                   ),
                 ),
@@ -3312,8 +3112,14 @@ try {
                     padding: const EdgeInsets.fromLTRB(14, 7, 14, 0),
                     child: Column(children: [
                       Row(children: [
-                        SizedBox(width: 118, child: _homeTabButton('Mine', 1)),
-                        const Spacer(),
+                        Expanded(
+                          child: Row(children: [
+                            _homeTabButton('Popular', 0),
+                            const SizedBox(width: 7),
+                            _homeTabButton('Mine', 1),
+                          ]),
+                        ),
+                        const SizedBox(width: 8),
                         _headerAction(Icons.search_rounded, _openSearch, 'Search'),
                         const SizedBox(width: 8),
                         _headerAction(Icons.emoji_events_rounded, _openRanking, 'Ranking'),
@@ -3323,50 +3129,17 @@ try {
                         Row(mainAxisAlignment: MainAxisAlignment.center, children: List.generate(3, (index) => AnimatedContainer(duration: const Duration(milliseconds: 180), margin: const EdgeInsets.symmetric(horizontal: 3), width: _bannerIndex == index ? 18 : 6, height: 6, decoration: BoxDecoration(color: _bannerIndex == index ? const Color(0xFFFFD76A) : Colors.white38, borderRadius: BorderRadius.circular(5))))),
                         const SizedBox(height: 12),
                         Row(children: [
-                          SizedBox(width: 118, child: _homeTabButton('Popular', 0)),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: InkWell(
-                              onTap: () {
-                                final country = _accountCountry.trim();
-                                setState(() {
-                                  _selectedTab = 0;
-                                  _selectedCountry = country.isEmpty ? 'All' : country;
-                                });
-                              },
-                              borderRadius: BorderRadius.circular(12),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 4),
-                                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                                  Text(_flag(_accountCountry.isEmpty ? _selectedCountry : _accountCountry), style: const TextStyle(fontSize: 23)),
-                                  const SizedBox(width: 7),
-                                  Flexible(child: Text(
-                                    _accountCountry.isEmpty ? (_selectedCountry == 'All' ? 'Your Country' : _selectedCountry) : _accountCountry,
-                                    maxLines: 1, overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(color: Color(0xFFFFD76A), fontSize: 16, fontWeight: FontWeight.w900),
-                                  )),
-                                ]),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
+                          const Expanded(child: Text('Popular Rooms', style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900))),
+                          if (_accountCountry.isNotEmpty) ...[
+                            Text(_flag(_accountCountry), style: const TextStyle(fontSize: 18)),
+                            const SizedBox(width: 5),
+                            Flexible(child: Text(_accountCountry, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFFFFD76A), fontSize: 11, fontWeight: FontWeight.w800))),
+                            const SizedBox(width: 7),
+                          ],
                           InkWell(
                             onTap: _openCountryPicker,
                             borderRadius: BorderRadius.circular(12),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF28103D),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: const Color(0xFFFFD76A).withOpacity(.6)),
-                              ),
-                              child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                                Icon(Icons.public, color: Color(0xFFFFD76A), size: 17),
-                                SizedBox(width: 6),
-                                Text('All Country', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
-                                Icon(Icons.arrow_drop_down, color: Colors.white),
-                              ]),
-                            ),
+                            child: Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9), decoration: BoxDecoration(color: const Color(0xFF28103D), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFFFD76A).withOpacity(.6))), child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.public, color: Color(0xFFFFD76A), size: 16), const SizedBox(width: 5), Text(_selectedCountry == 'All' ? 'All Country' : _selectedCountry, style: const TextStyle(color: Colors.white, fontSize: 11)), const Icon(Icons.arrow_drop_down, color: Colors.white)])),
                           ),
                         ]),
                         const SizedBox(height: 9),
@@ -3435,7 +3208,7 @@ try {
           style: TextStyle(
             color: _selectedTab == tab ? Colors.white : Colors.white70,
             fontWeight: FontWeight.w800,
-            fontSize: label == 'Mine' ? 16 : 13,
+            fontSize: 13,
           ),
         ),
       ),
@@ -3447,12 +3220,6 @@ try {
     child: IconButton(tooltip: tooltip, onPressed: onTap, icon: Icon(icon, color: const Color(0xFFFFE08A), size: 22)),
   );
 
-
-  @override
-  void dispose() {
-    _bannerController.dispose();
-    super.dispose();
-  }
 
   @override
   void didChangeDependencies() {
@@ -10720,10 +10487,11 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
     final selected = _category == value;
     return Expanded(child: GestureDetector(
       onTap: () {
+        if (value == 'room') {
+          _openRoomRanking();
+          return;
+        }
         if (_category == value) return;
-        // ROOM now stays inside the same Global Ranking screen.
-        // Its Daily / Weekly / Monthly period selector remains available,
-        // just like Wealth, Charm and Agency.
         setState(() => _category = value);
         _load();
       },
