@@ -1935,6 +1935,7 @@ class HomeScreen
 class _HomeScreenState
     extends State<HomeScreen> with WidgetsBindingObserver {
   int selectedIndex = 0;
+  int _roomsHomeReturnToken = 0;
   Timer? _globalPresenceTimer;
 
   @override
@@ -1995,6 +1996,7 @@ final titles = const [
   ) {
 final pages = [
   RoomsScreen(
+    key: ValueKey(_roomsHomeReturnToken),
     token: widget.token,
   ),
   const EventsScreen(),
@@ -2078,7 +2080,12 @@ bottomNavigationBar: SafeArea(
     return Expanded(
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
-        onTap: () => setState(() => selectedIndex = index),
+        onTap: () => setState(() {
+          if (index == 0 && selectedIndex == 0) {
+            _roomsHomeReturnToken++;
+          }
+          selectedIndex = index;
+        }),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeOutCubic,
@@ -3133,7 +3140,7 @@ try {
               children: [
                 // Room cover stays behind the transparent center of the decorative frame.
                 Padding(
-                  padding: EdgeInsets.all(isRanked ? 12 : 8),
+                  padding: EdgeInsets.all(isRanked ? 16 : 10),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(isRanked ? 9 : 8),
                     child: cover.isNotEmpty
@@ -3159,30 +3166,48 @@ try {
                   Positioned(
                     left: isRanked ? 27 : 12,
                     top: isRanked ? 43 : 28,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(.62),
-                        borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
+                      child: Text(
+                        countryFlag,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          shadows: [
+                            Shadow(color: Colors.black87, blurRadius: 3),
+                            Shadow(color: Colors.black54, blurRadius: 6),
+                          ],
+                        ),
                       ),
-                      child: Text(countryFlag, style: const TextStyle(fontSize: 14)),
                     ),
                   ),
                 Positioned(
                   right: isRanked ? 27 : 12,
                   top: isRanked ? 43 : 28,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(.64),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
                     child: Row(mainAxisSize: MainAxisSize.min, children: [
-                      const Icon(Icons.people_alt_rounded, size: 12, color: Colors.white),
+                      const Icon(
+                        Icons.people_alt_rounded,
+                        size: 15,
+                        color: Colors.white,
+                        shadows: [
+                          Shadow(color: Colors.black87, blurRadius: 3),
+                          Shadow(color: Colors.black54, blurRadius: 6),
+                        ],
+                      ),
                       const SizedBox(width: 3),
-                      Text('$members', style: const TextStyle(
-                        color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold,
-                      )),
+                      Text(
+                        '$members',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          shadows: [
+                            Shadow(color: Colors.black87, blurRadius: 3),
+                            Shadow(color: Colors.black54, blurRadius: 6),
+                          ],
+                        ),
+                      ),
                     ]),
                   ),
                 ),
@@ -3388,7 +3413,8 @@ try {
 
   Widget _mineSubTab(String label, int tab, IconData icon) => GestureDetector(onTap: () => setState(() => _mineTab = tab), child: AnimatedContainer(duration: const Duration(milliseconds: 180), height: 48, decoration: BoxDecoration(borderRadius: BorderRadius.circular(18), gradient: _mineTab == tab ? const LinearGradient(colors: [Color(0xFFE83EAD), Color(0xFF7927B5)]) : null, color: _mineTab == tab ? null : const Color(0xFF241332), border: Border.all(color: _mineTab == tab ? const Color(0xFFFFD76A) : Colors.white12), boxShadow: _mineTab == tab ? [BoxShadow(color: const Color(0xFFE83EAD).withOpacity(.3), blurRadius: 12)] : []), child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(icon, color: Colors.white, size: 18), const SizedBox(width: 7), Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800))])));
 
-  Widget _homeTabButton(String label, int tab) => GestureDetector(
+  Widget _homeTabButton(String label, int tab) => Expanded(
+    child: GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () => setState(() { _selectedTab = tab; if (tab == 0) _selectedCountry = 'All'; }),
       child: Container(
@@ -3409,10 +3435,11 @@ try {
           style: TextStyle(
             color: _selectedTab == tab ? Colors.white : Colors.white70,
             fontWeight: FontWeight.w800,
-            fontSize: 13,
+            fontSize: label == 'Mine' ? 16 : 13,
           ),
         ),
       ),
+    ),
   );
 
   Widget _headerAction(IconData icon, VoidCallback onTap, String tooltip) => Container(
@@ -10693,11 +10720,10 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
     final selected = _category == value;
     return Expanded(child: GestureDetector(
       onTap: () {
-        if (value == 'room') {
-          _openRoomRanking();
-          return;
-        }
         if (_category == value) return;
+        // ROOM now stays inside the same Global Ranking screen.
+        // Its Daily / Weekly / Monthly period selector remains available,
+        // just like Wealth, Charm and Agency.
         setState(() => _category = value);
         _load();
       },
