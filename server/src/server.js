@@ -213,6 +213,26 @@ await pool.query(`
     )
   `);
   await pool.query(`CREATE INDEX IF NOT EXISTS user_follows_followed_idx ON user_follows(followed_id)`);
+
+  // Room follows and recently visited rooms for the Mine screen.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS room_follows (
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      room_id UUID NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (user_id, room_id)
+    )
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS room_follows_user_idx ON room_follows(user_id, created_at DESC)`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS room_visit_history (
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      room_id UUID NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+      visited_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (user_id, room_id)
+    )
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS room_visit_history_user_idx ON room_visit_history(user_id, visited_at DESC)`);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS private_messages (
       id UUID PRIMARY KEY,
@@ -1406,6 +1426,129 @@ app.put("/api/me/avatar", authMiddleware, async (req, res) => {
 // -------------------------
 // Rooms
 // -------------------------
+
+// -------------------------
+// Authenticated Mine room lookup
+// -------------------------
+app.get("/api/me/rooms", authMiddleware, async (req, res) => {
+  if (!pool) {
+    return res.status(503).json({ message: "Database is not configured" });
+  }
+
+  try {
+    const result = await pool.query(`
+      SELECT r.id, r.name, r.owner_id, r.seat_count, r.cover_image_url,
+             r.created_at, u.public_uid AS owner_public_uid,
+             COALESCE(m.member_count, 0)::INTEGER AS member_count
+      FROM rooms r
+      JOIN users u ON u.id = r.owner_id
+      LEFT JOIN (
+        SELECT room_id, COUNT(DISTINCT user_id)::INTEGER AS member_count
+        FROM room_presence
+        WHERE last_seen >= NOW() - INTERVAL '2 minutes'
+        GROUP BY room_id
+      ) m ON m.room_id = r.id
+      WHERE r.owner_id = $1
+      ORDER BY r.created_at DESC
+      LIMIT 1
+    `, [req.user.id]);
+
+    res.json({ room: result.rows[0] || null });
+  } catch (error) {
+    console.error("My room load failed:", error);
+    res.status(500).json({ message: "Could not load your room" });
+  }
+});
+
+// -------------------------
+// Room follow and visit history
+// -------------------------
+app.get("/api/me/room-follows", authMiddleware, async (req, res) => {
+  if (!pool) {
+    return res.status(503).json({ message: "Database is not configured" });
+  }
+
+  try {
+    const result = await pool.query(`
+      SELECT r.id, r.name, r.owner_id, r.seat_count, r.cover_image_url,
+             r.created_at, u.public_uid AS owner_public_uid,
+             COALESCE(m.member_count, 0)::INTEGER AS member_count
+      FROM room_follows f
+      JOIN rooms r ON r.id = f.room_id
+      JOIN users u ON u.id = r.owner_id
+      LEFT JOIN (SELECT room_id, COUNT(DISTINCT user_id)::INTEGER AS member_count
+                 FROM room_presence WHERE last_seen >= NOW() - INTERVAL '2 minutes' GROUP BY room_id) m
+        ON m.room_id = r.id
+      WHERE f.user_id = $1 ORDER BY f.created_at DESC`, [req.user.id]);
+    res.json({ rooms: result.rows });
+  } catch (error) {
+    console.error("Room follows load failed:", error);
+    res.status(500).json({ message: "Could not load followed rooms" });
+  }
+});
+
+app.post("/api/rooms/:roomId/follow", authMiddleware, async (req, res) => {
+  if (!pool) {
+    return res.status(503).json({ message: "Database is not configured" });
+  }
+
+  try {
+    const exists = await pool.query(`SELECT 1 FROM rooms WHERE id = $1`, [req.params.roomId]);
+    if (!exists.rows.length) return res.status(404).json({ message: "Room not found" });
+    const current = await pool.query(`SELECT 1 FROM room_follows WHERE user_id = $1 AND room_id = $2`, [req.user.id, req.params.roomId]);
+    if (current.rows.length) {
+      await pool.query(`DELETE FROM room_follows WHERE user_id = $1 AND room_id = $2`, [req.user.id, req.params.roomId]);
+      return res.json({ following: false });
+    }
+    await pool.query(`INSERT INTO room_follows(user_id, room_id) VALUES($1, $2) ON CONFLICT DO NOTHING`, [req.user.id, req.params.roomId]);
+    res.json({ following: true });
+  } catch (error) {
+    console.error("Room follow update failed:", error);
+    res.status(500).json({ message: "Could not update room follow" });
+  }
+});
+
+app.get("/api/me/room-latest", authMiddleware, async (req, res) => {
+  if (!pool) {
+    return res.status(503).json({ message: "Database is not configured" });
+  }
+
+  try {
+    const result = await pool.query(`
+      SELECT r.id, r.name, r.owner_id, r.seat_count, r.cover_image_url,
+             r.created_at, u.public_uid AS owner_public_uid,
+             COALESCE(m.member_count, 0)::INTEGER AS member_count
+      FROM room_visit_history h
+      JOIN rooms r ON r.id = h.room_id
+      JOIN users u ON u.id = r.owner_id
+      LEFT JOIN (SELECT room_id, COUNT(DISTINCT user_id)::INTEGER AS member_count
+                 FROM room_presence WHERE last_seen >= NOW() - INTERVAL '2 minutes' GROUP BY room_id) m
+        ON m.room_id = r.id
+      WHERE h.user_id = $1 ORDER BY h.visited_at DESC LIMIT 50`, [req.user.id]);
+    res.json({ rooms: result.rows });
+  } catch (error) {
+    console.error("Room visit history load failed:", error);
+    res.status(500).json({ message: "Could not load latest rooms" });
+  }
+});
+
+app.post("/api/rooms/:roomId/visit", authMiddleware, async (req, res) => {
+  if (!pool) {
+    return res.status(503).json({ message: "Database is not configured" });
+  }
+
+  try {
+    const result = await pool.query(`SELECT 1 FROM rooms WHERE id = $1`, [req.params.roomId]);
+    if (!result.rows.length) return res.status(404).json({ message: "Room not found" });
+    await pool.query(`INSERT INTO room_visit_history(user_id, room_id, visited_at)
+      VALUES($1, $2, NOW()) ON CONFLICT(user_id, room_id)
+      DO UPDATE SET visited_at = NOW()`, [req.user.id, req.params.roomId]);
+    res.json({ saved: true });
+  } catch (error) {
+    console.error("Room visit save failed:", error);
+    res.status(500).json({ message: "Could not save room visit" });
+  }
+});
 
 app.get("/api/rooms", async (req, res) => {
   if (!pool) {
