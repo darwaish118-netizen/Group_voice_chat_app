@@ -3388,8 +3388,7 @@ try {
 
   Widget _mineSubTab(String label, int tab, IconData icon) => GestureDetector(onTap: () => setState(() => _mineTab = tab), child: AnimatedContainer(duration: const Duration(milliseconds: 180), height: 48, decoration: BoxDecoration(borderRadius: BorderRadius.circular(18), gradient: _mineTab == tab ? const LinearGradient(colors: [Color(0xFFE83EAD), Color(0xFF7927B5)]) : null, color: _mineTab == tab ? null : const Color(0xFF241332), border: Border.all(color: _mineTab == tab ? const Color(0xFFFFD76A) : Colors.white12), boxShadow: _mineTab == tab ? [BoxShadow(color: const Color(0xFFE83EAD).withOpacity(.3), blurRadius: 12)] : []), child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(icon, color: Colors.white, size: 18), const SizedBox(width: 7), Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800))])));
 
-  Widget _homeTabButton(String label, int tab) => Expanded(
-    child: GestureDetector(
+  Widget _homeTabButton(String label, int tab) => GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () => setState(() { _selectedTab = tab; if (tab == 0) _selectedCountry = 'All'; }),
       child: Container(
@@ -3414,7 +3413,6 @@ try {
           ),
         ),
       ),
-    ),
   );
 
   Widget _headerAction(IconData icon, VoidCallback onTap, String tooltip) => Container(
