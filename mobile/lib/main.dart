@@ -2865,7 +2865,7 @@ try {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => GlobalRoomRankingScreen(token: widget.token),
+        builder: (_) => GlobalWealthRankingScreen(token: widget.token),
       ),
     );
   }
@@ -3132,11 +3132,16 @@ try {
               fit: StackFit.expand,
               children: [
                 // Room cover stays behind the transparent center of the decorative frame.
-                if (cover.isNotEmpty)
-                  Image.network(cover, fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _roomCoverFallback())
-                else
-                  _roomCoverFallback(),
+                Padding(
+                  padding: EdgeInsets.all(isRanked ? 12 : 8),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(isRanked ? 9 : 8),
+                    child: cover.isNotEmpty
+                        ? Image.network(cover, fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => _roomCoverFallback())
+                        : _roomCoverFallback(),
+                  ),
+                ),
                 DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -3282,14 +3287,8 @@ try {
                     padding: const EdgeInsets.fromLTRB(14, 7, 14, 0),
                     child: Column(children: [
                       Row(children: [
-                        Expanded(
-                          child: Row(children: [
-                            _homeTabButton('Popular', 0),
-                            const SizedBox(width: 7),
-                            _homeTabButton('Mine', 1),
-                          ]),
-                        ),
-                        const SizedBox(width: 8),
+                        SizedBox(width: 118, child: _homeTabButton('Mine', 1)),
+                        const Spacer(),
                         _headerAction(Icons.search_rounded, _openSearch, 'Search'),
                         const SizedBox(width: 8),
                         _headerAction(Icons.emoji_events_rounded, _openRanking, 'Ranking'),
@@ -3299,17 +3298,50 @@ try {
                         Row(mainAxisAlignment: MainAxisAlignment.center, children: List.generate(3, (index) => AnimatedContainer(duration: const Duration(milliseconds: 180), margin: const EdgeInsets.symmetric(horizontal: 3), width: _bannerIndex == index ? 18 : 6, height: 6, decoration: BoxDecoration(color: _bannerIndex == index ? const Color(0xFFFFD76A) : Colors.white38, borderRadius: BorderRadius.circular(5))))),
                         const SizedBox(height: 12),
                         Row(children: [
-                          const Expanded(child: Text('Popular Rooms', style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900))),
-                          if (_accountCountry.isNotEmpty) ...[
-                            Text(_flag(_accountCountry), style: const TextStyle(fontSize: 18)),
-                            const SizedBox(width: 5),
-                            Flexible(child: Text(_accountCountry, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFFFFD76A), fontSize: 11, fontWeight: FontWeight.w800))),
-                            const SizedBox(width: 7),
-                          ],
+                          SizedBox(width: 118, child: _homeTabButton('Popular', 0)),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: InkWell(
+                              onTap: () {
+                                final country = _accountCountry.trim();
+                                setState(() {
+                                  _selectedTab = 0;
+                                  _selectedCountry = country.isEmpty ? 'All' : country;
+                                });
+                              },
+                              borderRadius: BorderRadius.circular(12),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 4),
+                                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                  Text(_flag(_accountCountry.isEmpty ? _selectedCountry : _accountCountry), style: const TextStyle(fontSize: 23)),
+                                  const SizedBox(width: 7),
+                                  Flexible(child: Text(
+                                    _accountCountry.isEmpty ? (_selectedCountry == 'All' ? 'Your Country' : _selectedCountry) : _accountCountry,
+                                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(color: Color(0xFFFFD76A), fontSize: 16, fontWeight: FontWeight.w900),
+                                  )),
+                                ]),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
                           InkWell(
                             onTap: _openCountryPicker,
                             borderRadius: BorderRadius.circular(12),
-                            child: Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9), decoration: BoxDecoration(color: const Color(0xFF28103D), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFFFD76A).withOpacity(.6))), child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.public, color: Color(0xFFFFD76A), size: 16), const SizedBox(width: 5), Text(_selectedCountry == 'All' ? 'All Country' : _selectedCountry, style: const TextStyle(color: Colors.white, fontSize: 11)), const Icon(Icons.arrow_drop_down, color: Colors.white)])),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF28103D),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: const Color(0xFFFFD76A).withOpacity(.6)),
+                              ),
+                              child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                                Icon(Icons.public, color: Color(0xFFFFD76A), size: 17),
+                                SizedBox(width: 6),
+                                Text('All Country', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
+                                Icon(Icons.arrow_drop_down, color: Colors.white),
+                              ]),
+                            ),
                           ),
                         ]),
                         const SizedBox(height: 9),
@@ -3356,8 +3388,7 @@ try {
 
   Widget _mineSubTab(String label, int tab, IconData icon) => GestureDetector(onTap: () => setState(() => _mineTab = tab), child: AnimatedContainer(duration: const Duration(milliseconds: 180), height: 48, decoration: BoxDecoration(borderRadius: BorderRadius.circular(18), gradient: _mineTab == tab ? const LinearGradient(colors: [Color(0xFFE83EAD), Color(0xFF7927B5)]) : null, color: _mineTab == tab ? null : const Color(0xFF241332), border: Border.all(color: _mineTab == tab ? const Color(0xFFFFD76A) : Colors.white12), boxShadow: _mineTab == tab ? [BoxShadow(color: const Color(0xFFE83EAD).withOpacity(.3), blurRadius: 12)] : []), child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(icon, color: Colors.white, size: 18), const SizedBox(width: 7), Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800))])));
 
-  Widget _homeTabButton(String label, int tab) => Expanded(
-    child: GestureDetector(
+  Widget _homeTabButton(String label, int tab) => GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () => setState(() { _selectedTab = tab; if (tab == 0) _selectedCountry = 'All'; }),
       child: Container(
@@ -3382,7 +3413,6 @@ try {
           ),
         ),
       ),
-    ),
   );
 
   Widget _headerAction(IconData icon, VoidCallback onTap, String tooltip) => Container(
