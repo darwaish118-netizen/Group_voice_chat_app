@@ -105,8 +105,21 @@ class ApiService {
     return data['rooms'] ?? [];
   }
 
+  Future<Map<String, dynamic>?> getMyRoom(String token) async {
+    final response = await http.get(
+      Uri.parse('$apiBaseUrl/api/me/rooms'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    final data = _handleResponse(response);
+    final room = data['room'];
+    return room is Map ? Map<String, dynamic>.from(room) : null;
+  }
+
   Future<List<dynamic>> getFollowedRooms(String token) async {
-    final response = await http.get(Uri.parse('$apiBaseUrl/api/me/room-follows'), headers: {'Authorization': 'Bearer $token'});
+    final response = await http.get(
+      Uri.parse('$apiBaseUrl/api/me/room-follows'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
     return (_handleResponse(response)['rooms'] as List?) ?? [];
   }
 
@@ -2277,6 +2290,8 @@ class _RoomsScreenState
   Map<String, dynamic>? myRoom;
   int _mineTab = 0;
   bool loading = true;
+  bool _mineDataLoading = true;
+  bool _myRoomLoadSucceeded = false;
 
   @override
   void initState() {
@@ -2286,25 +2301,35 @@ class _RoomsScreenState
   }
 
   Future<void> loadMineData() async {
-    try {
-      final results = await Future.wait([
-        api.me(widget.token),
-        api.getFollowedRooms(widget.token),
-        api.getLatestRooms(widget.token),
-      ]);
-      final meResponse = Map<String, dynamic>.from(results[0] as Map);
-      final user = Map<String, dynamic>.from(meResponse['user'] as Map);
-      final allRooms = await api.getRooms(widget.token);
-      final owned = allRooms.where((item) => (item as Map)['owner_id']?.toString() == user['id']?.toString()).toList();
-      if (!mounted) return;
-      setState(() {
-        myRoom = owned.isEmpty ? null : Map<String, dynamic>.from(owned.first as Map);
-        followedRooms = results[1] as List;
-        latestRooms = results[2] as List;
-      });
-    } catch (_) {
-      // Keep the main Popular screen usable if Mine data is temporarily unavailable.
-    }
+    if (mounted) setState(() => _mineDataLoading = true);
+
+    // Load each Mine section independently. A failure in Follow must not
+    // prevent My Room or Latest from being refreshed (and vice versa).
+    final results = await Future.wait([
+      api.getMyRoom(widget.token).then<dynamic>((value) => value).catchError((error) {
+        debugPrint('My Room load failed: $error');
+        return '__MINDO_MY_ROOM_LOAD_FAILED__';
+      }),
+      api.getFollowedRooms(widget.token).then<dynamic>((value) => value).catchError((error) {
+        debugPrint('Followed rooms load failed: $error');
+        return <dynamic>[];
+      }),
+      api.getLatestRooms(widget.token).then<dynamic>((value) => value).catchError((error) {
+        debugPrint('Latest rooms load failed: $error');
+        return <dynamic>[];
+      }),
+    ]);
+
+    if (!mounted) return;
+    setState(() {
+      _myRoomLoadSucceeded = results[0] != '__MINDO_MY_ROOM_LOAD_FAILED__';
+      if (_myRoomLoadSucceeded) {
+        myRoom = results[0] is Map ? Map<String, dynamic>.from(results[0] as Map) : null;
+      }
+      followedRooms = results[1] as List<dynamic>;
+      latestRooms = results[2] as List<dynamic>;
+      _mineDataLoading = false;
+    });
   }
 
   Future<void> loadRooms() async {
@@ -2611,11 +2636,20 @@ try {
     final name = (room['name'] ?? 'Voice Room').toString();
     final id = (room['id'] ?? '').toString();
     return GestureDetector(
-      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => VoiceRoomScreen(
-        token: widget.token, roomId: id, ownerPublicUid: (room['owner_public_uid'] ?? '').toString(),
-        roomName: name, coverImageUrl: cover.isEmpty ? null : cover,
-        seatCount: int.tryParse(room['seat_count']?.toString() ?? '') ?? 10,
-      ))),
+      onTap: () async {
+        try {
+          await api.recordRoomVisit(widget.token, id);
+          await loadMineData();
+        } catch (error) {
+          debugPrint('My room visit history save failed: $error');
+        }
+        if (!mounted) return;
+        await Navigator.push(context, MaterialPageRoute(builder: (_) => VoiceRoomScreen(
+          token: widget.token, roomId: id, ownerPublicUid: (room['owner_public_uid'] ?? '').toString(),
+          roomName: name, coverImageUrl: cover.isEmpty ? null : cover,
+          seatCount: int.tryParse(room['seat_count']?.toString() ?? '') ?? 10,
+        )));
+      },
       child: Container(
         height: 176, margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), border: Border.all(color: const Color(0xFFFFD76A), width: 1.3),
@@ -2642,9 +2676,15 @@ try {
       final cover = (room['cover_image_url'] ?? '').toString();
       final name = (room['name'] ?? 'Voice Room').toString();
       final id = (room['id'] ?? '').toString();
-      return GestureDetector(onTap: () {
-        api.recordRoomVisit(widget.token, id).then((_) => loadMineData()).catchError((_) {});
-        Navigator.push(context, MaterialPageRoute(builder: (_) => VoiceRoomScreen(token: widget.token, roomId: id, ownerPublicUid: (room['owner_public_uid'] ?? '').toString(), roomName: name, coverImageUrl: cover.isEmpty ? null : cover, seatCount: int.tryParse(room['seat_count']?.toString() ?? '') ?? 10)));
+      return GestureDetector(onTap: () async {
+        try {
+          await api.recordRoomVisit(widget.token, id);
+          await loadMineData();
+        } catch (error) {
+          debugPrint('Room visit history save failed: $error');
+        }
+        if (!mounted) return;
+        await Navigator.push(context, MaterialPageRoute(builder: (_) => VoiceRoomScreen(token: widget.token, roomId: id, ownerPublicUid: (room['owner_public_uid'] ?? '').toString(), roomName: name, coverImageUrl: cover.isEmpty ? null : cover, seatCount: int.tryParse(room['seat_count']?.toString() ?? '') ?? 10)));
       }, child: Container(margin: const EdgeInsets.only(bottom: 10), padding: const EdgeInsets.all(9), decoration: BoxDecoration(color: const Color(0xFF241332), borderRadius: BorderRadius.circular(17), border: Border.all(color: const Color(0xFF8B4AB2).withOpacity(.65))), child: Row(children: [
         ClipRRect(borderRadius: BorderRadius.circular(12), child: cover.isEmpty ? SizedBox(width: 72, height: 72, child: _roomCoverFallback()) : Image.network(cover, width: 72, height: 72, fit: BoxFit.cover, errorBuilder: (_, __, ___) => SizedBox(width: 72, height: 72, child: _roomCoverFallback()))),
         const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14)), const SizedBox(height: 5), Text('ID: $id', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white60, fontSize: 11))])),
@@ -2667,8 +2707,14 @@ try {
     final frameColor = rank == 1 ? const Color(0xFFFFD45C) : rank == 2 ? const Color(0xFF9EDBFF) : const Color(0xFFD99A68);
     return GestureDetector(
       onTap: () async {
-        api.recordRoomVisit(widget.token, id).then((_) => loadMineData()).catchError((_) {});
-        Navigator.push(context, MaterialPageRoute(builder: (_) => VoiceRoomScreen(
+        try {
+          await api.recordRoomVisit(widget.token, id);
+          await loadMineData();
+        } catch (error) {
+          debugPrint('Popular room visit history save failed: $error');
+        }
+        if (!mounted) return;
+        await Navigator.push(context, MaterialPageRoute(builder: (_) => VoiceRoomScreen(
           token: widget.token,
           roomId: id,
           ownerPublicUid: ownerUid,
@@ -2821,7 +2867,7 @@ try {
               ],
             ),
       ),
-      floatingActionButton: _selectedTab == 0 && myRoom == null ? Container(
+      floatingActionButton: _selectedTab == 0 && !_mineDataLoading && _myRoomLoadSucceeded && myRoom == null ? Container(
         decoration: BoxDecoration(shape: BoxShape.circle, gradient: const LinearGradient(colors: [Color(0xFFFFD76A), Color(0xFFE83EAD), Color(0xFF7927B5)]), boxShadow: [BoxShadow(color: const Color(0xFFE83EAD).withOpacity(.45), blurRadius: 18, spreadRadius: 2)]),
         child: FloatingActionButton(elevation: 0, backgroundColor: Colors.transparent, foregroundColor: Colors.white, onPressed: createRoom, child: const Icon(Icons.home_rounded, size: 30)),
       ) : null,
