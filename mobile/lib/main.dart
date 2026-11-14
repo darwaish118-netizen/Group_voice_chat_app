@@ -3449,20 +3449,69 @@ try {
                         SizedBox(height: 130, child: PageView.builder(controller: _bannerController, itemCount: 3, onPageChanged: (index) => setState(() => _bannerIndex = index), itemBuilder: (_, index) => _bannerCard(index))),
                         Row(mainAxisAlignment: MainAxisAlignment.center, children: List.generate(3, (index) => AnimatedContainer(duration: const Duration(milliseconds: 180), margin: const EdgeInsets.symmetric(horizontal: 3), width: _bannerIndex == index ? 18 : 6, height: 6, decoration: BoxDecoration(color: _bannerIndex == index ? const Color(0xFFFFD76A) : Colors.white38, borderRadius: BorderRadius.circular(5))))),
                         const SizedBox(height: 12),
-                        Row(children: [
-                          const Expanded(child: Text('Popular Rooms', style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900))),
-                          if (_accountCountry.isNotEmpty) ...[
-                            Text(_flag(_accountCountry), style: const TextStyle(fontSize: 18)),
-                            const SizedBox(width: 5),
-                            Flexible(child: Text(_accountCountry, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFFFFD76A), fontSize: 11, fontWeight: FontWeight.w800))),
+                        Row(
+                          children: [
+                            const Text(
+                              'Popular Rooms',
+                              maxLines: 1,
+                              style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900),
+                            ),
+                            const Spacer(),
+                            if (_accountCountry.isNotEmpty)
+                              InkWell(
+                                onTap: () {
+                                  setState(() {
+                                    _selectedTab = 0;
+                                    _selectedCountry = _accountCountry;
+                                  });
+                                },
+                                borderRadius: BorderRadius.circular(10),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 7),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(_flag(_accountCountry), style: const TextStyle(fontSize: 22)),
+                                      const SizedBox(width: 5),
+                                      ConstrainedBox(
+                                        constraints: const BoxConstraints(maxWidth: 82),
+                                        child: Text(
+                                          _accountCountry,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(color: Color(0xFFFFD76A), fontSize: 13, fontWeight: FontWeight.w900),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
                             const SizedBox(width: 7),
+                            InkWell(
+                              onTap: _openCountryPicker,
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF28103D),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: const Color(0xFFFFD76A).withOpacity(.6)),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.public, color: Color(0xFFFFD76A), size: 16),
+                                    const SizedBox(width: 4),
+                                    Text(_selectedCountry == 'All' ? 'All Country' : _selectedCountry,
+                                      style: const TextStyle(color: Colors.white, fontSize: 11),
+                                    ),
+                                    const Icon(Icons.arrow_drop_down, color: Colors.white),
+                                  ],
+                                ),
+                              ),
+                            ),
                           ],
-                          InkWell(
-                            onTap: _openCountryPicker,
-                            borderRadius: BorderRadius.circular(12),
-                            child: Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9), decoration: BoxDecoration(color: const Color(0xFF28103D), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFFFD76A).withOpacity(.6))), child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.public, color: Color(0xFFFFD76A), size: 16), const SizedBox(width: 5), Text(_selectedCountry == 'All' ? 'All Country' : _selectedCountry, style: const TextStyle(color: Colors.white, fontSize: 11)), const Icon(Icons.arrow_drop_down, color: Colors.white)])),
-                          ),
-                        ]),
+                        ),
                         const SizedBox(height: 9),
                       ] else ...[
                         const SizedBox(height: 20),
