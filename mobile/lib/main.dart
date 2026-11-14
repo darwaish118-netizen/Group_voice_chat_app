@@ -3133,7 +3133,7 @@ try {
               children: [
                 // Room cover stays behind the transparent center of the decorative frame.
                 Padding(
-                  padding: EdgeInsets.all(isRanked ? 12 : 8),
+                  padding: EdgeInsets.all(isRanked ? 16 : 8),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(isRanked ? 9 : 8),
                     child: cover.isNotEmpty
