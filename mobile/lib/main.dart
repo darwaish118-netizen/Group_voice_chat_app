@@ -2293,6 +2293,12 @@ class _RoomsScreenState
   bool _mineDataLoading = true;
   bool _myRoomLoadSucceeded = false;
   String _accountCountry = '';
+  String _selectedCountry = 'All';
+  String _searchQuery = '';
+  int _selectedTab = 0;
+  int _bannerIndex = 0;
+  final PageController _bannerController = PageController();
+
 
   @override
   void initState() {
@@ -2809,6 +2815,170 @@ try {
     return String.fromCharCodes(code.codeUnits.map((unit) => 0x1F1E6 + unit - 65));
   }
 
+
+  String _countryFlag(String country) => _flag(country);
+
+  Future<void> _openSearch() async {
+    final controller = TextEditingController(text: _searchQuery);
+    final result = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: const Color(0xFF241332),
+        title: const Text('Search Rooms', style: TextStyle(color: Colors.white)),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            hintText: 'Enter room name or ID',
+            hintStyle: const TextStyle(color: Colors.white54),
+            enabledBorder: const UnderlineInputBorder(
+              borderSide: BorderSide(color: Color(0xFFFFD76A)),
+            ),
+            focusedBorder: const UnderlineInputBorder(
+              borderSide: BorderSide(color: Color(0xFFFFD76A), width: 2),
+            ),
+          ),
+          onSubmitted: (value) => Navigator.pop(dialogContext, value),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogContext, controller.text),
+            child: const Text('Search'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (!mounted || result == null) return;
+    setState(() {
+      _searchQuery = result.trim().toLowerCase();
+      _selectedTab = 0;
+    });
+  }
+
+  void _openRanking() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => GlobalRoomRankingScreen(token: widget.token),
+      ),
+    );
+  }
+
+  Future<void> _openCountryPicker() async {
+    final countrySet = <String>{};
+    for (final item in rooms) {
+      if (item is Map) {
+        final value = _roomCountry(Map<String, dynamic>.from(item));
+        if (value.isNotEmpty) countrySet.add(value);
+      }
+    }
+    final countries = countrySet.toList()..sort();
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: const Color(0xFF241332),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(18, 18, 18, 10),
+              child: Text(
+                'Explore by Country',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.public, color: Color(0xFFFFD76A)),
+              title: const Text('All Country', style: TextStyle(color: Colors.white)),
+              trailing: _selectedCountry == 'All'
+                  ? const Icon(Icons.check, color: Color(0xFFFFD76A))
+                  : null,
+              onTap: () => Navigator.pop(sheetContext, 'All'),
+            ),
+            ...countries.map((country) => ListTile(
+              leading: Text(_countryFlag(country), style: const TextStyle(fontSize: 20)),
+              title: Text(country, style: const TextStyle(color: Colors.white)),
+              trailing: _selectedCountry == country
+                  ? const Icon(Icons.check, color: Color(0xFFFFD76A))
+                  : null,
+              onTap: () => Navigator.pop(sheetContext, country),
+            )),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || selected == null) return;
+    setState(() {
+      _selectedCountry = selected;
+      _selectedTab = 0;
+    });
+  }
+
+  Widget _bannerCard(int index) {
+    const titles = ['Welcome to MINDO', 'Discover Popular Rooms', 'Connect with Friends'];
+    const subtitles = [
+      'Your voice, your community',
+      'Join rooms loved by the community',
+      'Meet people and enjoy live conversations',
+    ];
+    const icons = [Icons.graphic_eq_rounded, Icons.public_rounded, Icons.people_alt_rounded];
+    const gradients = [
+      [Color(0xFF6D238F), Color(0xFF241044)],
+      [Color(0xFFB34B83), Color(0xFF35105D)],
+      [Color(0xFF235A83), Color(0xFF241044)],
+    ];
+    final i = index.clamp(0, 2).toInt();
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 7, horizontal: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: gradients[i],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFFFD76A).withOpacity(.65)),
+        boxShadow: [
+          BoxShadow(color: gradients[i][0].withOpacity(.3), blurRadius: 12),
+        ],
+      ),
+      child: Row(
+        children: [
+          Icon(icons[i], color: const Color(0xFFFFD76A), size: 42),
+          const SizedBox(width: 15),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(titles[i], style: const TextStyle(
+                  color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900,
+                )),
+                const SizedBox(height: 5),
+                Text(subtitles[i], maxLines: 2, overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white70, fontSize: 12)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _mineRoomTile(Map<String, dynamic> room) {
     final cover = (room['cover_image_url'] ?? '').toString();
     final name = (room['name'] ?? 'Voice Room').toString();
@@ -3220,6 +3390,12 @@ try {
     child: IconButton(tooltip: tooltip, onPressed: onTap, icon: Icon(icon, color: const Color(0xFFFFE08A), size: 22)),
   );
 
+
+  @override
+  void dispose() {
+    _bannerController.dispose();
+    super.dispose();
+  }
 
   @override
   void didChangeDependencies() {
