@@ -105,6 +105,26 @@ class ApiService {
     return data['rooms'] ?? [];
   }
 
+  Future<List<dynamic>> getFollowedRooms(String token) async {
+    final response = await http.get(Uri.parse('$apiBaseUrl/api/me/room-follows'), headers: {'Authorization': 'Bearer $token'});
+    return (_handleResponse(response)['rooms'] as List?) ?? [];
+  }
+
+  Future<List<dynamic>> getLatestRooms(String token) async {
+    final response = await http.get(Uri.parse('$apiBaseUrl/api/me/room-latest'), headers: {'Authorization': 'Bearer $token'});
+    return (_handleResponse(response)['rooms'] as List?) ?? [];
+  }
+
+  Future<bool> toggleRoomFollow(String token, String roomId) async {
+    final response = await http.post(Uri.parse('$apiBaseUrl/api/rooms/$roomId/follow'), headers: {'Authorization': 'Bearer $token'});
+    return _handleResponse(response)['following'] == true;
+  }
+
+  Future<void> recordRoomVisit(String token, String roomId) async {
+    final response = await http.post(Uri.parse('$apiBaseUrl/api/rooms/$roomId/visit'), headers: {'Authorization': 'Bearer $token'});
+    _handleResponse(response);
+  }
+
 Future<Map<String, dynamic>> createRoom(
   String token,
   String name, {
@@ -2252,12 +2272,39 @@ class RoomsScreen
 class _RoomsScreenState
     extends State<RoomsScreen> {
   List<dynamic> rooms = [];
+  List<dynamic> followedRooms = [];
+  List<dynamic> latestRooms = [];
+  Map<String, dynamic>? myRoom;
+  int _mineTab = 0;
   bool loading = true;
 
   @override
   void initState() {
     super.initState();
     loadRooms();
+    loadMineData();
+  }
+
+  Future<void> loadMineData() async {
+    try {
+      final results = await Future.wait([
+        api.me(widget.token),
+        api.getFollowedRooms(widget.token),
+        api.getLatestRooms(widget.token),
+      ]);
+      final meResponse = Map<String, dynamic>.from(results[0] as Map);
+      final user = Map<String, dynamic>.from(meResponse['user'] as Map);
+      final allRooms = await api.getRooms(widget.token);
+      final owned = allRooms.where((item) => (item as Map)['owner_id']?.toString() == user['id']?.toString()).toList();
+      if (!mounted) return;
+      setState(() {
+        myRoom = owned.isEmpty ? null : Map<String, dynamic>.from(owned.first as Map);
+        followedRooms = results[1] as List;
+        latestRooms = results[2] as List;
+      });
+    } catch (_) {
+      // Keep the main Popular screen usable if Mine data is temporarily unavailable.
+    }
   }
 
   Future<void> loadRooms() async {
@@ -2381,6 +2428,8 @@ class _RoomsScreenState
     );
 
 
+if (name == null || name.trim().isEmpty) return;
+
 try {
   String? coverImageUrl;
 
@@ -2401,6 +2450,7 @@ try {
   );
 
   await loadRooms();
+  await loadMineData();
 
       if (mounted) {
         showMessage(
@@ -2544,6 +2594,65 @@ try {
     );
   }
 
+  Future<void> _toggleFollowRoom(Map<String, dynamic> room) async {
+    final id = room['id']?.toString() ?? '';
+    if (id.isEmpty) return;
+    try {
+      await api.toggleRoomFollow(widget.token, id);
+      await loadMineData();
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Room follow list updated')));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+    }
+  }
+
+  Widget _mineRoomTile(Map<String, dynamic> room) {
+    final cover = (room['cover_image_url'] ?? '').toString();
+    final name = (room['name'] ?? 'Voice Room').toString();
+    final id = (room['id'] ?? '').toString();
+    return GestureDetector(
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => VoiceRoomScreen(
+        token: widget.token, roomId: id, ownerPublicUid: (room['owner_public_uid'] ?? '').toString(),
+        roomName: name, coverImageUrl: cover.isEmpty ? null : cover,
+        seatCount: int.tryParse(room['seat_count']?.toString() ?? '') ?? 10,
+      ))),
+      child: Container(
+        height: 176, margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), border: Border.all(color: const Color(0xFFFFD76A), width: 1.3),
+          gradient: const LinearGradient(colors: [Color(0xFF42105D), Color(0xFF1D0B30)]),
+          boxShadow: [BoxShadow(color: const Color(0xFFE83EAD).withOpacity(.22), blurRadius: 15)]),
+        child: ClipRRect(borderRadius: BorderRadius.circular(21), child: Stack(fit: StackFit.expand, children: [
+          if (cover.isNotEmpty) Image.network(cover, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _roomCoverFallback()) else _roomCoverFallback(),
+          DecoratedBox(decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.black.withOpacity(.12), const Color(0xFF170523).withOpacity(.92)]))),
+          Positioned(left: 14, right: 14, bottom: 13, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w900)),
+            const SizedBox(height: 4), Text('Room ID: $id', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFFFFE08A), fontSize: 12, fontWeight: FontWeight.w700)),
+          ])),
+          Positioned(top: 10, left: 12, child: Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7), decoration: BoxDecoration(color: const Color(0xFF210D32).withOpacity(.88), borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFFFFD76A))), child: const Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.workspace_premium_rounded, color: Color(0xFFFFD76A), size: 17), SizedBox(width: 5), Text('MY ROOM', style: TextStyle(color: Color(0xFFFFD76A), fontWeight: FontWeight.w900, fontSize: 11))]))),
+          const Positioned(right: 12, top: 10, child: Icon(Icons.open_in_new_rounded, color: Colors.white, size: 20)),
+        ])),
+      ),
+    );
+  }
+
+  Widget _mineRoomList(List<dynamic> list, String emptyText) {
+    if (list.isEmpty) return Center(child: Text(emptyText, style: const TextStyle(color: Colors.white60, fontSize: 15)));
+    return ListView.builder(padding: const EdgeInsets.only(top: 12, bottom: 90), itemCount: list.length, itemBuilder: (_, i) {
+      final room = Map<String, dynamic>.from(list[i] as Map);
+      final cover = (room['cover_image_url'] ?? '').toString();
+      final name = (room['name'] ?? 'Voice Room').toString();
+      final id = (room['id'] ?? '').toString();
+      return GestureDetector(onTap: () {
+        api.recordRoomVisit(widget.token, id).then((_) => loadMineData()).catchError((_) {});
+        Navigator.push(context, MaterialPageRoute(builder: (_) => VoiceRoomScreen(token: widget.token, roomId: id, ownerPublicUid: (room['owner_public_uid'] ?? '').toString(), roomName: name, coverImageUrl: cover.isEmpty ? null : cover, seatCount: int.tryParse(room['seat_count']?.toString() ?? '') ?? 10)));
+      }, child: Container(margin: const EdgeInsets.only(bottom: 10), padding: const EdgeInsets.all(9), decoration: BoxDecoration(color: const Color(0xFF241332), borderRadius: BorderRadius.circular(17), border: Border.all(color: const Color(0xFF8B4AB2).withOpacity(.65))), child: Row(children: [
+        ClipRRect(borderRadius: BorderRadius.circular(12), child: cover.isEmpty ? SizedBox(width: 72, height: 72, child: _roomCoverFallback()) : Image.network(cover, width: 72, height: 72, fit: BoxFit.cover, errorBuilder: (_, __, ___) => SizedBox(width: 72, height: 72, child: _roomCoverFallback()))),
+        const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14)), const SizedBox(height: 5), Text('ID: $id', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white60, fontSize: 11))])),
+        const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFFFFD76A), size: 16),
+      ])));
+    });
+  }
+
   Widget _roomCard(Map<String, dynamic> room, int rank) {
     final cover = room['cover_image_url']?.toString() ?? '';
     final name = (room['name'] ?? 'Voice Room').toString();
@@ -2558,6 +2667,7 @@ try {
     final frameColor = rank == 1 ? const Color(0xFFFFD45C) : rank == 2 ? const Color(0xFF9EDBFF) : const Color(0xFFD99A68);
     return GestureDetector(
       onTap: () async {
+        api.recordRoomVisit(widget.token, id).then((_) => loadMineData()).catchError((_) {});
         Navigator.push(context, MaterialPageRoute(builder: (_) => VoiceRoomScreen(
           token: widget.token,
           roomId: id,
@@ -2643,14 +2753,13 @@ try {
     final sortedRooms = [...rooms];
     sortedRooms.sort((a, b) => _roomCoins(Map<String, dynamic>.from(b as Map)).compareTo(_roomCoins(Map<String, dynamic>.from(a as Map))));
     var visibleRooms = sortedRooms.map((r) => Map<String, dynamic>.from(r as Map)).toList();
-    if (_selectedTab == 2) visibleRooms = [];
     if (_selectedCountry != 'All') visibleRooms = visibleRooms.where((r) => _roomCountry(r) == _selectedCountry).toList();
     if (_searchQuery.isNotEmpty) visibleRooms = visibleRooms.where((r) => '${r['name']} ${r['id']}'.toLowerCase().contains(_searchQuery)).toList();
 
     return Scaffold(
       backgroundColor: const Color(0xFF10051F),
       body: RefreshIndicator(
-        onRefresh: loadRooms,
+        onRefresh: () async { await loadRooms(); await loadMineData(); },
         color: const Color(0xFFFFD76A),
         child: loading
           ? const Center(child: CircularProgressIndicator(color: Color(0xFFFFD76A)))
@@ -2666,7 +2775,7 @@ try {
                           child: Row(children: [
                             _homeTabButton('Popular', 0),
                             const SizedBox(width: 7),
-                            _homeTabButton('Follow', 2),
+                            _homeTabButton('Mine', 1),
                           ]),
                         ),
                         const SizedBox(width: 8),
@@ -2674,52 +2783,52 @@ try {
                         const SizedBox(width: 8),
                         _headerAction(Icons.emoji_events_rounded, _openRanking, 'Ranking'),
                       ]),
-                      SizedBox(height: 130, child: PageView.builder(
-                        controller: _bannerController,
-                        itemCount: 3,
-                        onPageChanged: (index) => setState(() => _bannerIndex = index),
-                        itemBuilder: (_, index) => _bannerCard(index),
-                      )),
-                      Row(mainAxisAlignment: MainAxisAlignment.center, children: List.generate(3, (index) => AnimatedContainer(duration: const Duration(milliseconds: 180), margin: const EdgeInsets.symmetric(horizontal: 3), width: _bannerIndex == index ? 18 : 6, height: 6, decoration: BoxDecoration(color: _bannerIndex == index ? const Color(0xFFFFD76A) : Colors.white38, borderRadius: BorderRadius.circular(5))))),
-                      const SizedBox(height: 12),
-                      Row(children: [
-                        const Expanded(child: Text('Popular Rooms', style: TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w900))),
-                        PopupMenuButton<String>(
-                          color: const Color(0xFF28103D),
-                          initialValue: _selectedCountry,
-                          onSelected: (value) => setState(() { _selectedCountry = value; _selectedTab = 0; }),
-                          itemBuilder: (_) => ['All', 'Pakistan', 'India', 'United Arab Emirates', 'Saudi Arabia', 'Bangladesh', 'United Kingdom', 'United States', 'Germany'].map((c) => PopupMenuItem(value: c, child: Text(c, style: const TextStyle(color: Colors.white)))).toList(),
-                          child: Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7), decoration: BoxDecoration(color: const Color(0xFF28103D), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFFFD76A).withOpacity(.6))), child: Row(children: [const Icon(Icons.public, color: Color(0xFFFFD76A), size: 16), const SizedBox(width: 5), Text(_selectedCountry == 'All' ? 'All Country' : _selectedCountry, style: const TextStyle(color: Colors.white, fontSize: 11)), const Icon(Icons.arrow_drop_down, color: Colors.white)])),
-                        ),
-                      ]),
-                      const SizedBox(height: 9),
+                      if (_selectedTab == 0) ...[
+                        SizedBox(height: 130, child: PageView.builder(controller: _bannerController, itemCount: 3, onPageChanged: (index) => setState(() => _bannerIndex = index), itemBuilder: (_, index) => _bannerCard(index))),
+                        Row(mainAxisAlignment: MainAxisAlignment.center, children: List.generate(3, (index) => AnimatedContainer(duration: const Duration(milliseconds: 180), margin: const EdgeInsets.symmetric(horizontal: 3), width: _bannerIndex == index ? 18 : 6, height: 6, decoration: BoxDecoration(color: _bannerIndex == index ? const Color(0xFFFFD76A) : Colors.white38, borderRadius: BorderRadius.circular(5))))),
+                        const SizedBox(height: 12),
+                        Row(children: [
+                          const Expanded(child: Text('Popular Rooms', style: TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w900))),
+                          PopupMenuButton<String>(color: const Color(0xFF28103D), initialValue: _selectedCountry, onSelected: (value) => setState(() { _selectedCountry = value; _selectedTab = 0; }),
+                            itemBuilder: (_) => ['All', 'Pakistan', 'India', 'United Arab Emirates', 'Saudi Arabia', 'Bangladesh', 'United Kingdom', 'United States', 'Germany'].map((c) => PopupMenuItem(value: c, child: Text(c, style: const TextStyle(color: Colors.white)))).toList(),
+                            child: Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7), decoration: BoxDecoration(color: const Color(0xFF28103D), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFFFD76A).withOpacity(.6))), child: Row(children: [const Icon(Icons.public, color: Color(0xFFFFD76A), size: 16), const SizedBox(width: 5), Text(_selectedCountry == 'All' ? 'All Country' : _selectedCountry, style: const TextStyle(color: Colors.white, fontSize: 11)), const Icon(Icons.arrow_drop_down, color: Colors.white)])),
+                          ),
+                        ]),
+                        const SizedBox(height: 9),
+                      ] else ...[
+                        const SizedBox(height: 20),
+                        Row(children: [const Expanded(child: Text('My Room', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900))), Icon(Icons.auto_awesome, color: Color(0xFFFFD76A))]),
+                        const SizedBox(height: 12),
+                        if (myRoom != null) _mineRoomTile(myRoom!) else Container(width: double.infinity, padding: const EdgeInsets.all(24), decoration: BoxDecoration(color: const Color(0xFF241332), borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFFFD76A).withOpacity(.5))), child: const Text('Create your room to see it here', textAlign: TextAlign.center, style: TextStyle(color: Colors.white70))),
+                        const SizedBox(height: 10),
+                        Row(children: [Expanded(child: _mineSubTab('Follow', 0, Icons.favorite_rounded)), const SizedBox(width: 9), Expanded(child: _mineSubTab('Latest', 1, Icons.history_rounded))]),
+                        const SizedBox(height: 6),
+                      ],
                     ]),
                   )),
                 ),
-                if (visibleRooms.isEmpty)
-                  SliverFillRemaining(hasScrollBody: false, child: Center(child: Text(_selectedTab == 2 ? 'Followed rooms will appear here' : 'No rooms available', style: const TextStyle(color: Colors.white70))))
-                else
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 18),
-                    sliver: SliverGrid(
+                if (_selectedTab == 0)
+                  if (visibleRooms.isEmpty)
+                    const SliverFillRemaining(hasScrollBody: false, child: Center(child: Text('No rooms available', style: TextStyle(color: Colors.white70))))
+                  else
+                    SliverPadding(padding: const EdgeInsets.fromLTRB(12, 0, 12, 18), sliver: SliverGrid(
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 11, mainAxisSpacing: 11, childAspectRatio: 1),
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) => _roomCard(visibleRooms[index], sortedRooms.indexWhere((r) => (r as Map)['id']?.toString() == visibleRooms[index]['id']?.toString()) + 1),
-                        childCount: visibleRooms.length,
-                      ),
-                    ),
-                  ),
+                      delegate: SliverChildBuilderDelegate((context, index) => _roomCard(visibleRooms[index], sortedRooms.indexWhere((r) => (r as Map)['id']?.toString() == visibleRooms[index]['id']?.toString()) + 1), childCount: visibleRooms.length))),
+                if (_selectedTab == 1)
+                  SliverFillRemaining(hasScrollBody: true, child: Padding(padding: const EdgeInsets.fromLTRB(14, 0, 14, 18), child: Column(children: [
+                    Expanded(child: _mineTab == 0 ? _mineRoomList(followedRooms, 'Followed rooms will appear here') : _mineRoomList(latestRooms, 'Recently visited rooms will appear here')),
+                  ]))),
               ],
             ),
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color(0xFFE83EAD),
-        foregroundColor: Colors.white,
-        onPressed: createRoom,
-        child: const Icon(Icons.add),
-      ),
+      floatingActionButton: _selectedTab == 0 && myRoom == null ? Container(
+        decoration: BoxDecoration(shape: BoxShape.circle, gradient: const LinearGradient(colors: [Color(0xFFFFD76A), Color(0xFFE83EAD), Color(0xFF7927B5)]), boxShadow: [BoxShadow(color: const Color(0xFFE83EAD).withOpacity(.45), blurRadius: 18, spreadRadius: 2)]),
+        child: FloatingActionButton(elevation: 0, backgroundColor: Colors.transparent, foregroundColor: Colors.white, onPressed: createRoom, child: const Icon(Icons.home_rounded, size: 30)),
+      ) : null,
     );
   }
+
+  Widget _mineSubTab(String label, int tab, IconData icon) => GestureDetector(onTap: () => setState(() => _mineTab = tab), child: AnimatedContainer(duration: const Duration(milliseconds: 180), height: 48, decoration: BoxDecoration(borderRadius: BorderRadius.circular(18), gradient: _mineTab == tab ? const LinearGradient(colors: [Color(0xFFE83EAD), Color(0xFF7927B5)]) : null, color: _mineTab == tab ? null : const Color(0xFF241332), border: Border.all(color: _mineTab == tab ? const Color(0xFFFFD76A) : Colors.white12), boxShadow: _mineTab == tab ? [BoxShadow(color: const Color(0xFFE83EAD).withOpacity(.3), blurRadius: 12)] : []), child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(icon, color: Colors.white, size: 18), const SizedBox(width: 7), Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800))])));
 
   Widget _homeTabButton(String label, int tab) => Expanded(
     child: GestureDetector(
@@ -7455,6 +7564,8 @@ class VoiceRoomScreen
 
 class _VoiceRoomScreenState
     extends State<VoiceRoomScreen> {
+  bool _isRoomFollowed = false;
+  bool _roomFollowLoading = false;
   bool microphoneOn = false;
   bool speakerOn = true;
   Timer? _presenceHeartbeat;
@@ -7472,6 +7583,43 @@ class _VoiceRoomScreenState
   final Map<String, Timer> _reactionTimers = {};
   List<String> _roomEmojis = ['😀','😍','😂','🥰','😎','😭','😘','🤗','👏','❤️','🔥','👍','🎉','🥳','😜','💖'];
   bool _loadingSeatRequests = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRoomFollowStatus();
+  }
+
+  Future<void> _loadRoomFollowStatus() async {
+    try {
+      final rooms = await api.getFollowedRooms(widget.token);
+      final followed = rooms.any((room) =>
+          (room['id'] ?? room['room_id'] ?? '').toString() == widget.roomId);
+      if (mounted) setState(() => _isRoomFollowed = followed);
+    } catch (e) {
+      debugPrint('Room follow status load failed: $e');
+    }
+  }
+
+  Future<void> _toggleRoomFollowFromHeader() async {
+    if (_roomFollowLoading) return;
+    setState(() => _roomFollowLoading = true);
+    try {
+      final following = await api.toggleRoomFollow(widget.token, widget.roomId);
+      if (!mounted) return;
+      setState(() => _isRoomFollowed = following);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(following ? 'Room added to Follow' : 'Room removed from Follow'),
+        duration: const Duration(seconds: 2),
+      ));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not update Follow: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _roomFollowLoading = false);
+    }
+  }
 
   Future<void> _startPresence() async {
     try {
@@ -8225,13 +8373,36 @@ title: SizedBox(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                SizedBox(
-                  width: 250,
-                  child: ScrollingRainbowRoomName(
-                    text: widget.roomName,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ScrollingRainbowRoomName(
+                        text: widget.roomName,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    GestureDetector(
+                      onTap: _toggleRoomFollowFromHeader,
+                      child: Container(
+                        width: 34,
+                        height: 34,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: const Color(0xFF321449),
+                          border: Border.all(color: const Color(0xFFFFD36A), width: 1.4),
+                          boxShadow: [BoxShadow(color: const Color(0xFFFF4FD8).withOpacity(.35), blurRadius: 8)],
+                        ),
+                        child: Center(
+                          child: _roomFollowLoading
+                              ? const SizedBox(width: 15, height: 15, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFFFD36A)))
+                              : Icon(_isRoomFollowed ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+                                  size: 20, color: const Color(0xFFFFD36A)),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 2),
                 AnimatedRainbowText(
