@@ -7584,12 +7584,6 @@ class _VoiceRoomScreenState
   List<String> _roomEmojis = ['😀','😍','😂','🥰','😎','😭','😘','🤗','👏','❤️','🔥','👍','🎉','🥳','😜','💖'];
   bool _loadingSeatRequests = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _loadRoomFollowStatus();
-  }
-
   Future<void> _loadRoomFollowStatus() async {
     try {
       final rooms = await api.getFollowedRooms(widget.token);
@@ -7933,9 +7927,10 @@ Future<void> loadRoomMembers() async {
     debugPrint('Load room members error: $e');
   }
 }
-    @override
-void initState() {
-  super.initState();
+  @override
+  void initState() {
+    super.initState();
+    _loadRoomFollowStatus();
   loadRoomMembers();
   _startPresence();
   _loadRoomEmojis();
