@@ -3237,7 +3237,7 @@ try {
                 Positioned.fill(
                   child: IgnorePointer(
                     child: Transform.scale(
-                      scale: 1.04,
+                      scale: 1.12,
                       child: Image.asset(
                         frameAsset,
                         fit: BoxFit.fill,
@@ -3332,8 +3332,8 @@ try {
                   ),
                 ),
                 SliverToBoxAdapter(
-                  child: SafeArea(bottom: false, child: Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 7, 14, 0),
+                  child: SafeArea(top: false, bottom: false, child: Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 0, 14, 0),
                     child: Column(children: [
                       if (_selectedTab == 0) ...[
                         SizedBox(height: 130, child: PageView.builder(controller: _bannerController, itemCount: 3, onPageChanged: (index) => setState(() => _bannerIndex = index), itemBuilder: (_, index) => _bannerCard(index))),
