@@ -3171,21 +3171,14 @@ try {
       },
       child: AspectRatio(
         aspectRatio: 1,
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(13),
-            color: const Color(0xFF28103D),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: Stack(
+        child: Stack(
               fit: StackFit.expand,
               children: [
                 // Room cover stays behind the transparent center of the decorative frame.
                 Padding(
                   // Slightly reduce the cover height so it sits inside the
                   // top and bottom edges of the decorative frame.
-                  padding: const EdgeInsets.fromLTRB(16, 28, 16, 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(9),
                     child: cover.isNotEmpty
@@ -3255,8 +3248,6 @@ try {
                 ),
               ],
             ),
-          ),
-        ),
       ),
     );
   }
