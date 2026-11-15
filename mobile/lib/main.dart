@@ -3132,10 +3132,10 @@ try {
   }
 
   String _homeRoomFrameAsset(int rank) {
-    if (rank == 1) return 'assets/room_frames/MINDO_TOP1_FRAME.png';
-    if (rank == 2) return 'assets/room_frames/MINDO_TOP2_FRAME.png';
-    if (rank == 3) return 'assets/room_frames/a_detailed_ornate_square_decorative_frame_badge_in.png';
-    return 'assets/room_frames/MINDO_ROYAL_GOLD_RED_FRAME.png';
+    if (rank == 1) return 'assets/room_frames/MINDO_TOP1_FRAME_CLEAN.png';
+    if (rank == 2) return 'assets/room_frames/MINDO_TOP2_FRAME_CLEAN.png';
+    if (rank == 3) return 'assets/room_frames/MINDO_TOP3_FRAME_CLEAN.png';
+    return 'assets/room_frames/MINDO_ROYAL_FRAME_CLEAN.png';
   }
 
   Widget _roomCard(Map<String, dynamic> room, int rank) {
