@@ -3197,6 +3197,33 @@ try {
                     ),
                   ),
                 Positioned(
+                  left: 23,
+                  right: 23,
+                  bottom: 31,
+                  child: Center(
+                    child: RoomCoverMarqueeRainbowText(
+                      text: name,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                      rainbowDuration: const Duration(seconds: 3),
+                    ),
+                  ),
+                ),
+                // The PNG itself contains TOP 1 / TOP 2 / TOP 3 lettering.
+                // Rank 4+ uses the same royal border without a rank label.
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: Transform.scale(
+                      scale: 1.04,
+                      child: Image.asset(
+                        frameAsset,
+                        fit: BoxFit.fill,
+                        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
                   right: 27,
                   top: 34,
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -3211,40 +3238,6 @@ try {
                       ),
                     ),
                   ]),
-                ),
-                Positioned(
-                  left: 23,
-                  right: 23,
-                  bottom: 31,
-                  child: Text(
-                    name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 12,
-                      shadows: [
-                        Shadow(color: Colors.black, blurRadius: 6),
-                        Shadow(color: Colors.black, blurRadius: 3),
-                      ],
-                    ),
-                  ),
-                ),
-                // The PNG itself contains TOP 1 / TOP 2 / TOP 3 lettering.
-                // Rank 4+ uses the same royal border without a rank label.
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: Transform.scale(
-                      scale: 1.12,
-                      child: Image.asset(
-                        frameAsset,
-                        fit: BoxFit.fill,
-                        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                      ),
-                    ),
-                  ),
                 ),
               ],
             ),
@@ -3332,8 +3325,8 @@ try {
                   ),
                 ),
                 SliverToBoxAdapter(
-                  child: SafeArea(top: false, bottom: false, child: Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 0, 14, 0),
+                  child: SafeArea(bottom: false, child: Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 7, 14, 0),
                     child: Column(children: [
                       if (_selectedTab == 0) ...[
                         SizedBox(height: 130, child: PageView.builder(controller: _bannerController, itemCount: 3, onPageChanged: (index) => setState(() => _bannerIndex = index), itemBuilder: (_, index) => _bannerCard(index))),
@@ -9787,16 +9780,181 @@ if (nextOffset >= position.maxScrollExtent) {
   }
 }
 
+
+class RoomCoverMarqueeRainbowText extends StatefulWidget {
+  final String text;
+  final double fontSize;
+  final FontWeight fontWeight;
+  final Duration rainbowDuration;
+
+  const RoomCoverMarqueeRainbowText({
+    super.key,
+    required this.text,
+    required this.fontSize,
+    required this.fontWeight,
+    this.rainbowDuration = const Duration(seconds: 3),
+  });
+
+  @override
+  State<RoomCoverMarqueeRainbowText> createState() =>
+      _RoomCoverMarqueeRainbowTextState();
+}
+
+class _RoomCoverMarqueeRainbowTextState
+    extends State<RoomCoverMarqueeRainbowText>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _scrollController;
+  bool _isOverflowing = false;
+  double _textWidth = 0;
+  double _availableWidth = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 4),
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant RoomCoverMarqueeRainbowText oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.text != widget.text ||
+        oldWidget.fontSize != widget.fontSize ||
+        oldWidget.fontWeight != widget.fontWeight) {
+      _scrollController
+        ..stop()
+        ..value = 0;
+      _isOverflowing = false;
+    }
+  }
+
+  Future<void> _runMarquee() async {
+    while (mounted && _isOverflowing) {
+      // Keep the complete room name visible before each leftward pass.
+      await Future<void>.delayed(const Duration(seconds: 5));
+      if (!mounted || !_isOverflowing) return;
+
+      final distance = (_textWidth - _availableWidth).clamp(0.0, double.infinity);
+      final seconds = (distance / 28).clamp(2.0, 8.0);
+      await _scrollController.animateTo(
+        1,
+        duration: Duration(milliseconds: (seconds * 1000).round()),
+        curve: Curves.linear,
+      );
+      if (!mounted || !_isOverflowing) return;
+
+      // Pause at the end, then return to the beginning without scrolling right.
+      await Future<void>.delayed(const Duration(seconds: 5));
+      if (!mounted || !_isOverflowing) return;
+      _scrollController.value = 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final painter = TextPainter(
+          text: TextSpan(
+            text: widget.text,
+            style: TextStyle(
+              fontSize: widget.fontSize,
+              fontWeight: widget.fontWeight,
+            ),
+          ),
+          maxLines: 1,
+          textDirection: Directionality.of(context),
+        )..layout();
+
+        final availableWidth = constraints.maxWidth;
+        final textWidth = painter.width;
+        final overflowing = textWidth > availableWidth;
+
+        if (overflowing &&
+            (!_isOverflowing ||
+                _textWidth != textWidth ||
+                _availableWidth != availableWidth)) {
+          _isOverflowing = true;
+          _textWidth = textWidth;
+          _availableWidth = availableWidth;
+          _scrollController
+            ..stop()
+            ..value = 0;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _isOverflowing) {
+              _runMarquee();
+            }
+          });
+        } else if (!overflowing && _isOverflowing) {
+          _isOverflowing = false;
+          _scrollController
+            ..stop()
+            ..value = 0;
+        }
+
+        if (!overflowing) {
+          return AnimatedRainbowText(
+            text: widget.text,
+            fontSize: widget.fontSize,
+            fontWeight: widget.fontWeight,
+            animationDuration: widget.rainbowDuration,
+          );
+        }
+
+        return ClipRect(
+          child: SizedBox(
+            width: availableWidth,
+            child: AnimatedBuilder(
+              animation: _scrollController,
+              builder: (context, child) {
+                final offset =
+                    (_textWidth - _availableWidth) * _scrollController.value;
+                return Transform.translate(
+                  offset: Offset(-offset, 0),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    widthFactor: 1,
+                    child: SizedBox(
+                      width: _textWidth,
+                      child: AnimatedRainbowText(
+                        text: widget.text,
+                        fontSize: widget.fontSize,
+                        fontWeight: widget.fontWeight,
+                        animationDuration: widget.rainbowDuration,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+}
+
 class AnimatedRainbowText extends StatefulWidget {
   final String text;
   final double fontSize;
   final FontWeight fontWeight;
+  final Duration animationDuration;
 
   const AnimatedRainbowText({
     super.key,
     required this.text,
     required this.fontSize,
     required this.fontWeight,
+    this.animationDuration = const Duration(seconds: 4),
   });
 
   @override
@@ -9814,7 +9972,7 @@ class _AnimatedRainbowTextState
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 4),
+      duration: widget.animationDuration,
     )..repeat();
   }
 
