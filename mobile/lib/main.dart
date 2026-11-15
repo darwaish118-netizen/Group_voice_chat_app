@@ -3203,7 +3203,7 @@ try {
                   child: Center(
                     child: RoomCoverMarqueeRainbowText(
                       text: name,
-                      fontSize: 12,
+                      fontSize: 15,
                       fontWeight: FontWeight.w900,
                       rainbowDuration: const Duration(seconds: 3),
                     ),
