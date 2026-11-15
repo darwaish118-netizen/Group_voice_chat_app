@@ -3185,7 +3185,7 @@ try {
                 Padding(
                   // Slightly reduce the cover height so it sits inside the
                   // top and bottom edges of the decorative frame.
-                  padding: const EdgeInsets.fromLTRB(12, 24, 12, 12),
+                  padding: const EdgeInsets.fromLTRB(16, 28, 16, 16),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(9),
                     child: cover.isNotEmpty
@@ -3460,7 +3460,7 @@ try {
           style: TextStyle(
             color: _selectedTab == tab ? Colors.white : Colors.white70,
             fontWeight: FontWeight.w800,
-            fontSize: label == 'Mine' ? 17 : 13,
+            fontSize: label == 'Mine' || label == 'Popular' ? 17 : 13,
           ),
         ),
       ),
