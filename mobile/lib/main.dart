@@ -3211,7 +3211,7 @@ try {
           const SizedBox(height: 0),
           SizedBox(
             width: double.infinity,
-            height: 29,
+            height: 27,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 7),
               color: Colors.black,
@@ -9842,8 +9842,8 @@ class _RoomCoverMarqueeRainbowTextState
       );
       if (!mounted || !_isOverflowing) return;
 
-      // Pause at the end, then return to the beginning without scrolling right.
-      await Future<void>.delayed(const Duration(seconds: 5));
+      // Reset immediately at the end. The next loop iteration applies
+      // the 5-second pause at the beginning of the next cycle.
       if (!mounted || !_isOverflowing) return;
       _scrollController.value = 0;
     }
@@ -9857,84 +9857,93 @@ class _RoomCoverMarqueeRainbowTextState
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final painter = TextPainter(
-          text: TextSpan(
-            text: widget.text,
-            style: TextStyle(
-              fontSize: widget.fontSize,
-              fontWeight: widget.fontWeight,
-            ),
-          ),
-          maxLines: 1,
-          textDirection: Directionality.of(context),
-        )..layout();
+    return SizedBox(
+      height: 20,
+      child: ClipRect(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final painter = TextPainter(
+              text: TextSpan(
+                text: widget.text,
+                style: TextStyle(
+                  fontSize: widget.fontSize,
+                  fontWeight: widget.fontWeight,
+                  height: 1.0,
+                ),
+              ),
+              maxLines: 1,
+              textDirection: Directionality.of(context),
+            )..layout();
 
-        final availableWidth = constraints.maxWidth;
-        final textWidth = painter.width;
-        final overflowing = textWidth > availableWidth;
+            final availableWidth = constraints.maxWidth;
+            final textWidth = painter.width;
+            final overflowing = textWidth > availableWidth;
 
-        if (overflowing &&
-            (!_isOverflowing ||
-                _textWidth != textWidth ||
-                _availableWidth != availableWidth)) {
-          _isOverflowing = true;
-          _textWidth = textWidth;
-          _availableWidth = availableWidth;
-          _scrollController
-            ..stop()
-            ..value = 0;
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted && _isOverflowing) {
-              _runMarquee();
+            if (overflowing &&
+                (!_isOverflowing ||
+                    _textWidth != textWidth ||
+                    _availableWidth != availableWidth)) {
+              _isOverflowing = true;
+              _textWidth = textWidth;
+              _availableWidth = availableWidth;
+              _scrollController
+                ..stop()
+                ..value = 0;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted && _isOverflowing) {
+                  _runMarquee();
+                }
+              });
+            } else if (!overflowing && _isOverflowing) {
+              _isOverflowing = false;
+              _scrollController
+                ..stop()
+                ..value = 0;
             }
-          });
-        } else if (!overflowing && _isOverflowing) {
-          _isOverflowing = false;
-          _scrollController
-            ..stop()
-            ..value = 0;
-        }
 
-        if (!overflowing) {
-          return AnimatedRainbowText(
-            text: widget.text,
-            fontSize: widget.fontSize,
-            fontWeight: widget.fontWeight,
-            animationDuration: widget.rainbowDuration,
-          );
-        }
+            if (!overflowing) {
+              return AnimatedRainbowText(
+                text: widget.text,
+                fontSize: widget.fontSize,
+                fontWeight: widget.fontWeight,
+                animationDuration: widget.rainbowDuration,
+              );
+            }
 
-        return ClipRect(
-          child: SizedBox(
-            width: availableWidth,
-            child: AnimatedBuilder(
-              animation: _scrollController,
-              builder: (context, child) {
-                final offset =
-                    (_textWidth - _availableWidth) * _scrollController.value;
-                return Transform.translate(
-                  offset: Offset(-offset, 0),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    widthFactor: 1,
-                    child: SizedBox(
-                      width: _textWidth,
-                      child: AnimatedRainbowText(
-                        text: widget.text,
-                        fontSize: widget.fontSize,
-                        fontWeight: widget.fontWeight,
-                        animationDuration: widget.rainbowDuration,
+            return SizedBox(
+              height: 20,
+              width: availableWidth,
+              child: ClipRect(
+                child: AnimatedBuilder(
+                  animation: _scrollController,
+                  builder: (context, child) {
+                    final offset =
+                        (_textWidth - _availableWidth) *
+                        _scrollController.value;
+                    return Transform.translate(
+                      offset: Offset(-offset, 0),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        widthFactor: 1,
+                        child: SizedBox(
+                          width: _textWidth,
+                          height: 20,
+                          child: AnimatedRainbowText(
+                            text: widget.text,
+                            fontSize: widget.fontSize,
+                            fontWeight: widget.fontWeight,
+                            animationDuration: widget.rainbowDuration,
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        );
-      },
+                    );
+                  },
+                ),
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
 
@@ -9999,12 +10008,23 @@ Widget build(BuildContext context) {
             ],
           ).createShader(bounds);
         },
-        child: Text(
-          widget.text,
-          style: TextStyle(
-            fontSize: widget.fontSize,
-            fontWeight: widget.fontWeight,
-            color: Colors.white,
+        child: SizedBox(
+          height: 20,
+          child: Text(
+            widget.text,
+            maxLines: 1,
+            softWrap: false,
+            overflow: TextOverflow.clip,
+            textHeightBehavior: const TextHeightBehavior(
+              applyHeightToFirstAscent: false,
+              applyHeightToLastDescent: false,
+            ),
+            style: TextStyle(
+              fontSize: widget.fontSize,
+              fontWeight: widget.fontWeight,
+              height: 1.0,
+              color: Colors.white,
+            ),
           ),
         ),
       );
