@@ -3206,28 +3206,35 @@ try {
               ),
             ),
           ),
-          const SizedBox(height: 3),
-          // Country flag and animated room name sit together below the frame.
-          Container(
+          // Keep the title strip at a fixed one-line height so long room
+          // names can scroll horizontally without reducing the cover area.
+          const SizedBox(height: 0),
+          SizedBox(
             width: double.infinity,
-            constraints: const BoxConstraints(minHeight: 25),
-            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-            color: Colors.black,
-            child: Row(
-              children: [
-                if (countryFlag.isNotEmpty) ...[
-                  Text(countryFlag, style: const TextStyle(fontSize: 17)),
-                  const SizedBox(width: 7),
-                ],
-                Expanded(
-                  child: RoomCoverMarqueeRainbowText(
-                    text: name,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w900,
-                    rainbowDuration: const Duration(seconds: 3),
+            height: 29,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7),
+              color: Colors.black,
+              alignment: Alignment.center,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  if (countryFlag.isNotEmpty) ...[
+                    Text(countryFlag, maxLines: 1, style: const TextStyle(fontSize: 17, height: 1.0)),
+                    const SizedBox(width: 7),
+                  ],
+                  Expanded(
+                    child: ClipRect(
+                      child: RoomCoverMarqueeRainbowText(
+                        text: name,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w900,
+                        rainbowDuration: const Duration(seconds: 3),
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],
