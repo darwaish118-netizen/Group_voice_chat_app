@@ -10948,9 +10948,12 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
         : rank == 2
             ? 'assets/ranking/wealth/frames/wealth_top2.png'
             : 'assets/ranking/wealth/frames/wealth_top3.png';
-    final frameWidth = isFirst ? 132.0 : 116.0;
-    final frameHeight = frameWidth * (rank == 1 ? 830 / 600 : rank == 2 ? 836 / 620 : 833 / 641);
-    final avatarSize = frameWidth * (isFirst ? .43 : .42);
+    // Slightly taller podium cards; keep the three original frame artworks.
+    final frameWidth = isFirst ? 138.0 : 122.0;
+    final frameHeight = frameWidth *
+        (rank == 1 ? 830 / 600 : rank == 2 ? 836 / 620 : 833 / 641) * 1.06;
+    // Match the transparent circular opening more closely so the DP fills it.
+    final avatarSize = frameWidth * (isFirst ? .53 : .53);
     final avatar = _avatar(user);
     final level = user['wealth_level'] ?? user['level'] ?? 1;
     return Expanded(
@@ -10964,11 +10967,16 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
             clipBehavior: Clip.none,
             children: [
               Positioned.fill(
-                child: Image.asset(asset, fit: BoxFit.fill,
-                  errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+                // A tiny horizontal inset removes the pale edge fringe visible
+                // on the silver-blue second-place frame without changing its art.
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: rank == 2 ? 1.8 : 0),
+                  child: Image.asset(asset, fit: BoxFit.fill,
+                    errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+                ),
               ),
               Positioned(
-                top: frameHeight * .115,
+                top: frameHeight * .145,
                 child: GestureDetector(
                   onTap: user.isEmpty ? null : () => _openRankingProfile(user),
                   child: Container(
@@ -11007,8 +11015,8 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
               Positioned(
                 left: frameWidth * .34,
                 right: frameWidth * .12,
-                top: frameHeight * .755,
-                height: frameHeight * .065,
+                top: frameHeight * .725,
+                height: frameHeight * .075,
                 child: Align(
                   alignment: Alignment.center,
                   child: Text(user.isEmpty ? '' : '$level',
@@ -11019,8 +11027,8 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
               Positioned(
                 left: frameWidth * .23,
                 right: frameWidth * .10,
-                top: frameHeight * .855,
-                height: frameHeight * .065,
+                top: frameHeight * .815,
+                height: frameHeight * .085,
                 child: Center(
                   child: Text(user.isEmpty ? '' : _compact(_coins(user)),
                     maxLines: 1, overflow: TextOverflow.ellipsis,
