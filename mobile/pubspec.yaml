@@ -37,5 +37,7 @@ flutter:
     - assets/room_frames/MINDO_TOP2_FRAME_CLEAN.png
     - assets/room_frames/MINDO_TOP3_FRAME_CLEAN.png
     - assets/room_frames/MINDO_ROYAL_FRAME_CLEAN.png
-
-
+    - assets/ranking/wealth/frames/wealth_top1.png
+    - assets/ranking/wealth/frames/wealth_top2.png
+    - assets/ranking/wealth/frames/wealth_top3.png
+    - assets/ranking/wealth/backgrounds/wealth_gold_background.png
