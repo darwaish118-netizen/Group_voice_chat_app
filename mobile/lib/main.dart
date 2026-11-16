@@ -9802,17 +9802,17 @@ class _RoomCoverMarqueeRainbowTextState
     with SingleTickerProviderStateMixin {
   late final AnimationController _scrollController;
   bool _isOverflowing = false;
-  bool _marqueeRunning = false;
+  int _loopVersion = 0;
   double _textWidth = 0;
   double _availableWidth = 0;
+
+  static const double _gap = 42;
+  static const double _pixelsPerSecond = 34;
 
   @override
   void initState() {
     super.initState();
-    _scrollController = AnimationController(
-      vsync: this,
-      value: 0,
-    );
+    _scrollController = AnimationController(vsync: this, value: 0);
   }
 
   @override
@@ -9821,54 +9821,69 @@ class _RoomCoverMarqueeRainbowTextState
     if (oldWidget.text != widget.text ||
         oldWidget.fontSize != widget.fontSize ||
         oldWidget.fontWeight != widget.fontWeight) {
+      _loopVersion++;
       _scrollController
         ..stop()
         ..value = 0;
       _isOverflowing = false;
-      _marqueeRunning = false;
     }
   }
 
-  Future<void> _runMarquee() async {
-    if (_marqueeRunning) return;
-    _marqueeRunning = true;
+  Future<void> _runMarquee(int version) async {
+    final cycleDistance = _textWidth + _gap;
+    if (cycleDistance <= 0) return;
 
-    while (mounted && _isOverflowing) {
-      // Pause only at the fully readable starting position.
+    final duration = Duration(
+      milliseconds:
+          (cycleDistance / _pixelsPerSecond * 1000).round().clamp(1000, 30000),
+    );
+
+    // Pause only at the starting position. Then move left continuously.
+    while (mounted && version == _loopVersion && _isOverflowing) {
       await Future<void>.delayed(const Duration(seconds: 5));
-      if (!mounted || !_isOverflowing) break;
+      if (!mounted || version != _loopVersion || !_isOverflowing) break;
 
-      final distance =
-          (_textWidth - _availableWidth).clamp(0.0, double.infinity);
-      if (distance <= 0) break;
-
-      // Keep a steady pixel-per-second speed for a smooth, non-stuttering pass.
-      final milliseconds = (distance / 32 * 1000).round().clamp(1200, 12000);
-      final travelDuration = Duration(milliseconds: milliseconds);
-
-      // Scroll left until the complete end of the name is visible.
       await _scrollController.animateTo(
         1,
-        duration: travelDuration,
+        duration: duration,
         curve: Curves.linear,
       );
-      if (!mounted || !_isOverflowing) break;
+      if (!mounted || version != _loopVersion || !_isOverflowing) break;
 
-      // No pause at the end: smoothly glide back to the start, then pause there.
-      await _scrollController.animateBack(
-        0,
-        duration: travelDuration,
-        curve: Curves.linear,
-      );
+      // The duplicate text is now at the exact starting position.
+      // Resetting the offset is visually seamless; there is no reverse scroll.
+      _scrollController.value = 0;
     }
-
-    _marqueeRunning = false;
   }
 
   @override
   void dispose() {
+    _loopVersion++;
     _scrollController.dispose();
     super.dispose();
+  }
+
+  TextPainter _measureText(BuildContext context) {
+    final style = TextStyle(
+      fontSize: widget.fontSize,
+      fontWeight: widget.fontWeight,
+      height: 1.0,
+    );
+    return TextPainter(
+      text: TextSpan(text: widget.text, style: style),
+      maxLines: 1,
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+    )..layout(maxWidth: double.infinity);
+  }
+
+  Widget _rainbowCopy() {
+    return AnimatedRainbowText(
+      text: widget.text,
+      fontSize: widget.fontSize,
+      fontWeight: widget.fontWeight,
+      animationDuration: widget.rainbowDuration,
+    );
   }
 
   @override
@@ -9879,19 +9894,7 @@ class _RoomCoverMarqueeRainbowTextState
         child: LayoutBuilder(
           builder: (context, constraints) {
             final availableWidth = constraints.maxWidth;
-            final painter = TextPainter(
-              text: TextSpan(
-                text: widget.text,
-                style: TextStyle(
-                  fontSize: widget.fontSize,
-                  fontWeight: widget.fontWeight,
-                  height: 1.0,
-                ),
-              ),
-              maxLines: 1,
-              textDirection: Directionality.of(context),
-            )..layout(maxWidth: double.infinity);
-
+            final painter = _measureText(context);
             final textWidth = painter.width;
             final overflowing = textWidth > availableWidth;
 
@@ -9899,59 +9902,53 @@ class _RoomCoverMarqueeRainbowTextState
                 (!_isOverflowing ||
                     _textWidth != textWidth ||
                     _availableWidth != availableWidth)) {
+              _loopVersion++;
+              final version = _loopVersion;
               _isOverflowing = true;
               _textWidth = textWidth;
               _availableWidth = availableWidth;
               _scrollController
                 ..stop()
                 ..value = 0;
-              _marqueeRunning = false;
               WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted && _isOverflowing) {
-                  _runMarquee();
+                if (mounted && version == _loopVersion && _isOverflowing) {
+                  _runMarquee(version);
                 }
               });
             } else if (!overflowing && _isOverflowing) {
+              _loopVersion++;
               _isOverflowing = false;
               _scrollController
                 ..stop()
                 ..value = 0;
-              _marqueeRunning = false;
             }
 
             if (!overflowing) {
               return Center(
-                child: AnimatedRainbowText(
-                  text: widget.text,
-                  fontSize: widget.fontSize,
-                  fontWeight: widget.fontWeight,
-                  animationDuration: widget.rainbowDuration,
-                ),
+                child: _rainbowCopy(),
               );
             }
 
+            final cycleWidth = _textWidth + _gap;
             return SizedBox(
               height: 22,
               width: availableWidth,
               child: AnimatedBuilder(
                 animation: _scrollController,
                 builder: (context, child) {
-                  final maxOffset =
-                      (_textWidth - _availableWidth).clamp(0.0, double.infinity);
-                  final offset = maxOffset * _scrollController.value;
+                  final offset = cycleWidth * _scrollController.value;
                   return Transform.translate(
                     offset: Offset(-offset, 0),
                     child: SizedBox(
-                      width: _textWidth,
+                      width: cycleWidth * 2,
                       height: 22,
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: AnimatedRainbowText(
-                          text: widget.text,
-                          fontSize: widget.fontSize,
-                          fontWeight: widget.fontWeight,
-                          animationDuration: widget.rainbowDuration,
-                        ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(width: _textWidth, child: _rainbowCopy()),
+                          const SizedBox(width: _gap),
+                          SizedBox(width: _textWidth, child: _rainbowCopy()),
+                        ],
                       ),
                     ),
                   );
