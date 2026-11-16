@@ -3214,7 +3214,8 @@ try {
                 Positioned.fill(
                   child: IgnorePointer(
                     child: Transform.scale(
-                      scale: 1.10,
+                      scaleX: 1.12,
+                      scaleY: 1.04,
                       child: Image.asset(
                         frameAsset,
                         fit: BoxFit.fill,
