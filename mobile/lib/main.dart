@@ -10966,15 +10966,6 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
             alignment: Alignment.topCenter,
             clipBehavior: Clip.none,
             children: [
-              Positioned.fill(
-                // A tiny horizontal inset removes the pale edge fringe visible
-                // on the silver-blue second-place frame without changing its art.
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: rank == 2 ? 1.8 : 0),
-                  child: Image.asset(asset, fit: BoxFit.fill,
-                    errorBuilder: (_, __, ___) => const SizedBox.shrink()),
-                ),
-              ),
               Positioned(
                 top: frameHeight * .145,
                 child: GestureDetector(
@@ -10996,6 +10987,15 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                               fit: BoxFit.cover),
                     ),
                   ),
+                ),
+              ),
+              Positioned.fill(
+                // A tiny horizontal inset removes the pale edge fringe visible
+                // on the silver-blue second-place frame without changing its art.
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: rank == 2 ? 1.8 : 0),
+                  child: Image.asset(asset, fit: BoxFit.fill,
+                    errorBuilder: (_, __, ___) => const SizedBox.shrink()),
                 ),
               ),
               Positioned(
