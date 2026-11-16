@@ -40,21 +40,48 @@ jobs:
         run: |
           set -euo pipefail
           NDK_VERSION="28.2.13676358"
-          SDKMANAGER="${ANDROID_SDK_ROOT:-$ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          ANDROID_SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
 
-          if [ ! -x "$SDKMANAGER" ]; then
-            SDKMANAGER="$(find "${ANDROID_SDK_ROOT:-$ANDROID_HOME}/cmdline-tools" -type f -name sdkmanager 2>/dev/null | head -n 1)"
+          if [ -z "$ANDROID_SDK" ]; then
+            echo "ANDROID_SDK_ROOT / ANDROID_HOME is not set" >&2
+            exit 1
           fi
 
-          if [ -z "${SDKMANAGER:-}" ] || [ ! -x "$SDKMANAGER" ]; then
+          SDKMANAGER="$ANDROID_SDK/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER="$(find "$ANDROID_SDK/cmdline-tools" -type f -name sdkmanager 2>/dev/null | head -n 1 || true)"
+          fi
+
+          if [ -z "$SDKMANAGER" ] || [ ! -x "$SDKMANAGER" ]; then
             echo "Android sdkmanager was not found" >&2
             exit 1
           fi
 
-          yes | "$SDKMANAGER" --uninstall "ndk;$NDK_VERSION" || true
-          rm -rf "${ANDROID_SDK_ROOT:-$ANDROID_HOME}/ndk/$NDK_VERSION"
-          yes | "$SDKMANAGER" --install "ndk;$NDK_VERSION"
-          yes | "$SDKMANAGER" --licenses
+          # sdkmanager may close stdin after accepting all licenses.
+          # With pipefail, that can make `yes` report SIGPIPE even when
+          # sdkmanager itself succeeds. Check the sdkmanager exit code only.
+          run_sdkmanager_with_licenses() {
+            set +e
+            yes | "$SDKMANAGER" "$@"
+            local pipeline_status=( "${PIPESTATUS[@]}" )
+            set -e
+
+            local sdkmanager_status="${pipeline_status[1]}"
+            if [ "$sdkmanager_status" -ne 0 ]; then
+              echo "sdkmanager failed with exit code $sdkmanager_status: $*" >&2
+              return "$sdkmanager_status"
+            fi
+            return 0
+          }
+
+          "$SDKMANAGER" --uninstall "ndk;$NDK_VERSION" || true
+          rm -rf "$ANDROID_SDK/ndk/$NDK_VERSION"
+
+          run_sdkmanager_with_licenses --licenses
+          run_sdkmanager_with_licenses --install "ndk;$NDK_VERSION"
+
+          test -d "$ANDROID_SDK/ndk/$NDK_VERSION"
+          echo "NDK $NDK_VERSION installed successfully."
 
       - name: Flutter version
         run: flutter --version
