@@ -10870,7 +10870,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
       final end = endRaw == null ? null : DateTime.tryParse(endRaw)?.toLocal();
       if (!mounted) return;
       setState(() {
-        _ranking = list.take(50).toList();
+        _ranking = list.take(_category == 'wealth' ? 30 : 50).toList();
         _myRank = me is Map ? Map<String, dynamic>.from(me) : null;
         _periodEnd = end;
         _loading = false;
@@ -10912,6 +10912,179 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
       (user['display_name'] ?? user['username'] ?? user['name'] ?? 'MINDO User').toString();
 
   String _avatar(Map<String, dynamic> user) => (user['avatar_url'] ?? '').toString();
+
+  Future<void> _openRankingProfile(Map<String, dynamic> user) async {
+    final publicId = (user['id'] ?? '').toString();
+    if (publicId.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('User profile is unavailable.')),
+        );
+      }
+      return;
+    }
+    try {
+      final result = await api.getPublicProfile(publicId);
+      final profile = Map<String, dynamic>.from(result['user'] ?? result);
+      if (!mounted) return;
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PublicProfileScreen(user: profile, token: widget.token),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    }
+  }
+
+  Widget _wealthPodiumUser(int rank, Map<String, dynamic> user) {
+    final isFirst = rank == 1;
+    final asset = rank == 1
+        ? 'assets/ranking/wealth/frames/wealth_top1.png'
+        : rank == 2
+            ? 'assets/ranking/wealth/frames/wealth_top2.png'
+            : 'assets/ranking/wealth/frames/wealth_top3.png';
+    final frameWidth = isFirst ? 132.0 : 116.0;
+    final frameHeight = frameWidth * (rank == 1 ? 830 / 600 : rank == 2 ? 836 / 620 : 833 / 641);
+    final avatarSize = frameWidth * (isFirst ? .43 : .42);
+    final avatar = _avatar(user);
+    final level = user['wealth_level'] ?? user['level'] ?? 1;
+    return Expanded(
+      child: Padding(
+        // Top 1 sits higher in the middle; Top 2 and Top 3 share the same top edge.
+        padding: EdgeInsets.only(top: isFirst ? 0 : 24),
+        child: SizedBox(
+          height: frameHeight,
+          child: Stack(
+            alignment: Alignment.topCenter,
+            clipBehavior: Clip.none,
+            children: [
+              Positioned.fill(
+                child: Image.asset(asset, fit: BoxFit.fill,
+                  errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+              ),
+              Positioned(
+                top: frameHeight * .115,
+                child: GestureDetector(
+                  onTap: user.isEmpty ? null : () => _openRankingProfile(user),
+                  child: Container(
+                    width: avatarSize,
+                    height: avatarSize,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: const Color(0xFFFFD978), width: 1.4),
+                      boxShadow: const [BoxShadow(color: Color(0x66000000), blurRadius: 5)],
+                    ),
+                    child: ClipOval(
+                      child: avatar.isNotEmpty
+                          ? Image.network(avatar, fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Image.asset(
+                                'assets/ChatGPT Image Oct 8, 2026, 11_35_07 PM.png', fit: BoxFit.cover))
+                          : Image.asset('assets/ChatGPT Image Oct 8, 2026, 11_35_07 PM.png',
+                              fit: BoxFit.cover),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                left: frameWidth * .20,
+                right: frameWidth * .20,
+                top: frameHeight * .625,
+                height: frameHeight * .075,
+                child: Center(
+                  child: Text(user.isEmpty ? 'MINDO' : _displayName(user),
+                    maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900,
+                      fontSize: isFirst ? 10 : 8.5, shadows: const [
+                        Shadow(color: Colors.black, blurRadius: 3),
+                      ])),
+                ),
+              ),
+              Positioned(
+                left: frameWidth * .34,
+                right: frameWidth * .12,
+                top: frameHeight * .755,
+                height: frameHeight * .065,
+                child: Align(
+                  alignment: Alignment.center,
+                  child: Text(user.isEmpty ? '' : '$level',
+                    maxLines: 1, style: TextStyle(color: const Color(0xFFFFE8A0),
+                      fontWeight: FontWeight.w900, fontSize: isFirst ? 10 : 8.5)),
+                ),
+              ),
+              Positioned(
+                left: frameWidth * .23,
+                right: frameWidth * .10,
+                top: frameHeight * .855,
+                height: frameHeight * .065,
+                child: Center(
+                  child: Text(user.isEmpty ? '' : _compact(_coins(user)),
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: const Color(0xFFFFE08A),
+                      fontWeight: FontWeight.w900, fontSize: isFirst ? 11 : 9)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _wealthUserRow(int index, Map<String, dynamic> user) {
+    final rank = index + 4;
+    final avatar = _avatar(user);
+    final level = user['wealth_level'] ?? user['level'] ?? 1;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xB8794B20), Color(0xC94A2A12), Color(0xB8794B20)],
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0x99F5C66A), width: 1),
+      ),
+      child: Row(children: [
+        SizedBox(width: 27,
+          child: Text('$rank', textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900))),
+        const SizedBox(width: 7),
+        GestureDetector(
+          onTap: () => _openRankingProfile(user),
+          child: Container(
+            width: 49, height: 49,
+            padding: const EdgeInsets.all(2),
+            decoration: BoxDecoration(shape: BoxShape.circle,
+              border: Border.all(color: const Color(0xFFFFD36B), width: 1.5)),
+            child: ClipOval(
+              child: avatar.isNotEmpty
+                  ? Image.network(avatar, fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Image.asset(
+                        'assets/ChatGPT Image Oct 8, 2026, 11_35_07 PM.png', fit: BoxFit.cover))
+                  : Image.asset('assets/ChatGPT Image Oct 8, 2026, 11_35_07 PM.png', fit: BoxFit.cover),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(_displayName(user), maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13)),
+          const SizedBox(height: 3),
+          Text('Lv. $level', maxLines: 1,
+            style: const TextStyle(color: Color(0xFFFFE4A0), fontWeight: FontWeight.w700, fontSize: 11)),
+        ])),
+        const Icon(Icons.monetization_on_rounded, color: Color(0xFFFFD34F), size: 19),
+        const SizedBox(width: 4),
+        Text(_compact(_coins(user)), style: const TextStyle(
+          color: Color(0xFFFFE08A), fontWeight: FontWeight.w900, fontSize: 13)),
+      ]),
+    );
+  }
 
   Widget _avatarImage(Map<String, dynamic> user, double size, {String? frameAsset, int rank = 1}) {
     final url = _avatar(user);
@@ -11054,6 +11227,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
   }
 
   Widget _userRow(int index, Map<String, dynamic> user) {
+    if (_category == 'wealth') return _wealthUserRow(index, user);
     final rank = index + 4;
     final avatar = _avatar(user);
     return Container(
@@ -11132,8 +11306,18 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
         centerTitle: true,
       ),
       body: Container(
-        decoration: const BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
-          colors: [Color(0xFF6A370C), Color(0xFF321807), Color(0xFF160B06)])),
+        decoration: BoxDecoration(
+          image: _category == 'wealth'
+              ? const DecorationImage(
+                  image: AssetImage('assets/ranking/wealth/backgrounds/wealth_gold_background.png'),
+                  fit: BoxFit.cover,
+                  opacity: .72,
+                )
+              : null,
+          gradient: _category == 'wealth' ? null : const LinearGradient(
+            begin: Alignment.topCenter, end: Alignment.bottomCenter,
+            colors: [Color(0xFF6A370C), Color(0xFF321807), Color(0xFF160B06)]),
+        ),
         child: Stack(children: [
           // Subtle palace columns and warm royal lighting, kept behind live ranking data.
           Positioned(left: 0, top: 0, bottom: 0, child: Container(width: 9,
@@ -11168,19 +11352,26 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                     const SizedBox(height: 12), OutlinedButton.icon(onPressed: _load, icon: const Icon(Icons.refresh), label: const Text('Retry')),
                   ])))
                 : RefreshIndicator(color: _royalGold, onRefresh: _load, child: ListView(padding: const EdgeInsets.fromLTRB(13, 8, 13, 10), children: [
-                        Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                          _podiumUser(2, top.length > 1 ? top[1] : <String, dynamic>{}),
-                          const SizedBox(width: 5),
-                          _podiumUser(1, top.isNotEmpty ? top[0] : <String, dynamic>{}),
-                          const SizedBox(width: 5),
-                          _podiumUser(3, top.length > 2 ? top[2] : <String, dynamic>{}),
+                        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          _category == 'wealth'
+                              ? _wealthPodiumUser(2, top.length > 1 ? top[1] : <String, dynamic>{})
+                              : _podiumUser(2, top.length > 1 ? top[1] : <String, dynamic>{}),
+                          const SizedBox(width: 4),
+                          _category == 'wealth'
+                              ? _wealthPodiumUser(1, top.isNotEmpty ? top[0] : <String, dynamic>{})
+                              : _podiumUser(1, top.isNotEmpty ? top[0] : <String, dynamic>{}),
+                          const SizedBox(width: 4),
+                          _category == 'wealth'
+                              ? _wealthPodiumUser(3, top.length > 2 ? top[2] : <String, dynamic>{})
+                              : _podiumUser(3, top.length > 2 ? top[2] : <String, dynamic>{}),
                         ]),
                         const SizedBox(height: 13),
                       if (rest.isNotEmpty) ...[
                         Container(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
                           decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFF63350D), Color(0xFF2A1408)]),
                             borderRadius: BorderRadius.circular(13), border: Border.all(color: _royalGold, width: 1.4)),
-                          child: const Text('RANK 4–50', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, letterSpacing: 1.1, fontSize: 15))),
+                          child: Text(_category == 'wealth' ? 'RANK 4–30' : 'RANK 4–50',
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, letterSpacing: 1.1, fontSize: 15))),
                         const SizedBox(height: 9),
                         ...rest.asMap().entries.map((e) => _userRow(e.key, e.value)),
                       ],
