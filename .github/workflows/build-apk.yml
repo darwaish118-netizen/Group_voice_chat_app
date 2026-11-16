@@ -35,6 +35,27 @@ jobs:
         run: |
           sed -i '/<manifest /a\    <uses-permission android:name="android.permission.INTERNET"/>' android/app/src/main/AndroidManifest.xml
 
+      - name: Reinstall Android NDK 28.2.13676358
+        shell: bash
+        run: |
+          set -euo pipefail
+          NDK_VERSION="28.2.13676358"
+          SDKMANAGER="${ANDROID_SDK_ROOT:-$ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER="$(find "${ANDROID_SDK_ROOT:-$ANDROID_HOME}/cmdline-tools" -type f -name sdkmanager 2>/dev/null | head -n 1)"
+          fi
+
+          if [ -z "${SDKMANAGER:-}" ] || [ ! -x "$SDKMANAGER" ]; then
+            echo "Android sdkmanager was not found" >&2
+            exit 1
+          fi
+
+          yes | "$SDKMANAGER" --uninstall "ndk;$NDK_VERSION" || true
+          rm -rf "${ANDROID_SDK_ROOT:-$ANDROID_HOME}/ndk/$NDK_VERSION"
+          yes | "$SDKMANAGER" --install "ndk;$NDK_VERSION"
+          yes | "$SDKMANAGER" --licenses
+
       - name: Flutter version
         run: flutter --version
 
