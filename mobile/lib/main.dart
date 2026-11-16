@@ -3145,11 +3145,9 @@ try {
     final countryFlag = (room['country_flag']?.toString().trim().isNotEmpty == true)
         ? room['country_flag'].toString().trim()
         : _flag('${room['owner_country_code'] ?? room['country_code'] ?? country}');
-    final members = _roomMembers(room);
     final id = room['id']?.toString() ?? '';
     final ownerUid = room['owner_public_uid']?.toString() ?? '';
     final frameAsset = _homeRoomFrameAsset(rank);
-    final isRanked = rank >= 1 && rank <= 3;
 
     return GestureDetector(
       onTap: () async {
@@ -3169,79 +3167,70 @@ try {
           seatCount: int.tryParse(room['seat_count']?.toString() ?? '') ?? 10,
         )));
       },
-      child: AspectRatio(
-        aspectRatio: 1,
-        child: Stack(
-              fit: StackFit.expand,
+      child: Column(
+        children: [
+          // The framed cover is now image-only: no room name, flag or member count on it.
+          Expanded(
+            child: AspectRatio(
+              aspectRatio: 1,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(9),
+                      child: cover.isNotEmpty
+                          ? Image.network(
+                              cover,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => _roomCoverFallback(),
+                            )
+                          : _roomCoverFallback(),
+                    ),
+                  ),
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: Transform.scale(
+                        scaleX: 1.12,
+                        scaleY: 1.04,
+                        child: Image.asset(
+                          frameAsset,
+                          fit: BoxFit.fill,
+                          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 3),
+          // Country flag and animated room name sit together below the frame.
+          Container(
+            width: double.infinity,
+            constraints: const BoxConstraints(minHeight: 25),
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+            color: Colors.black,
+            child: Row(
               children: [
-                // Room cover stays behind the transparent center of the decorative frame.
-                Padding(
-                  // Slightly reduce the cover height so it sits inside the
-                  // top and bottom edges of the decorative frame.
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(9),
-                    child: cover.isNotEmpty
-                        ? Image.network(cover, fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => _roomCoverFallback())
-                        : _roomCoverFallback(),
+                if (countryFlag.isNotEmpty) ...[
+                  Text(countryFlag, style: const TextStyle(fontSize: 17)),
+                  const SizedBox(width: 7),
+                ],
+                Expanded(
+                  child: RoomCoverMarqueeRainbowText(
+                    text: name,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                    rainbowDuration: const Duration(seconds: 3),
                   ),
-                ),
-                if (countryFlag.isNotEmpty)
-                  Positioned(
-                    left: 27,
-                    top: 34,
-                    child: Text(
-                      countryFlag,
-                      style: const TextStyle(fontSize: 17),
-                    ),
-                  ),
-                Positioned(
-                  left: 23,
-                  right: 23,
-                  bottom: 31,
-                  child: Center(
-                    child: RoomCoverMarqueeRainbowText(
-                      text: name,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w900,
-                      rainbowDuration: const Duration(seconds: 3),
-                    ),
-                  ),
-                ),
-                // The PNG itself contains TOP 1 / TOP 2 / TOP 3 lettering.
-                // Rank 4+ uses the same royal border without a rank label.
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: Transform.scale(
-                      scaleX: 1.12,
-                      scaleY: 1.04,
-                      child: Image.asset(
-                        frameAsset,
-                        fit: BoxFit.fill,
-                        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  right: 27,
-                  top: 34,
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    const Icon(Icons.people_alt_rounded, size: 15, color: Colors.white),
-                    const SizedBox(width: 4),
-                    Text(
-                      '$members',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ]),
                 ),
               ],
             ),
+          ),
+        ],
       ),
     );
   }
@@ -3406,7 +3395,7 @@ try {
                     ])))
                   else
                     SliverPadding(padding: const EdgeInsets.fromLTRB(12, 0, 12, 18), sliver: SliverGrid(
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 11, mainAxisSpacing: 11, childAspectRatio: 1),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 11, mainAxisSpacing: 11, childAspectRatio: 0.86),
                       delegate: SliverChildBuilderDelegate((context, index) => _roomCard(visibleRooms[index], sortedRooms.indexWhere((r) => (r as Map)['id']?.toString() == visibleRooms[index]['id']?.toString()) + 1), childCount: visibleRooms.length))),
                 if (_selectedTab == 1)
                   SliverFillRemaining(hasScrollBody: true, child: Padding(padding: const EdgeInsets.fromLTRB(14, 0, 14, 18), child: Column(children: [
