@@ -10948,12 +10948,13 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
         : rank == 2
             ? 'assets/ranking/wealth/frames/wealth_top2.png'
             : 'assets/ranking/wealth/frames/wealth_top3.png';
-    // Slightly taller podium cards; keep the three original frame artworks.
+    // Preserve each PNG's real aspect ratio so its circular DP opening
+    // stays circular instead of being stretched into an oval.
     final frameWidth = isFirst ? 138.0 : 122.0;
     final frameHeight = frameWidth *
-        (rank == 1 ? 830 / 600 : rank == 2 ? 836 / 620 : 833 / 641) * 1.06;
-    // Match the transparent circular opening more closely so the DP fills it.
-    final avatarSize = frameWidth * (isFirst ? .53 : .53);
+        (rank == 1 ? 831 / 611 : rank == 2 ? 829 / 603 : 1484 / 1060);
+    // Keep the avatar itself perfectly square; ClipOval makes a true circle.
+    final avatarSize = frameWidth * .48;
     final avatar = _avatar(user);
     final level = user['wealth_level'] ?? user['level'] ?? 1;
     return Expanded(
