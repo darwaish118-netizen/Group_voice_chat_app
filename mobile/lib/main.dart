@@ -10961,6 +10961,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
             : 1484 / 1060;
     final avatar = _avatar(user);
     final level = user['wealth_level'] ?? user['level'] ?? 1;
+    final charmLevel = user['charm_level'] ?? 1;
 
     return Expanded(
       flex: isFirst ? 12 : 10,
@@ -10991,7 +10992,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                     // Daily: Top 3 portrait moves slightly upward; Top 1 grows,
                     // while Top 2 keeps its already-correct portrait position.
                     top: frameHeight *
-                        (isDaily ? (rank == 3 ? .145 : .155) : .165),
+                        (isDaily ? (rank == 1 ? .135 : rank == 3 ? .145 : .155) : .165),
                     child: GestureDetector(
                       onTap: user.isEmpty ? null : () => _openRankingProfile(user),
                       child: SizedBox(
@@ -11043,7 +11044,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                     right: frameWidth * .19,
                     top: frameHeight *
                         (isDaily
-                            ? (rank == 1 ? .595 : rank == 2 ? .590 : .605)
+                            ? (rank == 1 ? .590 : rank == 2 ? .590 : .605)
                             : .615),
                     height: frameHeight * (isDaily && rank == 1 ? .105 : (isDaily ? .095 : .095)),
                     child: Center(
@@ -11069,14 +11070,14 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                     height: frameHeight * (isDaily && rank == 1 ? .10 : (isDaily ? .09 : .09)),
                     child: Center(
                       child: Text(
-                        user.isEmpty ? '' : '$level',
+                        user.isEmpty ? '' : '$level     $charmLevel',
                         maxLines: 1,
                         overflow: TextOverflow.clip,
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: const Color(0xFFFFE8A0),
                           fontWeight: FontWeight.w900,
-                          fontSize: isFirst ? 10 : 8.5,
+                          fontSize: isFirst ? 8.5 : 7.5,
                         ),
                       ),
                     ),
