@@ -10943,6 +10943,9 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
 
   Widget _wealthPodiumUser(int rank, Map<String, dynamic> user) {
     final isFirst = rank == 1;
+    // Daily is being tuned independently first; Weekly and Monthly retain
+    // their current geometry until the Daily layout is approved.
+    final isDaily = _period == 'daily';
     final asset = rank == 1
         ? 'assets/ranking/wealth/frames/wealth_top1.png'
         : rank == 2
@@ -10968,8 +10971,10 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
           builder: (context, constraints) {
             final frameWidth = constraints.maxWidth;
             final frameHeight = frameWidth * aspectHeight;
-            // Enlarge all three portrait fills; Top 2 and Top 3 needed extra size.
-            final avatarSize = frameWidth * (isFirst ? .50 : .52);
+            // Daily: enlarge the portrait fills consistently across all three podiums.
+            // Other periods keep the existing values for now.
+            final avatarSize = frameWidth *
+                (isDaily ? (isFirst ? .52 : .54) : (isFirst ? .50 : .52));
 
             return SizedBox(
               width: frameWidth,
@@ -10981,8 +10986,8 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                   // The square avatar is painted first, behind the transparent
                   // circular opening in the PNG frame.
                   Positioned(
-                    // Move every DP down by about 2% so it fills the lower part of each circular opening.
-                    top: frameHeight * .165,
+                    // Daily DP sits slightly lower to fill the circular opening.
+                    top: frameHeight * (isDaily ? .155 : .165),
                     child: GestureDetector(
                       onTap: user.isEmpty ? null : () => _openRankingProfile(user),
                       child: SizedBox(
@@ -11029,8 +11034,8 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                   Positioned(
                     left: frameWidth * .19,
                     right: frameWidth * .19,
-                    top: frameHeight * .615,
-                    height: frameHeight * .095,
+                    top: frameHeight * (isDaily ? .605 : .615),
+                    height: frameHeight * (isDaily ? .105 : .095),
                     child: Center(
                       child: Text(
                         user.isEmpty ? 'MINDO' : _displayName(user),
@@ -11050,8 +11055,8 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                   Positioned(
                     left: frameWidth * .34,
                     right: frameWidth * .12,
-                    top: frameHeight * .715,
-                    height: frameHeight * .09,
+                    top: frameHeight * (isDaily ? .705 : .715),
+                    height: frameHeight * (isDaily ? .10 : .09),
                     child: Center(
                       child: Text(
                         user.isEmpty ? '' : '$level',
@@ -11070,8 +11075,8 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                   Positioned(
                     left: frameWidth * .23,
                     right: frameWidth * .10,
-                    top: frameHeight * .815,
-                    height: frameHeight * .09,
+                    top: frameHeight * (isDaily ? .805 : .815),
+                    height: frameHeight * (isDaily ? .10 : .09),
                     child: Center(
                       child: Text(
                         user.isEmpty ? '' : _compact(_coins(user)),
