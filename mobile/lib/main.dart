@@ -10992,7 +10992,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                     // Daily: Top 3 portrait moves slightly upward; Top 1 grows,
                     // while Top 2 keeps its already-correct portrait position.
                     top: frameHeight *
-                        (isDaily ? (rank == 1 ? .135 : rank == 3 ? .145 : .155) : .165),
+                        (isDaily ? (rank == 1 ? .125 : rank == 3 ? .145 : .155) : .165),
                     child: GestureDetector(
                       onTap: user.isEmpty ? null : () => _openRankingProfile(user),
                       child: SizedBox(
@@ -11044,7 +11044,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                     right: frameWidth * .19,
                     top: frameHeight *
                         (isDaily
-                            ? (rank == 1 ? .590 : rank == 2 ? .590 : .605)
+                            ? (rank == 1 ? .575 : rank == 2 ? .590 : .605)
                             : .615),
                     height: frameHeight * (isDaily && rank == 1 ? .105 : (isDaily ? .095 : .095)),
                     child: Center(
@@ -11066,7 +11066,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                   Positioned(
                     left: frameWidth * .34,
                     right: frameWidth * .12,
-                    top: frameHeight * (isDaily && rank == 1 ? .695 : (isDaily ? .705 : .715)),
+                    top: frameHeight * (isDaily && rank == 1 ? .680 : (isDaily ? .705 : .715)),
                     height: frameHeight * (isDaily && rank == 1 ? .10 : (isDaily ? .09 : .09)),
                     child: Center(
                       child: Text(
@@ -11086,7 +11086,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                   Positioned(
                     left: frameWidth * .23,
                     right: frameWidth * .10,
-                    top: frameHeight * (isDaily && rank == 1 ? .795 : (isDaily ? .805 : .815)),
+                    top: frameHeight * (isDaily && rank == 1 ? .780 : (isDaily ? .805 : .815)),
                     height: frameHeight * (isDaily && rank == 1 ? .10 : (isDaily ? .09 : .09)),
                     child: Center(
                       child: Text(
