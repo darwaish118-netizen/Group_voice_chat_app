@@ -10997,7 +10997,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                         (isDaily
                             ? (rank == 1 ? .125 : rank == 3 ? .145 : .155)
                             : (adjustTopOne
-                                ? (isWeekly ? .145 : .125)
+                                ? (isWeekly ? .155 : .125)
                                 : (isWeekly && rank == 2 ? .155 : isWeekly && rank == 3 ? .145 : .165))),
                     child: GestureDetector(
                       onTap: user.isEmpty ? null : () => _openRankingProfile(user),
@@ -11075,7 +11075,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                     top: frameHeight *
                         (isDaily
                             ? (rank == 1 ? .680 : .705)
-                            : (adjustTopOne ? .680 : (isWeekly && rank == 2 ? .705 : .715))),
+                            : (adjustTopOne ? .680 : (isWeekly && rank == 2 ? .690 : .715))),
                     height: frameHeight * (adjustTopOne ? .10 : .09),
                     child: Center(
                       child: Text(
@@ -11098,7 +11098,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                     top: frameHeight *
                         (isDaily
                             ? (rank == 1 ? .780 : .805)
-                            : (adjustTopOne ? .780 : (isWeekly && rank == 2 ? .805 : .815))),
+                            : (adjustTopOne ? .780 : (isWeekly && rank == 2 ? .790 : .815))),
                     height: frameHeight * (adjustTopOne ? .10 : .09),
                     child: Center(
                       child: Text(
