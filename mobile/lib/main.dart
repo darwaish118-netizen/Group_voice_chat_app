@@ -10968,7 +10968,8 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
           builder: (context, constraints) {
             final frameWidth = constraints.maxWidth;
             final frameHeight = frameWidth * aspectHeight;
-            final avatarSize = frameWidth * .48;
+            // Enlarge all three portrait fills; Top 2 and Top 3 needed extra size.
+            final avatarSize = frameWidth * (isFirst ? .50 : .52);
 
             return SizedBox(
               width: frameWidth,
@@ -10980,7 +10981,8 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                   // The square avatar is painted first, behind the transparent
                   // circular opening in the PNG frame.
                   Positioned(
-                    top: frameHeight * .145,
+                    // Move every DP down by about 2% so it fills the lower part of each circular opening.
+                    top: frameHeight * .165,
                     child: GestureDetector(
                       onTap: user.isEmpty ? null : () => _openRankingProfile(user),
                       child: SizedBox(
@@ -11013,18 +11015,22 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                   // Frame overlays the DP; contain the image at its true aspect
                   // ratio so its round portrait aperture is not vertically stretched.
                   Positioned.fill(
-                    child: Image.asset(
-                      asset,
-                      fit: BoxFit.fill,
-                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                    child: Transform.scale(
+                      // Top 1 frame is widened by 2% only; Top 2 and Top 3 stay unchanged.
+                      scaleX: isFirst ? 1.02 : 1.0,
+                      child: Image.asset(
+                        asset,
+                        fit: BoxFit.fill,
+                        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                      ),
                     ),
                   ),
                   // Name stays inside the black nameplate.
                   Positioned(
                     left: frameWidth * .19,
                     right: frameWidth * .19,
-                    top: frameHeight * .625,
-                    height: frameHeight * .085,
+                    top: frameHeight * .615,
+                    height: frameHeight * .095,
                     child: Center(
                       child: Text(
                         user.isEmpty ? 'MINDO' : _displayName(user),
@@ -11044,8 +11050,8 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                   Positioned(
                     left: frameWidth * .34,
                     right: frameWidth * .12,
-                    top: frameHeight * .735,
-                    height: frameHeight * .075,
+                    top: frameHeight * .715,
+                    height: frameHeight * .09,
                     child: Center(
                       child: Text(
                         user.isEmpty ? '' : '$level',
@@ -11064,8 +11070,8 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                   Positioned(
                     left: frameWidth * .23,
                     right: frameWidth * .10,
-                    top: frameHeight * .835,
-                    height: frameHeight * .075,
+                    top: frameHeight * .815,
+                    height: frameHeight * .09,
                     child: Center(
                       child: Text(
                         user.isEmpty ? '' : _compact(_coins(user)),
