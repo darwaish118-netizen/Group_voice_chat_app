@@ -10974,7 +10974,9 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
             // Daily: enlarge the portrait fills consistently across all three podiums.
             // Other periods keep the existing values for now.
             final avatarSize = frameWidth *
-                (isDaily ? (isFirst ? .52 : .54) : (isFirst ? .50 : .52));
+                (isDaily
+                    ? (rank == 1 ? .54 : rank == 2 ? .54 : .54)
+                    : (isFirst ? .50 : .52));
 
             return SizedBox(
               width: frameWidth,
@@ -10986,8 +10988,10 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                   // The square avatar is painted first, behind the transparent
                   // circular opening in the PNG frame.
                   Positioned(
-                    // Daily DP sits slightly lower to fill the circular opening.
-                    top: frameHeight * (isDaily ? .155 : .165),
+                    // Daily: Top 3 portrait moves slightly upward; Top 1 grows,
+                    // while Top 2 keeps its already-correct portrait position.
+                    top: frameHeight *
+                        (isDaily ? (rank == 3 ? .145 : .155) : .165),
                     child: GestureDetector(
                       onTap: user.isEmpty ? null : () => _openRankingProfile(user),
                       child: SizedBox(
@@ -11021,8 +11025,11 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                   // ratio so its round portrait aperture is not vertically stretched.
                   Positioned.fill(
                     child: Transform.scale(
-                      // Top 1 frame is widened by 2% only; Top 2 and Top 3 stay unchanged.
-                      scaleX: isFirst ? 1.02 : 1.0,
+                      // Daily Top 1: widen slightly and pull only the upper edge upward.
+                      // Top 2 and Top 3 frame artwork remains unchanged.
+                      alignment: Alignment.bottomCenter,
+                      scaleX: isDaily && rank == 1 ? 1.02 : (isFirst ? 1.02 : 1.0),
+                      scaleY: isDaily && rank == 1 ? 1.02 : 1.0,
                       child: Image.asset(
                         asset,
                         fit: BoxFit.fill,
@@ -11034,8 +11041,11 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                   Positioned(
                     left: frameWidth * .19,
                     right: frameWidth * .19,
-                    top: frameHeight * (isDaily ? .605 : .615),
-                    height: frameHeight * (isDaily ? .105 : .095),
+                    top: frameHeight *
+                        (isDaily
+                            ? (rank == 1 ? .595 : rank == 2 ? .590 : .605)
+                            : .615),
+                    height: frameHeight * (isDaily && rank == 1 ? .105 : (isDaily ? .095 : .095)),
                     child: Center(
                       child: Text(
                         user.isEmpty ? 'MINDO' : _displayName(user),
@@ -11055,8 +11065,8 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                   Positioned(
                     left: frameWidth * .34,
                     right: frameWidth * .12,
-                    top: frameHeight * (isDaily ? .705 : .715),
-                    height: frameHeight * (isDaily ? .10 : .09),
+                    top: frameHeight * (isDaily && rank == 1 ? .695 : (isDaily ? .705 : .715)),
+                    height: frameHeight * (isDaily && rank == 1 ? .10 : (isDaily ? .09 : .09)),
                     child: Center(
                       child: Text(
                         user.isEmpty ? '' : '$level',
@@ -11075,8 +11085,8 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                   Positioned(
                     left: frameWidth * .23,
                     right: frameWidth * .10,
-                    top: frameHeight * (isDaily ? .805 : .815),
-                    height: frameHeight * (isDaily ? .10 : .09),
+                    top: frameHeight * (isDaily && rank == 1 ? .795 : (isDaily ? .805 : .815)),
+                    height: frameHeight * (isDaily && rank == 1 ? .10 : (isDaily ? .09 : .09)),
                     child: Center(
                       child: Text(
                         user.isEmpty ? '' : _compact(_coins(user)),
