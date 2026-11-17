@@ -10948,97 +10948,142 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
         : rank == 2
             ? 'assets/ranking/wealth/frames/wealth_top2.png'
             : 'assets/ranking/wealth/frames/wealth_top3.png';
-    // Preserve each PNG's real aspect ratio so its circular DP opening
-    // stays circular instead of being stretched into an oval.
-    final frameWidth = isFirst ? 138.0 : 122.0;
-    final frameHeight = frameWidth *
-        (rank == 1 ? 831 / 611 : rank == 2 ? 829 / 603 : 1484 / 1060);
-    // Keep the avatar itself perfectly square; ClipOval makes a true circle.
-    final avatarSize = frameWidth * .48;
+
+    // Use the actual width allocated by the row and preserve each PNG's
+    // native portrait ratio. The centre card gets a little extra width.
+    final aspectHeight = rank == 1
+        ? 831 / 611
+        : rank == 2
+            ? 829 / 603
+            : 1484 / 1060;
     final avatar = _avatar(user);
     final level = user['wealth_level'] ?? user['level'] ?? 1;
+
     return Expanded(
+      flex: isFirst ? 12 : 10,
       child: Padding(
         // Top 1 sits higher in the middle; Top 2 and Top 3 share the same top edge.
         padding: EdgeInsets.only(top: isFirst ? 0 : 24),
-        child: SizedBox(
-          height: frameHeight,
-          child: Stack(
-            alignment: Alignment.topCenter,
-            clipBehavior: Clip.none,
-            children: [
-              Positioned(
-                top: frameHeight * .145,
-                child: GestureDetector(
-                  onTap: user.isEmpty ? null : () => _openRankingProfile(user),
-                  child: Container(
-                    width: avatarSize,
-                    height: avatarSize,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0xFFFFD978), width: 1.4),
-                      boxShadow: const [BoxShadow(color: Color(0x66000000), blurRadius: 5)],
-                    ),
-                    child: ClipOval(
-                      child: avatar.isNotEmpty
-                          ? Image.network(avatar, fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Image.asset(
-                                'assets/ChatGPT Image Oct 8, 2026, 11_35_07 PM.png', fit: BoxFit.cover))
-                          : Image.asset('assets/ChatGPT Image Oct 8, 2026, 11_35_07 PM.png',
-                              fit: BoxFit.cover),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final frameWidth = constraints.maxWidth;
+            final frameHeight = frameWidth * aspectHeight;
+            final avatarSize = frameWidth * .48;
+
+            return SizedBox(
+              width: frameWidth,
+              height: frameHeight,
+              child: Stack(
+                alignment: Alignment.topCenter,
+                clipBehavior: Clip.none,
+                children: [
+                  // The square avatar is painted first, behind the transparent
+                  // circular opening in the PNG frame.
+                  Positioned(
+                    top: frameHeight * .145,
+                    child: GestureDetector(
+                      onTap: user.isEmpty ? null : () => _openRankingProfile(user),
+                      child: SizedBox(
+                        width: avatarSize,
+                        height: avatarSize,
+                        child: ClipOval(
+                          child: avatar.isNotEmpty
+                              ? Image.network(
+                                  avatar,
+                                  width: avatarSize,
+                                  height: avatarSize,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => Image.asset(
+                                    'assets/ChatGPT Image Oct 8, 2026, 11_35_07 PM.png',
+                                    width: avatarSize,
+                                    height: avatarSize,
+                                    fit: BoxFit.cover,
+                                  ),
+                                )
+                              : Image.asset(
+                                  'assets/ChatGPT Image Oct 8, 2026, 11_35_07 PM.png',
+                                  width: avatarSize,
+                                  height: avatarSize,
+                                  fit: BoxFit.cover,
+                                ),
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                  // Frame overlays the DP; contain the image at its true aspect
+                  // ratio so its round portrait aperture is not vertically stretched.
+                  Positioned.fill(
+                    child: Image.asset(
+                      asset,
+                      fit: BoxFit.fill,
+                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                    ),
+                  ),
+                  // Name stays inside the black nameplate.
+                  Positioned(
+                    left: frameWidth * .19,
+                    right: frameWidth * .19,
+                    top: frameHeight * .625,
+                    height: frameHeight * .085,
+                    child: Center(
+                      child: Text(
+                        user.isEmpty ? 'MINDO' : _displayName(user),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: isFirst ? 10 : 8.5,
+                          shadows: const [Shadow(color: Colors.black, blurRadius: 3)],
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Level value is centred in the level bar, beside the Lv. badge.
+                  Positioned(
+                    left: frameWidth * .34,
+                    right: frameWidth * .12,
+                    top: frameHeight * .735,
+                    height: frameHeight * .075,
+                    child: Center(
+                      child: Text(
+                        user.isEmpty ? '' : '$level',
+                        maxLines: 1,
+                        overflow: TextOverflow.clip,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: const Color(0xFFFFE8A0),
+                          fontWeight: FontWeight.w900,
+                          fontSize: isFirst ? 10 : 8.5,
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Coin total remains centred in the bottom black bar.
+                  Positioned(
+                    left: frameWidth * .23,
+                    right: frameWidth * .10,
+                    top: frameHeight * .835,
+                    height: frameHeight * .075,
+                    child: Center(
+                      child: Text(
+                        user.isEmpty ? '' : _compact(_coins(user)),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: const Color(0xFFFFE08A),
+                          fontWeight: FontWeight.w900,
+                          fontSize: isFirst ? 11 : 9,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              Positioned.fill(
-                // A tiny horizontal inset removes the pale edge fringe visible
-                // on the silver-blue second-place frame without changing its art.
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: rank == 2 ? 1.8 : 0),
-                  child: Image.asset(asset, fit: BoxFit.fill,
-                    errorBuilder: (_, __, ___) => const SizedBox.shrink()),
-                ),
-              ),
-              Positioned(
-                left: frameWidth * .20,
-                right: frameWidth * .20,
-                top: frameHeight * .625,
-                height: frameHeight * .075,
-                child: Center(
-                  child: Text(user.isEmpty ? 'MINDO' : _displayName(user),
-                    maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900,
-                      fontSize: isFirst ? 10 : 8.5, shadows: const [
-                        Shadow(color: Colors.black, blurRadius: 3),
-                      ])),
-                ),
-              ),
-              Positioned(
-                left: frameWidth * .34,
-                right: frameWidth * .12,
-                top: frameHeight * .725,
-                height: frameHeight * .075,
-                child: Align(
-                  alignment: Alignment.center,
-                  child: Text(user.isEmpty ? '' : '$level',
-                    maxLines: 1, style: TextStyle(color: const Color(0xFFFFE8A0),
-                      fontWeight: FontWeight.w900, fontSize: isFirst ? 10 : 8.5)),
-                ),
-              ),
-              Positioned(
-                left: frameWidth * .23,
-                right: frameWidth * .10,
-                top: frameHeight * .815,
-                height: frameHeight * .085,
-                child: Center(
-                  child: Text(user.isEmpty ? '' : _compact(_coins(user)),
-                    maxLines: 1, overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: const Color(0xFFFFE08A),
-                      fontWeight: FontWeight.w900, fontSize: isFirst ? 11 : 9)),
-                ),
-              ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
