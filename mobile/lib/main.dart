@@ -10997,7 +10997,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                         (isDaily
                             ? (rank == 1 ? .125 : rank == 3 ? .145 : .155)
                             : (adjustTopOne
-                                ? .125
+                                ? (isWeekly ? .135 : .125)
                                 : (isWeekly && rank == 2 ? .155 : isWeekly && rank == 3 ? .145 : .165))),
                     child: GestureDetector(
                       onTap: user.isEmpty ? null : () => _openRankingProfile(user),
@@ -11070,7 +11070,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                   ),
                   // Level value is centred in the level bar, beside the Lv. badge.
                   Positioned(
-                    left: frameWidth * .34,
+                    left: frameWidth * (isWeekly && rank == 2 ? .48 : .34),
                     right: frameWidth * .12,
                     top: frameHeight *
                         (isDaily
@@ -11093,7 +11093,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                   ),
                   // Coin total remains centred in the bottom black bar.
                   Positioned(
-                    left: frameWidth * .23,
+                    left: frameWidth * (isWeekly && rank == 2 ? .30 : .23),
                     right: frameWidth * .10,
                     top: frameHeight *
                         (isDaily
