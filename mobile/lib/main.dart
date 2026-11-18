@@ -9783,6 +9783,8 @@ class RoomCoverMarqueeRainbowText extends StatefulWidget {
   final double fontSize;
   final FontWeight fontWeight;
   final Duration rainbowDuration;
+  final double scrollPixelsPerSecond;
+  final Duration startPause;
 
   const RoomCoverMarqueeRainbowText({
     super.key,
@@ -9790,6 +9792,8 @@ class RoomCoverMarqueeRainbowText extends StatefulWidget {
     required this.fontSize,
     required this.fontWeight,
     this.rainbowDuration = const Duration(seconds: 3),
+    this.scrollPixelsPerSecond = 34,
+    this.startPause = const Duration(seconds: 5),
   });
 
   @override
@@ -9806,8 +9810,7 @@ class _RoomCoverMarqueeRainbowTextState
   double _textWidth = 0;
   double _availableWidth = 0;
 
-  static const double _gap = 42;
-  static const double _pixelsPerSecond = 34;
+  static const double _gap = 30;
 
   @override
   void initState() {
@@ -9835,12 +9838,14 @@ class _RoomCoverMarqueeRainbowTextState
 
     final duration = Duration(
       milliseconds:
-          (cycleDistance / _pixelsPerSecond * 1000).round().clamp(1000, 30000),
+          (cycleDistance / widget.scrollPixelsPerSecond * 1000)
+              .round()
+              .clamp(1000, 30000),
     );
 
     // Pause only at the starting position. Then move left continuously.
     while (mounted && version == _loopVersion && _isOverflowing) {
-      await Future<void>.delayed(const Duration(seconds: 5));
+      await Future<void>.delayed(widget.startPause);
       if (!mounted || version != _loopVersion || !_isOverflowing) break;
 
       await _scrollController.animateTo(
@@ -11048,7 +11053,9 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                   // Centre the user name vertically and horizontally in the black nameplate.
                   Positioned(
                     left: frameWidth * .19,
-                    right: frameWidth * .19,
+                    // Keep clear of the small status/ring marker at the right end
+                    // of the Top 1 nameplate; long names marquee inside this safe area.
+                    right: frameWidth * .29,
                     top: frameHeight * (rank == 1 ? .66 : rank == 3 ? .675 : .665),
                     height: frameHeight * .10,
                     child: Center(
@@ -11056,6 +11063,8 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                         text: user.isEmpty ? 'MINDO' : _displayName(user),
                         fontSize: isFirst ? 12 : 10.5,
                         fontWeight: FontWeight.w900,
+                        scrollPixelsPerSecond: 27,
+                        startPause: const Duration(seconds: 2),
                       ),
                     ),
                   ),
