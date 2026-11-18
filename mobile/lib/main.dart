@@ -9900,7 +9900,9 @@ class _RoomCoverMarqueeRainbowTextState
           builder: (context, constraints) {
             final availableWidth = constraints.maxWidth;
             final painter = _measureText(context);
-            final textWidth = painter.width;
+            // Add a few logical pixels beyond TextPainter's measurement so glyph
+            // overhang/rounding cannot clip the final character at the right edge.
+            final textWidth = painter.width + 4.0;
             final overflowing = textWidth > availableWidth;
 
             if (overflowing &&
@@ -9950,9 +9952,21 @@ class _RoomCoverMarqueeRainbowTextState
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          SizedBox(width: _textWidth, child: _rainbowCopy()),
+                          SizedBox(
+                            width: _textWidth,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 2),
+                              child: _rainbowCopy(),
+                            ),
+                          ),
                           const SizedBox(width: _gap),
-                          SizedBox(width: _textWidth, child: _rainbowCopy()),
+                          SizedBox(
+                            width: _textWidth,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 2),
+                              child: _rainbowCopy(),
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -11053,9 +11067,9 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                   // Centre the user name vertically and horizontally in the black nameplate.
                   Positioned(
                     left: frameWidth * .19,
-                    // Keep clear of the small status/ring marker at the right end
-                    // of the Top 1 nameplate; long names marquee inside this safe area.
-                    right: frameWidth * .29,
+                    // Keep only a small safety gap for the Top 1 status marker.
+                    // Top 2 and Top 3 use the full available nameplate width.
+                    right: frameWidth * (rank == 1 ? .22 : .15),
                     top: frameHeight * (rank == 1 ? .66 : rank == 3 ? .675 : .665),
                     height: frameHeight * .10,
                     child: Center(
