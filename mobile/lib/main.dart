@@ -9900,9 +9900,10 @@ class _RoomCoverMarqueeRainbowTextState
           builder: (context, constraints) {
             final availableWidth = constraints.maxWidth;
             final painter = _measureText(context);
-            // Add a few logical pixels beyond TextPainter's measurement so glyph
-            // overhang/rounding cannot clip the final character at the right edge.
-            final textWidth = painter.width + 4.0;
+            // Reserve a generous glyph-safety allowance. The marquee copies below
+            // render unconstrained at their natural text width, so the final glyph
+            // is never squeezed by the viewport's width.
+            final textWidth = painter.width + 12.0;
             final overflowing = textWidth > availableWidth;
 
             if (overflowing &&
@@ -9954,16 +9955,20 @@ class _RoomCoverMarqueeRainbowTextState
                         children: [
                           SizedBox(
                             width: _textWidth,
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 2),
+                            child: OverflowBox(
+                              alignment: Alignment.centerLeft,
+                              minWidth: 0,
+                              maxWidth: double.infinity,
                               child: _rainbowCopy(),
                             ),
                           ),
                           const SizedBox(width: _gap),
                           SizedBox(
                             width: _textWidth,
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 2),
+                            child: OverflowBox(
+                              alignment: Alignment.centerLeft,
+                              minWidth: 0,
+                              maxWidth: double.infinity,
                               child: _rainbowCopy(),
                             ),
                           ),
