@@ -10971,6 +10971,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
     // their current geometry until the Daily layout is approved.
     final isDaily = _period == 'daily';
     final isWeekly = _period == 'weekly';
+    final isMonthly = _period == 'monthly';
     final adjustTopOne = rank == 1 && (isDaily || isWeekly);
     final asset = rank == 1
         ? 'assets/ranking/wealth/frames/wealth_top1.png'
@@ -11003,7 +11004,10 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                     ? (isDaily ? .54 : .54)
                     : (isFirst ? .50 : .52)) *
                 (rank == 1 ? 1.03 * 1.015 : 1.0) *
-                (isWeekly && rank == 1 ? 1.01 : 1.0);
+                (isWeekly && rank == 1 ? 1.01 : 1.0) *
+                (isMonthly
+                    ? (rank == 1 ? 1.01 : (rank == 2 || rank == 3) ? 1.005 : 1.0)
+                    : 1.0);
 
             return SizedBox(
               width: frameWidth,
@@ -11027,6 +11031,9 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                             (rank == 1 ? .02 : rank == 3 ? .01 : 0) +
                             (isWeekly
                                 ? (rank == 1 ? -.02 : (rank == 2 || rank == 3) ? .015 : 0)
+                                : 0) +
+                            (isMonthly
+                                ? (rank == 1 ? -.02 : rank == 2 ? .01 : rank == 3 ? -.015 : 0)
                                 : 0)),
                     child: GestureDetector(
                       onTap: user.isEmpty ? null : () => _openRankingProfile(user),
@@ -11098,8 +11105,10 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                     top: frameHeight *
                         (isDaily
                             ? (rank == 1 ? .780 : .805)
-                            : (adjustTopOne ? .780 : (isWeekly && rank == 2 ? .790 : .815))),
-                    height: frameHeight * (adjustTopOne ? .10 : .09),
+                            : isMonthly
+                                ? .805
+                                : (adjustTopOne ? .780 : (isWeekly && rank == 2 ? .790 : .815))),
+                    height: frameHeight * (isMonthly ? .10 : (adjustTopOne ? .10 : .09)),
                     child: Center(
                       child: Text(
                         user.isEmpty ? '' : _compact(_coins(user)),
