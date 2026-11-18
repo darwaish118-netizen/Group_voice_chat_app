@@ -11006,7 +11006,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                 (rank == 1 ? 1.03 * 1.015 : 1.0) *
                 (isWeekly && rank == 1 ? 1.01 : 1.0) *
                 (isMonthly
-                    ? (rank == 1 ? 1.01 : (rank == 2 || rank == 3) ? 1.005 : 1.0)
+                    ? (rank == 1 || rank == 2 ? 1.01 : rank == 3 ? 1.005 : 1.0)
                     : 1.0);
 
             return SizedBox(
@@ -11034,6 +11034,9 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                                 : 0) +
                             (isMonthly
                                 ? (rank == 1 ? -.02 : rank == 2 ? .01 : rank == 3 ? -.015 : 0)
+                                : 0) +
+                            (isMonthly
+                                ? (rank == 1 || rank == 2 ? .015 : rank == 3 ? -.005 : 0)
                                 : 0)),
                     child: GestureDetector(
                       onTap: user.isEmpty ? null : () => _openRankingProfile(user),
@@ -11106,7 +11109,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                         (isDaily
                             ? (rank == 1 ? .780 : .805)
                             : isMonthly
-                                ? .805
+                                ? .790
                                 : (adjustTopOne ? .780 : (isWeekly && rank == 2 ? .790 : .815))),
                     height: frameHeight * (isMonthly ? .10 : (adjustTopOne ? .10 : .09)),
                     child: Center(
