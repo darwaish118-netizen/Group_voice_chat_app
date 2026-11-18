@@ -10997,17 +10997,21 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
           builder: (context, constraints) {
             final frameWidth = constraints.maxWidth;
             final frameHeight = frameWidth * aspectHeight;
-            // Daily: enlarge the portrait fills consistently across all three podiums.
-            // Other periods keep the existing values for now.
-            final avatarSize = frameWidth *
-                ((isDaily || (isWeekly && rank == 1))
-                    ? (isDaily ? .54 : .54)
-                    : (isFirst ? .50 : .52)) *
-                (rank == 1 ? 1.03 * 1.015 : 1.0) *
-                (isWeekly && rank == 1 ? 1.01 : 1.0) *
-                (isMonthly
-                    ? (rank == 1 || rank == 2 ? 1.01 : rank == 3 ? 1.005 : 1.0) * 1.01
-                    : 1.0);
+            // Align each DP to the measured transparent circular aperture in its PNG.
+            // Values are normalized to the original wealth_top1/2/3 frame artwork.
+            final apertureCenterX = rank == 1 ? .4985755 : rank == 2 ? .4990628 : .4937137;
+            final apertureCenterY = rank == 1 ? .3221685 : rank == 2 ? .3582090 : .3238950;
+            final apertureWidth = rank == 1 ? .5071225 : rank == 2 ? .5426429 : .5038685;
+            final apertureHeight = rank == 1 ? .3301105 : rank == 2 ? .3860244 : .3280387;
+            final frameScaleX = isFirst ? 1.02 : 1.0;
+            final frameScaleY = adjustTopOne ? 1.02 : 1.0;
+            // The frame art scales from its centre horizontally and bottom edge vertically.
+            final avatarCenterX = frameWidth * (.5 + (apertureCenterX - .5) * frameScaleX);
+            final avatarCenterY = frameHeight * (1 + (apertureCenterY - 1) * frameScaleY);
+            final avatarSize = [
+              frameWidth * apertureWidth * frameScaleX,
+              frameHeight * apertureHeight * frameScaleY,
+            ].reduce((a, b) => a < b ? a : b) * .98;
 
             return SizedBox(
               width: frameWidth,
@@ -11019,25 +11023,8 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                   // The square avatar is painted first, behind the transparent
                   // circular opening in the PNG frame.
                   Positioned(
-                    // Slightly lower the circular DP in all three podium frames.
-                    top: frameHeight *
-                        ((isDaily
-                            ? (rank == 1 ? .125 : rank == 3 ? .145 : .155)
-                            : (adjustTopOne
-                                ? (isWeekly ? .155 : .125)
-                                : (isWeekly && rank == 2 ? .155 : isWeekly && rank == 3 ? .145 : .165))) +
-                            .01 +
-                            ((rank == 1 || rank == 3) ? .032 : 0) -
-                            (rank == 1 ? .02 : rank == 3 ? .01 : 0) +
-                            (isWeekly
-                                ? (rank == 1 ? -.02 : (rank == 2 || rank == 3) ? .015 : 0)
-                                : 0) +
-                            (isMonthly
-                                ? (rank == 1 ? -.02 : rank == 2 ? .01 : rank == 3 ? -.015 : 0)
-                                : 0) +
-                            (isMonthly
-                                ? (rank == 1 || rank == 2 ? -.02 : rank == 3 ? .015 : 0)
-                                : 0)),
+                    left: avatarCenterX - avatarSize / 2,
+                    top: avatarCenterY - avatarSize / 2,
                     child: GestureDetector(
                       onTap: user.isEmpty ? null : () => _openRankingProfile(user),
                       child: SizedBox(
