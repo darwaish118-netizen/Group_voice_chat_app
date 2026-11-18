@@ -11105,7 +11105,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                         style: TextStyle(
                           color: const Color(0xFFFFE08A),
                           fontWeight: FontWeight.w900,
-                          fontSize: isFirst ? 11 : 9,
+                          fontSize: isFirst ? 13 : 11.5,
                         ),
                       ),
                     ),
