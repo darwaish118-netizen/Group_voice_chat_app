@@ -10962,8 +10962,6 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
             ? 829 / 603
             : 1484 / 1060;
     final avatar = _avatar(user);
-    final level = user['wealth_level'] ?? user['level'] ?? 1;
-    final charmLevel = user['charm_level'] ?? 1;
 
     return Expanded(
       flex: isFirst ? 12 : 10,
@@ -10991,14 +10989,13 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                   // The square avatar is painted first, behind the transparent
                   // circular opening in the PNG frame.
                   Positioned(
-                    // Daily: Top 3 portrait moves slightly upward; Top 1 grows,
-                    // while Top 2 keeps its already-correct portrait position.
+                    // Slightly lower the circular DP in all three podium frames.
                     top: frameHeight *
-                        (isDaily
+                        ((isDaily
                             ? (rank == 1 ? .125 : rank == 3 ? .145 : .155)
                             : (adjustTopOne
                                 ? (isWeekly ? .155 : .125)
-                                : (isWeekly && rank == 2 ? .155 : isWeekly && rank == 3 ? .145 : .165))),
+                                : (isWeekly && rank == 2 ? .155 : isWeekly && rank == 3 ? .145 : .165))) + .01),
                     child: GestureDetector(
                       onTap: user.isEmpty ? null : () => _openRankingProfile(user),
                       child: SizedBox(
@@ -11044,15 +11041,12 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                       ),
                     ),
                   ),
-                  // Name stays inside the black nameplate.
+                  // Centre the user name vertically and horizontally in the black nameplate.
                   Positioned(
                     left: frameWidth * .19,
                     right: frameWidth * .19,
-                    top: frameHeight *
-                        (isDaily
-                            ? (rank == 1 ? .575 : rank == 2 ? .590 : .605)
-                            : (adjustTopOne ? .575 : (isWeekly && rank == 2 ? .590 : .615))),
-                    height: frameHeight * (adjustTopOne ? .105 : .095),
+                    top: frameHeight * .64,
+                    height: frameHeight * .10,
                     child: Center(
                       child: Text(
                         user.isEmpty ? 'MINDO' : _displayName(user),
@@ -11064,29 +11058,6 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                           fontWeight: FontWeight.w900,
                           fontSize: isFirst ? 10 : 8.5,
                           shadows: const [Shadow(color: Colors.black, blurRadius: 3)],
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Level value is centred in the level bar, beside the Lv. badge.
-                  Positioned(
-                    left: frameWidth * .34,
-                    right: frameWidth * .12,
-                    top: frameHeight *
-                        (isDaily
-                            ? (rank == 1 ? .680 : .705)
-                            : (adjustTopOne ? .680 : (isWeekly && rank == 2 ? .690 : .715))),
-                    height: frameHeight * (adjustTopOne ? .10 : .09),
-                    child: Center(
-                      child: Text(
-                        user.isEmpty ? '' : '$level     $charmLevel',
-                        maxLines: 1,
-                        overflow: TextOverflow.clip,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: const Color(0xFFFFE8A0),
-                          fontWeight: FontWeight.w900,
-                          fontSize: isFirst ? 8.5 : 7.5,
                         ),
                       ),
                     ),
