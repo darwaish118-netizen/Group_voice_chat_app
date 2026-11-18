@@ -10995,7 +10995,9 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                             ? (rank == 1 ? .125 : rank == 3 ? .145 : .155)
                             : (adjustTopOne
                                 ? (isWeekly ? .155 : .125)
-                                : (isWeekly && rank == 2 ? .155 : isWeekly && rank == 3 ? .145 : .165))) + .01),
+                                : (isWeekly && rank == 2 ? .155 : isWeekly && rank == 3 ? .145 : .165))) +
+                            .01 +
+                            ((rank == 1 || rank == 3) ? .012 : 0)),
                     child: GestureDetector(
                       onTap: user.isEmpty ? null : () => _openRankingProfile(user),
                       child: SizedBox(
@@ -11045,7 +11047,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                   Positioned(
                     left: frameWidth * .19,
                     right: frameWidth * .19,
-                    top: frameHeight * .64,
+                    top: frameHeight * (rank == 1 ? .64 : .655),
                     height: frameHeight * .10,
                     child: Center(
                       child: Text(
@@ -11064,8 +11066,8 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                   ),
                   // Coin total remains centred in the bottom black bar.
                   Positioned(
-                    left: frameWidth * (isWeekly && rank == 2 ? .30 : .23),
-                    right: frameWidth * .10,
+                    left: frameWidth * (isWeekly && rank == 2 ? .26 : .19),
+                    right: frameWidth * .15,
                     top: frameHeight *
                         (isDaily
                             ? (rank == 1 ? .780 : .805)
