@@ -11054,7 +11054,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                     child: Center(
                       child: RoomCoverMarqueeRainbowText(
                         text: user.isEmpty ? 'MINDO' : _displayName(user),
-                        fontSize: isFirst ? 11 : 9.5,
+                        fontSize: isFirst ? 12 : 10.5,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
