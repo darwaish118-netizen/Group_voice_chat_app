@@ -10998,7 +10998,8 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                                 ? (isWeekly ? .155 : .125)
                                 : (isWeekly && rank == 2 ? .155 : isWeekly && rank == 3 ? .145 : .165))) +
                             .01 +
-                            ((rank == 1 || rank == 3) ? .032 : 0)),
+                            ((rank == 1 || rank == 3) ? .032 : 0) -
+                            (rank == 1 ? .03 : rank == 3 ? .01 : 0)),
                     child: GestureDetector(
                       onTap: user.isEmpty ? null : () => _openRankingProfile(user),
                       child: SizedBox(
@@ -11051,17 +11052,10 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                     top: frameHeight * (rank == 1 ? .65 : rank == 3 ? .665 : .655),
                     height: frameHeight * .10,
                     child: Center(
-                      child: Text(
-                        user.isEmpty ? 'MINDO' : _displayName(user),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w900,
-                          fontSize: isFirst ? 10 : 8.5,
-                          shadows: const [Shadow(color: Colors.black, blurRadius: 3)],
-                        ),
+                      child: RoomCoverMarqueeRainbowText(
+                        text: user.isEmpty ? 'MINDO' : _displayName(user),
+                        fontSize: isFirst ? 10 : 8.5,
+                        fontWeight: FontWeight.w900,
                       ),
                     ),
                   ),
