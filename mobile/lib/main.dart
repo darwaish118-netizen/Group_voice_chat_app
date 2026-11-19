@@ -11009,7 +11009,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
             // by 1.5% consistently across Daily, Weekly and Monthly.
             final avatarSize = frameWidth *
                 apertureDiameter *
-                (rank == 1 ? 1.03 : 1.03 * 1.015);
+                (rank == 1 ? 1.03 : 1.03 * 1.02);
             final avatarLeft = frameWidth * apertureCenterX - avatarSize / 2;
             // Apply the requested downward adjustment consistently on Daily,
             // Weekly and Monthly: Top 1 = 0.5%, Top 2/3 = 1% of frame height.
