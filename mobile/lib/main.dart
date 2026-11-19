@@ -11007,9 +11007,9 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
             // align its centre to the measured aperture centre (not guessed top offsets).
             // Top 1 keeps its existing size. Top 2 and Top 3 receive
             // an additional 2.5% increase across Daily, Weekly and Monthly.
-            final avatarSize = frameWidth *
-                apertureDiameter *
-                (rank == 1 ? 1.03 * 1.01 : 1.03 * 1.025 * 1.025);
+            // Use the same DP size for all three podium frames:
+            // 52% of the rendered frame width on Daily, Weekly and Monthly.
+            final avatarSize = frameWidth * 0.52;
             final avatarLeft = frameWidth * apertureCenterX - avatarSize / 2;
             // Apply the requested downward adjustment consistently on Daily,
             // Weekly and Monthly: Top 1 = 0.5%, Top 2/3 = 1% of frame height.
