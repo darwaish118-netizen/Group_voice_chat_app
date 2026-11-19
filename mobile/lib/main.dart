@@ -11005,9 +11005,16 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
             final frameHeight = frameWidth * aspectHeight;
             // Keep the portrait just inside the transparent aperture, and
             // align its centre to the measured aperture centre (not guessed top offsets).
-            final avatarSize = frameWidth * apertureDiameter * 1.02;
+            // Increase every podium avatar by a further 1% while keeping
+            // the same frame-specific aperture measurement.
+            final avatarSize = frameWidth * apertureDiameter * 1.03;
             final avatarLeft = frameWidth * apertureCenterX - avatarSize / 2;
-            final avatarTop = frameHeight * apertureCenterY - avatarSize / 2;
+            // Apply the requested downward adjustment consistently on Daily,
+            // Weekly and Monthly: Top 1 = 0.5%, Top 2/3 = 1% of frame height.
+            final avatarTop =
+                frameHeight * apertureCenterY -
+                avatarSize / 2 +
+                frameHeight * (rank == 1 ? 0.005 : 0.01);
 
             return SizedBox(
               width: frameWidth,
