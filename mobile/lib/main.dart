@@ -11005,7 +11005,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
             final frameHeight = frameWidth * aspectHeight;
             // Keep the portrait just inside the transparent aperture, and
             // align its centre to the measured aperture centre (not guessed top offsets).
-            final avatarSize = frameWidth * apertureDiameter * .97;
+            final avatarSize = frameWidth * apertureDiameter * 1.02;
             final avatarLeft = frameWidth * apertureCenterX - avatarSize / 2;
             final avatarTop = frameHeight * apertureCenterY - avatarSize / 2;
 
