@@ -11005,9 +11005,11 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
             final frameHeight = frameWidth * aspectHeight;
             // Keep the portrait just inside the transparent aperture, and
             // align its centre to the measured aperture centre (not guessed top offsets).
-            // Increase every podium avatar by a further 1% while keeping
-            // the same frame-specific aperture measurement.
-            final avatarSize = frameWidth * apertureDiameter * 1.03;
+            // Keep Top 1 untouched. Enlarge only Top 2 and Top 3
+            // by 1.5% consistently across Daily, Weekly and Monthly.
+            final avatarSize = frameWidth *
+                apertureDiameter *
+                (rank == 1 ? 1.03 : 1.03 * 1.015);
             final avatarLeft = frameWidth * apertureCenterX - avatarSize / 2;
             // Apply the requested downward adjustment consistently on Daily,
             // Weekly and Monthly: Top 1 = 0.5%, Top 2/3 = 1% of frame height.
@@ -11076,7 +11078,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                     height: frameHeight * .10,
                     child: Center(
                       child: RoomCoverMarqueeRainbowText(
-                        text: user.isEmpty ? 'MINDO' : _displayName(user),
+                        text: user.isEmpty ? '*******' : _displayName(user),
                         fontSize: isFirst ? 12 : 10.5,
                         fontWeight: FontWeight.w900,
                         scrollPixelsPerSecond: 27,
@@ -11286,7 +11288,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
             child: Column(children: [
               Text('TOP $rank', style: TextStyle(color: accent, fontWeight: FontWeight.w900, fontSize: first ? 13 : 11)),
               const SizedBox(height: 3),
-              Text(hasUser ? _displayName(user) : 'MINDO', maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center,
+              Text(hasUser ? _displayName(user) : '*******', maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: first ? 13 : 11)),
               if (hasUser)
                 Text('Lv.${user['level'] ?? 1}  •  ${user['country'] ?? ''}', maxLines: 1, overflow: TextOverflow.ellipsis,
