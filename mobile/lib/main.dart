@@ -11038,20 +11038,10 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                             (isWeekly
                                 ? (rank == 1 ? -.02 : (rank == 2 || rank == 3) ? .015 : 0)
                                 : 0) +
+                            // Monthly follow-up: move Top 1 and Top 2 up 1%,
+                            // and Top 3 down 0.5% from the currently displayed positions.
                             (isMonthly
-                                ? (rank == 1 ? -.02 : rank == 2 ? .01 : rank == 3 ? -.015 : 0)
-                                : 0) +
-                            (isMonthly
-                                ? (rank == 1
-                                    ? 0.0
-                                    : rank == 2
-                                        ? .02
-                                        : rank == 3
-                                            ? 0.0
-                                            : 0)
-                                : 0) +
-                            (isMonthly
-                                ? (rank == 1 ? .02 : rank == 2 ? .01 : rank == 3 ? -.015 : 0)
+                                ? (rank == 1 ? -.01 : rank == 2 ? .03 : rank == 3 ? -.025 : 0)
                                 : 0)),
                     child: GestureDetector(
                       onTap: user.isEmpty ? null : () => _openRankingProfile(user),
