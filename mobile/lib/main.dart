@@ -11120,6 +11120,128 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
     );
   }
 
+  Widget _charmPodiumUser(int rank, Map<String, dynamic> user) {
+    final isFirst = rank == 1;
+    final asset = rank == 1
+        ? 'assets/ranking/charm/Charm_top1.png'
+        : rank == 2
+            ? 'assets/ranking/charm/Charm_top2.png'
+            : 'assets/ranking/charm/Charm_top3.png';
+
+    // These ratios follow the supplied Charm PNG dimensions and circular
+    // portrait openings. The DP is painted behind the transparent frame.
+    final frameAspect = rank == 1
+        ? 723 / 619
+        : rank == 2
+            ? 724 / 631
+            : 724 / 628;
+    final apertureCenterX = .50;
+    final apertureCenterY = rank == 2 ? .475 : .465;
+    final avatarSizeFactor = .52;
+    final avatar = _avatar(user);
+
+    return Expanded(
+      child: Padding(
+        padding: EdgeInsets.only(top: isFirst ? 0 : 24),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final frameWidth = constraints.maxWidth;
+            final frameHeight = frameWidth * frameAspect;
+            final avatarSize = frameWidth * avatarSizeFactor;
+            final avatarLeft = frameWidth * apertureCenterX - avatarSize / 2;
+            final avatarTop =
+                frameHeight * apertureCenterY - avatarSize / 2;
+
+            return SizedBox(
+              width: frameWidth,
+              height: frameHeight,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Positioned(
+                    left: avatarLeft,
+                    top: avatarTop,
+                    child: GestureDetector(
+                      onTap: user.isEmpty ? null : () => _openRankingProfile(user),
+                      child: SizedBox(
+                        width: avatarSize,
+                        height: avatarSize,
+                        child: ClipOval(
+                          child: avatar.isNotEmpty
+                              ? Image.network(
+                                  avatar,
+                                  width: avatarSize,
+                                  height: avatarSize,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => Image.asset(
+                                    'assets/ChatGPT Image Oct 8, 2026, 11_35_07 PM.png',
+                                    width: avatarSize,
+                                    height: avatarSize,
+                                    fit: BoxFit.cover,
+                                  ),
+                                )
+                              : Image.asset(
+                                  'assets/ChatGPT Image Oct 8, 2026, 11_35_07 PM.png',
+                                  width: avatarSize,
+                                  height: avatarSize,
+                                  fit: BoxFit.cover,
+                                ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned.fill(
+                    child: Image.asset(
+                      asset,
+                      fit: BoxFit.fill,
+                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                    ),
+                  ),
+                  // Username is centred in the first black nameplate.
+                  Positioned(
+                    left: frameWidth * .17,
+                    right: frameWidth * .17,
+                    top: frameHeight * .695,
+                    height: frameHeight * .105,
+                    child: Center(
+                      child: RoomCoverMarqueeRainbowText(
+                        text: user.isEmpty ? '*******' : _displayName(user),
+                        fontSize: isFirst ? 12 : 10.5,
+                        fontWeight: FontWeight.w900,
+                        scrollPixelsPerSecond: 27,
+                        startPause: const Duration(seconds: 2),
+                      ),
+                    ),
+                  ),
+                  // Charm value is displayed in the lower coin bar.
+                  Positioned(
+                    left: frameWidth * .25,
+                    right: frameWidth * .13,
+                    top: frameHeight * .805,
+                    height: frameHeight * .085,
+                    child: Center(
+                      child: Text(
+                        user.isEmpty ? '' : _compact(_coins(user)),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: const Color(0xFFFFE08A),
+                          fontWeight: FontWeight.w900,
+                          fontSize: isFirst ? 13 : 11.5,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
   Widget _wealthUserRow(int index, Map<String, dynamic> user) {
     final rank = index + 4;
     final avatar = _avatar(user);
@@ -11398,17 +11520,24 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                   fit: BoxFit.cover,
                   opacity: .72,
                 )
-              : null,
-          gradient: _category == 'wealth' ? null : const LinearGradient(
+              : _category == 'charm'
+                  ? const DecorationImage(
+                      image: AssetImage('assets/ranking/charm/charm_rankings_daily_weekly_monthly.png'),
+                      fit: BoxFit.cover,
+                    )
+                  : null,
+          gradient: (_category == 'wealth' || _category == 'charm') ? null : const LinearGradient(
             begin: Alignment.topCenter, end: Alignment.bottomCenter,
             colors: [Color(0xFF6A370C), Color(0xFF321807), Color(0xFF160B06)]),
         ),
         child: Stack(children: [
           // Subtle palace columns and warm royal lighting, kept behind live ranking data.
-          Positioned(left: 0, top: 0, bottom: 0, child: Container(width: 9,
-            decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFFFFE9A0), Color(0xFF8C4B12), Color(0xFFFFD15B)])))),
-          Positioned(right: 0, top: 0, bottom: 0, child: Container(width: 9,
-            decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFFFFE9A0), Color(0xFF8C4B12), Color(0xFFFFD15B)])))),
+          if (_category != 'charm') ...[
+            Positioned(left: 0, top: 0, bottom: 0, child: Container(width: 9,
+              decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFFFFE9A0), Color(0xFF8C4B12), Color(0xFFFFD15B)])))),
+            Positioned(right: 0, top: 0, bottom: 0, child: Container(width: 9,
+              decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFFFFE9A0), Color(0xFF8C4B12), Color(0xFFFFD15B)])))),
+          ],
           SafeArea(child: Column(children: [
             Padding(padding: const EdgeInsets.fromLTRB(14, 9, 14, 7), child: Row(children: [
               _categoryButton('WEALTH', 'wealth'), const SizedBox(width: 6),
@@ -11440,15 +11569,21 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                           _category == 'wealth'
                               ? _wealthPodiumUser(2, top.length > 1 ? top[1] : <String, dynamic>{})
-                              : _podiumUser(2, top.length > 1 ? top[1] : <String, dynamic>{}),
+                              : _category == 'charm'
+                                  ? _charmPodiumUser(2, top.length > 1 ? top[1] : <String, dynamic>{})
+                                  : _podiumUser(2, top.length > 1 ? top[1] : <String, dynamic>{}),
                           const SizedBox(width: 4),
                           _category == 'wealth'
                               ? _wealthPodiumUser(1, top.isNotEmpty ? top[0] : <String, dynamic>{})
-                              : _podiumUser(1, top.isNotEmpty ? top[0] : <String, dynamic>{}),
+                              : _category == 'charm'
+                                  ? _charmPodiumUser(1, top.isNotEmpty ? top[0] : <String, dynamic>{})
+                                  : _podiumUser(1, top.isNotEmpty ? top[0] : <String, dynamic>{}),
                           const SizedBox(width: 4),
                           _category == 'wealth'
                               ? _wealthPodiumUser(3, top.length > 2 ? top[2] : <String, dynamic>{})
-                              : _podiumUser(3, top.length > 2 ? top[2] : <String, dynamic>{}),
+                              : _category == 'charm'
+                                  ? _charmPodiumUser(3, top.length > 2 ? top[2] : <String, dynamic>{})
+                                  : _podiumUser(3, top.length > 2 ? top[2] : <String, dynamic>{}),
                         ]),
                         const SizedBox(height: 13),
                       if (rest.isNotEmpty) ...[
