@@ -35,11 +35,12 @@ jobs:
         run: |
           sed -i '/<manifest /a\    <uses-permission android:name="android.permission.INTERNET"/>' android/app/src/main/AndroidManifest.xml
 
+      # Cache the NDK between workflow runs so it does not need to be downloaded each time.
       - name: Cache Android NDK 28.2.13676358
         uses: actions/cache@v4
         with:
-          path: ${{ env.ANDROID_SDK_ROOT }}/ndk/28.2.13676358
-          key: ${{ runner.os }}-android-ndk-28.2.13676358-v1
+          path: ${{ env.ANDROID_HOME }}/ndk/28.2.13676358
+          key: ${{ runner.os }}-android-ndk-28.2.13676358-v2
 
       - name: Ensure Android NDK 28.2.13676358
         shell: bash
@@ -62,15 +63,14 @@ jobs:
             exit 1
           fi
 
-          # Reuse a complete NDK installation; do not uninstall it on every run.
+          # Reuse a complete NDK installation; never uninstall it on every run.
           NDK_DIR="$ANDROID_SDK/ndk/$NDK_VERSION"
           if [ -s "$NDK_DIR/source.properties" ]; then
             echo "NDK $NDK_VERSION is already present; reusing it."
             exit 0
           fi
 
-          # Accept SDK licenses, then retry installation to tolerate transient
-          # repository/network failures. Remove only an incomplete NDK folder.
+          # Accept SDK licenses, checking sdkmanager's status rather than yes/SIGPIPE.
           set +e
           yes | "$SDKMANAGER" --licenses
           license_status=${PIPESTATUS[1]}
@@ -80,6 +80,7 @@ jobs:
             exit "$license_status"
           fi
 
+          # Remove only an incomplete NDK folder, then retry transient download failures.
           rm -rf "$NDK_DIR"
           for attempt in 1 2 3; do
             echo "Installing Android NDK $NDK_VERSION (attempt $attempt/3)..."
@@ -137,12 +138,6 @@ jobs:
           GRADLE
 
           echo "Disabled lint tasks only in third-party Android plugin modules: $GRADLE_FILE"
-
-
-
-
-
-
 
       - name: Build APK
         working-directory: mobile
