@@ -35,7 +35,13 @@ jobs:
         run: |
           sed -i '/<manifest /a\    <uses-permission android:name="android.permission.INTERNET"/>' android/app/src/main/AndroidManifest.xml
 
-      - name: Reinstall Android NDK 28.2.13676358
+      - name: Cache Android NDK 28.2.13676358
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.ANDROID_SDK_ROOT }}/ndk/28.2.13676358
+          key: ${{ runner.os }}-android-ndk-28.2.13676358-v1
+
+      - name: Ensure Android NDK 28.2.13676358
         shell: bash
         run: |
           set -euo pipefail
@@ -51,37 +57,51 @@ jobs:
           if [ ! -x "$SDKMANAGER" ]; then
             SDKMANAGER="$(find "$ANDROID_SDK/cmdline-tools" -type f -name sdkmanager 2>/dev/null | head -n 1 || true)"
           fi
-
           if [ -z "$SDKMANAGER" ] || [ ! -x "$SDKMANAGER" ]; then
             echo "Android sdkmanager was not found" >&2
             exit 1
           fi
 
-          # sdkmanager may close stdin after accepting all licenses.
-          # With pipefail, that can make `yes` report SIGPIPE even when
-          # sdkmanager itself succeeds. Check the sdkmanager exit code only.
-          run_sdkmanager_with_licenses() {
+          # Reuse a complete NDK installation; do not uninstall it on every run.
+          NDK_DIR="$ANDROID_SDK/ndk/$NDK_VERSION"
+          if [ -s "$NDK_DIR/source.properties" ]; then
+            echo "NDK $NDK_VERSION is already present; reusing it."
+            exit 0
+          fi
+
+          # Accept SDK licenses, then retry installation to tolerate transient
+          # repository/network failures. Remove only an incomplete NDK folder.
+          set +e
+          yes | "$SDKMANAGER" --licenses
+          license_status=${PIPESTATUS[1]}
+          set -e
+          if [ "$license_status" -ne 0 ]; then
+            echo "sdkmanager --licenses failed with exit code $license_status" >&2
+            exit "$license_status"
+          fi
+
+          rm -rf "$NDK_DIR"
+          for attempt in 1 2 3; do
+            echo "Installing Android NDK $NDK_VERSION (attempt $attempt/3)..."
             set +e
-            yes | "$SDKMANAGER" "$@"
-            local pipeline_status=( "${PIPESTATUS[@]}" )
+            yes | "$SDKMANAGER" --install "ndk;$NDK_VERSION"
+            install_status=${PIPESTATUS[1]}
             set -e
 
-            local sdkmanager_status="${pipeline_status[1]}"
-            if [ "$sdkmanager_status" -ne 0 ]; then
-              echo "sdkmanager failed with exit code $sdkmanager_status: $*" >&2
-              return "$sdkmanager_status"
+            if [ "$install_status" -eq 0 ] && [ -s "$NDK_DIR/source.properties" ]; then
+              echo "NDK $NDK_VERSION installed successfully."
+              exit 0
             fi
-            return 0
-          }
 
-          "$SDKMANAGER" --uninstall "ndk;$NDK_VERSION" || true
-          rm -rf "$ANDROID_SDK/ndk/$NDK_VERSION"
+            echo "NDK installation attempt $attempt failed (sdkmanager exit: $install_status)." >&2
+            rm -rf "$NDK_DIR"
+            if [ "$attempt" -lt 3 ]; then
+              sleep $((attempt * 10))
+            fi
+          done
 
-          run_sdkmanager_with_licenses --licenses
-          run_sdkmanager_with_licenses --install "ndk;$NDK_VERSION"
-
-          test -d "$ANDROID_SDK/ndk/$NDK_VERSION"
-          echo "NDK $NDK_VERSION installed successfully."
+          echo "Could not install Android NDK $NDK_VERSION after 3 attempts." >&2
+          exit 1
 
       - name: Flutter version
         run: flutter --version
