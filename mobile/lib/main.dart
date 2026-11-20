@@ -11147,10 +11147,17 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
           builder: (context, constraints) {
             final frameWidth = constraints.maxWidth;
             final frameHeight = frameWidth * frameAspect;
-            final avatarSize = frameWidth * avatarSizeFactor;
+            // Extend the frame upward by 5% while keeping its bottom edge
+            // anchored, so the name and coin plates stay in their positions.
+            final expandedFrameHeight = frameHeight * 1.05;
+            final avatarSize = frameWidth * avatarSizeFactor * 1.015;
             final avatarLeft = frameWidth * apertureCenterX - avatarSize / 2;
-            final avatarTop =
-                frameHeight * apertureCenterY - avatarSize / 2;
+            // Recalculate the aperture centre for the upward-extended frame,
+            // then move the DP upward by a further 2% of the frame height.
+            final adjustedApertureCenterY =
+                (expandedFrameHeight * apertureCenterY) - (frameHeight * .05);
+            final avatarTop = adjustedApertureCenterY -
+                avatarSize / 2 - (frameHeight * .02);
 
             return SizedBox(
               width: frameWidth,
@@ -11190,7 +11197,11 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                       ),
                     ),
                   ),
-                  Positioned.fill(
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    top: -frameHeight * .05,
+                    height: expandedFrameHeight,
                     child: Image.asset(
                       asset,
                       fit: BoxFit.fill,
