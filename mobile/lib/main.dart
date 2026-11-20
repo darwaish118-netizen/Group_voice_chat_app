@@ -11130,11 +11130,15 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
 
     // These ratios follow the supplied Charm PNG dimensions and circular
     // portrait openings. The DP is painted behind the transparent frame.
+    // The source PNGs are rendered 5% taller than the layout box below
+    // (expandedFrameHeight), so divide each source image's true H/W ratio
+    // by 1.05. This keeps the artwork at its native aspect ratio instead of
+    // stretching it vertically.
     final frameAspect = rank == 1
-        ? 723 / 619
+        ? (998 / 619) / 1.05
         : rank == 2
-            ? 724 / 631
-            : 724 / 628;
+            ? (996 / 619) / 1.05
+            : (997 / 635) / 1.05;
     final apertureCenterX = .50;
     final apertureCenterY = rank == 2 ? .475 : .465;
     final avatarSizeFactor = .52;
