@@ -11467,7 +11467,8 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
     final avatar = _avatar(user);
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      constraints: const BoxConstraints(minHeight: 68),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
       decoration: BoxDecoration(
         // Semi-transparent Rank 4+ row lets the ranking background show through.
         gradient: LinearGradient(colors: [
@@ -11487,7 +11488,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
           child: CircleAvatar(radius: 22, backgroundColor: Colors.brown.shade700,
             backgroundImage: avatar.isNotEmpty ? NetworkImage(avatar) : null,
             child: avatar.isEmpty ? const Icon(Icons.person, color: Colors.white70) : null)),
-        const SizedBox(width: 10),
+        const SizedBox(width: 6),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           RoomCoverMarqueeRainbowText(
             text: _displayName(user),
@@ -11497,7 +11498,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
             startPause: const Duration(seconds: 2),
           ),
         ])),
-        const Icon(Icons.circle, color: Color(0xFFFFD34F), size: 16),
+        const Icon(Icons.monetization_on, color: Color(0xFFFFD34F), size: 17),
         const SizedBox(width: 4),
         Text(_compact(_coins(user)), style: const TextStyle(color: Color(0xFFFFE08A), fontWeight: FontWeight.w900, fontSize: 13)),
       ]),
@@ -11510,6 +11511,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
     final coins = mine == null ? 0 : _coins(mine);
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 7, 12, 12),
+      constraints: const BoxConstraints(minHeight: 68),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
       decoration: BoxDecoration(
         gradient: const LinearGradient(colors: [Color(0xFF63350D), Color(0xFF211006)]),
@@ -11612,7 +11614,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                           color: _royalGold,
                           onRefresh: _load,
                           child: ListView(
-                            padding: const EdgeInsets.fromLTRB(13, 190, 13, 10),
+                            padding: const EdgeInsets.fromLTRB(13, 202, 13, 10),
                             children: [
                               if (rest.isNotEmpty)
                                 ...rest.asMap().entries.map((e) => _userRow(e.key, e.value)),
