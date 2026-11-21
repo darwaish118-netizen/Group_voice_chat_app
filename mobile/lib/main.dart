@@ -10894,7 +10894,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
       final end = endRaw == null ? null : DateTime.tryParse(endRaw)?.toLocal();
       if (!mounted) return;
       setState(() {
-        _ranking = list.take(_category == 'wealth' ? 30 : 50).toList();
+        _ranking = list.take((_category == 'wealth' || _category == 'charm') ? 30 : 50).toList();
         _myRank = me is Map ? Map<String, dynamic>.from(me) : null;
         _periodEnd = end;
         _loading = false;
@@ -11241,11 +11241,11 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                       ),
                     ),
                   ),
-                  // Charm value is displayed in the lower coin bar.
+                  // Charm value is displayed slightly higher, centred in the lower coin bar.
                   Positioned(
                     left: frameWidth * .19,
                     right: frameWidth * .19,
-                    top: frameHeight * .790,
+                    top: frameHeight * .775,
                     height: frameHeight * .070,
                     child: Center(
                       child: Text(
@@ -11415,7 +11415,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
         padding: EdgeInsets.only(top: first ? 0 : 25),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           // The rank number sits above the crown, as in the Golden Royal reference.
-          Text('#$rank', style: TextStyle(color: _royalLight,
+          Text('$rank', style: TextStyle(color: _royalLight,
             fontWeight: FontWeight.w900, fontSize: first ? 22 : 19,
             shadows: const [Shadow(color: Colors.black, blurRadius: 7)])),
           SizedBox(height: first ? 1 : 3),
@@ -11469,10 +11469,14 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [Color(0xFF4A280F), Color(0xFF241208)]),
+        // Semi-transparent Rank 4+ row lets the ranking background show through.
+        gradient: LinearGradient(colors: [
+          const Color(0xFF4A280F).withOpacity(.58),
+          const Color(0xFF241208).withOpacity(.48),
+        ]),
         borderRadius: BorderRadius.circular(13),
-        border: Border.all(color: const Color(0xFFD99A32).withOpacity(.65)),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(.35), blurRadius: 7, offset: const Offset(0, 3))],
+        border: Border.all(color: const Color(0xFFFFD15B), width: 1.5),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(.25), blurRadius: 7, offset: const Offset(0, 3))],
       ),
       child: Row(children: [
         SizedBox(width: 28, child: Text('$rank', textAlign: TextAlign.center,
@@ -11485,12 +11489,15 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
             child: avatar.isEmpty ? const Icon(Icons.person, color: Colors.white70) : null)),
         const SizedBox(width: 10),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(_displayName(user), maxLines: 1, overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13)),
-          Text('Lv.${user['level'] ?? 1}  ${user['country'] ?? ''}  •  ID: ${user['public_uid'] ?? '—'}',
-            maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white70, fontSize: 9)),
+          RoomCoverMarqueeRainbowText(
+            text: _displayName(user),
+            fontSize: 13,
+            fontWeight: FontWeight.w900,
+            scrollPixelsPerSecond: 27,
+            startPause: const Duration(seconds: 2),
+          ),
         ])),
-        const Icon(Icons.monetization_on_rounded, color: Color(0xFFFFD34F), size: 19),
+        const Icon(Icons.circle, color: Color(0xFFFFD34F), size: 16),
         const SizedBox(width: 4),
         Text(_compact(_coins(user)), style: const TextStyle(color: Color(0xFFFFE08A), fontWeight: FontWeight.w900, fontSize: 13)),
       ]),
@@ -11511,12 +11518,17 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
         boxShadow: const [BoxShadow(color: Color(0x99FFB52E), blurRadius: 13)],
       ),
       child: Row(children: [
-        const Icon(Icons.workspace_premium_rounded, color: Color(0xFFFFE08A), size: 27),
+        // Show the actual rank number instead of the medal.
+        SizedBox(
+          width: 30,
+          child: Text(rank, textAlign: TextAlign.center,
+            style: const TextStyle(color: Color(0xFFFFD45E), fontWeight: FontWeight.w900, fontSize: 20)),
+        ),
         const SizedBox(width: 9),
         const Expanded(child: Text('MY RANK', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: .6))),
-        Text('#$rank', style: const TextStyle(color: Color(0xFFFFD45E), fontWeight: FontWeight.w900, fontSize: 20)),
-        const SizedBox(width: 12),
-        Text('${_compact(coins)} Coins', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12)),
+        const Icon(Icons.circle, color: Color(0xFFFFD34F), size: 16),
+        const SizedBox(width: 5),
+        Text(_compact(coins), style: const TextStyle(color: Color(0xFFFFE08A), fontWeight: FontWeight.w900, fontSize: 12)),
       ]),
     );
   }
@@ -11593,7 +11605,36 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                     const SizedBox(height: 7), Text(_error!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white70, fontSize: 11)),
                     const SizedBox(height: 12), OutlinedButton.icon(onPressed: _load, icon: const Icon(Icons.refresh), label: const Text('Retry')),
                   ])))
-                : RefreshIndicator(color: _royalGold, onRefresh: _load, child: ListView(padding: const EdgeInsets.fromLTRB(13, 8, 13, 10), children: [
+                : _category == 'charm'
+                    ? Stack(children: [
+                        // Rank 4+ scrolls underneath the fixed top-three podium.
+                        Positioned.fill(child: RefreshIndicator(
+                          color: _royalGold,
+                          onRefresh: _load,
+                          child: ListView(
+                            padding: const EdgeInsets.fromLTRB(13, 190, 13, 10),
+                            children: [
+                              if (rest.isNotEmpty)
+                                ...rest.asMap().entries.map((e) => _userRow(e.key, e.value)),
+                            ],
+                          ),
+                        )),
+                        Positioned(top: 0, left: 13, right: 13, child: Container(
+                          padding: const EdgeInsets.only(bottom: 5),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                              colors: [const Color(0xFF1B0D08).withOpacity(.96), const Color(0xFF1B0D08).withOpacity(.82), const Color(0x001B0D08)]),
+                          ),
+                          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            _charmPodiumUser(2, top.length > 1 ? top[1] : <String, dynamic>{}),
+                            const SizedBox(width: 4),
+                            _charmPodiumUser(1, top.isNotEmpty ? top[0] : <String, dynamic>{}),
+                            const SizedBox(width: 4),
+                            _charmPodiumUser(3, top.length > 2 ? top[2] : <String, dynamic>{}),
+                          ]),
+                        )),
+                      ])
+                    : RefreshIndicator(color: _royalGold, onRefresh: _load, child: ListView(padding: const EdgeInsets.fromLTRB(13, 8, 13, 10), children: [
                         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                           _category == 'wealth'
                               ? _wealthPodiumUser(2, top.length > 1 ? top[1] : <String, dynamic>{})
