@@ -11158,11 +11158,11 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
             // by Daily, Weekly and Monthly periods.
             final avatarSize = frameWidth * avatarSizeFactor * 1.02;
             final avatarLeft = frameWidth * apertureCenterX - avatarSize / 2;
-            // DP position adjustment; shared by Daily, Weekly and Monthly.
+            // Move only the DP 1.5% down; shared by Daily, Weekly and Monthly.
             final adjustedApertureCenterY =
                 (expandedFrameHeight * apertureCenterY) - (frameHeight * .05);
             final avatarTop = adjustedApertureCenterY -
-                avatarSize / 2 - frameHeight * .01;
+                avatarSize / 2 + frameHeight * .015;
 
             return SizedBox(
               width: frameWidth,
