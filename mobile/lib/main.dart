@@ -11155,7 +11155,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
             // Shared by Daily, Weekly and Monthly Charm podiums.
             // Increase all three Charm podium DPs by an additional 2.5%.
             // Preserve the existing size adjustment and apply 2.5% on top.
-            final avatarSize = frameWidth * avatarSizeFactor * 1.04 * 1.025;
+            final avatarSize = frameWidth * avatarSizeFactor * 1.04 * 1.025 * 1.02;
             final avatarLeft = frameWidth * apertureCenterX - avatarSize / 2;
             // Recalculate the aperture centre for the upward-extended frame.
             final adjustedApertureCenterY =
