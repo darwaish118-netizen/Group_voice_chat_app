@@ -11207,7 +11207,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                   Positioned(
                     left: 0,
                     right: 0,
-                    top: -frameHeight * .05 -
+                    top: -frameHeight * .05 + frameHeight * .02 -
                         (rank == 2 ? frameHeight * .015 : 0),
                     height: expandedFrameHeight,
                     child: Image.asset(
