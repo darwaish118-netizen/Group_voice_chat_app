@@ -11123,10 +11123,10 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
   Widget _charmPodiumUser(int rank, Map<String, dynamic> user) {
     final isFirst = rank == 1;
     final asset = rank == 1
-        ? 'assets/ranking/charm/charm_top1.png'
+        ? 'assets/ranking/charm/Charm_top1.png'
         : rank == 2
-            ? 'assets/ranking/charm/charm_top2.png'
-            : 'assets/ranking/charm/charm_top3.png';
+            ? 'assets/ranking/charm/Charm_top2.png'
+            : 'assets/ranking/charm/Charm_top3.png';
 
     // These ratios follow the supplied Charm PNG dimensions and circular
     // portrait openings. The DP is painted behind the transparent frame.
