@@ -11154,15 +11154,17 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
             // Extend the frame upward by 5% while keeping its bottom edge
             // anchored, so the name and coin plates stay in their positions.
             final expandedFrameHeight = frameHeight * 1.05;
-            // Keep the existing 2% larger DP size; this helper is shared
-            // by Daily, Weekly and Monthly periods.
+            // All three Charm podium DPs are 2% larger. Only the rank-2
+            // DP moves upward by 1.5%; rank-1 and rank-3 DP positions stay put.
+            // This helper is shared by Daily, Weekly and Monthly periods.
             final avatarSize = frameWidth * avatarSizeFactor * 1.02;
             final avatarLeft = frameWidth * apertureCenterX - avatarSize / 2;
-            // Move only the DP 1.5% down; shared by Daily, Weekly and Monthly.
+            // Recalculate the aperture centre for the upward-extended frame.
             final adjustedApertureCenterY =
                 (expandedFrameHeight * apertureCenterY) - (frameHeight * .05);
+            final rank2DpUpShift = rank == 2 ? frameHeight * .015 : 0.0;
             final avatarTop = adjustedApertureCenterY -
-                avatarSize / 2 + frameHeight * .015;
+                avatarSize / 2 - rank2DpUpShift;
 
             return SizedBox(
               width: frameWidth,
@@ -11205,9 +11207,8 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                   Positioned(
                     left: 0,
                     right: 0,
-                    // Shift only the decorative frame down by 10%.
-                    // DP, username and coin value retain their original positions.
-                    top: -frameHeight * .05 + frameHeight * .10,
+                    top: -frameHeight * .05 -
+                        (rank == 2 ? frameHeight * .015 : 0),
                     height: expandedFrameHeight,
                     child: Image.asset(
                       asset,
