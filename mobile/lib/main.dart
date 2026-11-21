@@ -11153,18 +11153,22 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
             // anchored, so the name and coin plates stay in their positions.
             final expandedFrameHeight = frameHeight * 1.05;
             // Shared by Daily, Weekly and Monthly Charm podiums.
-            // All three DPs stay 2% larger and move upward by 8% total.
-            // This adds the newly requested 3% to the previous 5% shift.
-            // Preserve rank-2's additional 1.5% upward adjustment.
-            final avatarSize = frameWidth * avatarSizeFactor * 1.04;
+            // Increase all three Charm podium DPs by an additional 2.5%.
+            // Preserve the existing size adjustment and apply 2.5% on top.
+            final avatarSize = frameWidth * avatarSizeFactor * 1.04 * 1.025;
             final avatarLeft = frameWidth * apertureCenterX - avatarSize / 2;
             // Recalculate the aperture centre for the upward-extended frame.
             final adjustedApertureCenterY =
                 (expandedFrameHeight * apertureCenterY) - (frameHeight * .05);
+            // Frame 1 and 3 DPs move 1.5% down; Frame 2 keeps
+            // its existing vertical position and extra upward adjustment.
             final allDpsUpShift = frameHeight * .08;
             final rank2DpUpShift = rank == 2 ? frameHeight * .015 : 0.0;
+            final rank1And3DpDownShift =
+                (rank == 1 || rank == 3) ? frameHeight * .015 : 0.0;
             final avatarTop = adjustedApertureCenterY -
-                avatarSize / 2 - allDpsUpShift - rank2DpUpShift;
+                avatarSize / 2 - allDpsUpShift - rank2DpUpShift +
+                rank1And3DpDownShift;
             // Move every frame artwork down 2%. Keep rank-2's prior 1.5%
             // upward adjustment as a separate offset, so it is preserved.
             final allFramesDownShift = frameHeight * .02;
