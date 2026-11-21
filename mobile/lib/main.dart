@@ -11155,7 +11155,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
             // Shared by Daily, Weekly and Monthly Charm podiums.
             // Increase all three Charm podium DPs by an additional 2.5%.
             // Preserve the existing size adjustment and apply 2.5% on top.
-            final avatarSize = frameWidth * avatarSizeFactor * 1.04 * 1.025 * 1.02 * 1.015;
+            final avatarSize = frameWidth * avatarSizeFactor * 1.04 * 1.025 * 1.02 * 1.015 * 1.01;
             final avatarLeft = frameWidth * apertureCenterX - avatarSize / 2;
             // Recalculate the aperture centre for the upward-extended frame.
             final adjustedApertureCenterY =
@@ -11229,8 +11229,8 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                   Positioned(
                     left: frameWidth * .17,
                     right: frameWidth * .17,
-                    top: frameHeight * .695,
-                    height: frameHeight * .105,
+                    top: frameHeight * .625,
+                    height: frameHeight * .070,
                     child: Center(
                       child: RoomCoverMarqueeRainbowText(
                         text: user.isEmpty ? '*******' : _displayName(user),
@@ -11245,8 +11245,8 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                   Positioned(
                     left: frameWidth * .19,
                     right: frameWidth * .19,
-                    top: frameHeight * .805,
-                    height: frameHeight * .085,
+                    top: frameHeight * .790,
+                    height: frameHeight * .070,
                     child: Center(
                       child: Text(
                         user.isEmpty ? '' : _compact(_coins(user)),
