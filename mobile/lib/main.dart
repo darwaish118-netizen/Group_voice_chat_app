@@ -11155,7 +11155,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
             // Shared by Daily, Weekly and Monthly Charm podiums.
             // Increase all three Charm podium DPs by an additional 2.5%.
             // Preserve the existing size adjustment and apply 2.5% on top.
-            final avatarSize = frameWidth * avatarSizeFactor * 1.04 * 1.025 * 1.02;
+            final avatarSize = frameWidth * avatarSizeFactor * 1.04 * 1.025 * 1.02 * 1.015;
             final avatarLeft = frameWidth * apertureCenterX - avatarSize / 2;
             // Recalculate the aperture centre for the upward-extended frame.
             final adjustedApertureCenterY =
@@ -11234,7 +11234,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                     child: Center(
                       child: RoomCoverMarqueeRainbowText(
                         text: user.isEmpty ? '*******' : _displayName(user),
-                        fontSize: isFirst ? 12 : 10.5,
+                        fontSize: 13,
                         fontWeight: FontWeight.w900,
                         scrollPixelsPerSecond: 27,
                         startPause: const Duration(seconds: 2),
@@ -11243,8 +11243,8 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                   ),
                   // Charm value is displayed in the lower coin bar.
                   Positioned(
-                    left: frameWidth * .25,
-                    right: frameWidth * .13,
+                    left: frameWidth * .19,
+                    right: frameWidth * .19,
                     top: frameHeight * .805,
                     height: frameHeight * .085,
                     child: Center(
@@ -11256,7 +11256,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                         style: TextStyle(
                           color: const Color(0xFFFFE08A),
                           fontWeight: FontWeight.w900,
-                          fontSize: isFirst ? 13 : 11.5,
+                          fontSize: 11,
                         ),
                       ),
                     ),
