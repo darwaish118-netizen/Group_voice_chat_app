@@ -11207,7 +11207,9 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                   Positioned(
                     left: 0,
                     right: 0,
-                    top: -frameHeight * .05,
+                    // Shift only the decorative frame down by 10%.
+                    // DP, username and coin value retain their original positions.
+                    top: -frameHeight * .05 + frameHeight * .10,
                     height: expandedFrameHeight,
                     child: Image.asset(
                       asset,
