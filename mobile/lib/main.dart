@@ -11154,17 +11154,16 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
             // Extend the frame upward by 5% while keeping its bottom edge
             // anchored, so the name and coin plates stay in their positions.
             final expandedFrameHeight = frameHeight * 1.05;
-            // All three Charm podium DPs are 1.5% larger and 2% higher.
+            // All three Charm podium DPs are 2% larger and 3% lower.
             // This helper is shared by Daily, Weekly and Monthly periods.
-            final avatarSize = frameWidth * avatarSizeFactor * 1.015;
+            final avatarSize = frameWidth * avatarSizeFactor * 1.02;
             final avatarLeft = frameWidth * apertureCenterX - avatarSize / 2;
-            // Recalculate the aperture centre for the upward-extended frame,
-            // then move every DP upward by 2% of the original frame height.
+            // Keep the DP aligned to the same aperture, then move only the
+            // DP downward by 3% of the original frame height.
             final adjustedApertureCenterY =
                 (expandedFrameHeight * apertureCenterY) - (frameHeight * .05);
-            final allDpsUpShift = frameHeight * .02;
             final avatarTop = adjustedApertureCenterY -
-                avatarSize / 2 - allDpsUpShift;
+                avatarSize / 2 + frameHeight * .03;
 
             return SizedBox(
               width: frameWidth,
