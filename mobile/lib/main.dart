@@ -11156,7 +11156,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
             // All three DPs stay 2% larger and move upward by 8% total.
             // This adds the newly requested 3% to the previous 5% shift.
             // Preserve rank-2's additional 1.5% upward adjustment.
-            final avatarSize = frameWidth * avatarSizeFactor * 1.02;
+            final avatarSize = frameWidth * avatarSizeFactor * 1.04;
             final avatarLeft = frameWidth * apertureCenterX - avatarSize / 2;
             // Recalculate the aperture centre for the upward-extended frame.
             final adjustedApertureCenterY =
