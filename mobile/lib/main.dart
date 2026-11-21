@@ -3917,7 +3917,7 @@ class _CoinHistoryScreenState extends State<CoinHistoryScreen> {
                             decoration: BoxDecoration(color: const Color(0xFF171225), borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFF8D6A32))),
                             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                               Row(children: [
-                                const Icon(Icons.monetization_on_rounded, color: gold, size: 28),
+                                Image.asset('assets/mindo_coin.png', width: 28, height: 28, fit: BoxFit.contain),
                                 const SizedBox(width: 9),
                                 Expanded(child: Text(type, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15))),
                                 Text(delta >= 0 ? '+$delta' : '$delta', style: TextStyle(color: delta >= 0 ? Colors.greenAccent : Colors.redAccent, fontWeight: FontWeight.w900)),
@@ -6070,7 +6070,7 @@ class _MindoMallScreenState extends State<MindoMallScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.monetization_on_rounded, color: _gold),
+                  Image.asset('assets/mindo_coin.png', width: 24, height: 24, fit: BoxFit.contain),
                   const SizedBox(width: 6),
                   Text('${product['price']} Coins', style: const TextStyle(color: _gold, fontWeight: FontWeight.w900, fontSize: 18)),
                 ],
@@ -6324,7 +6324,7 @@ class _MindoMallScreenState extends State<MindoMallScreen> {
               ),
               child: _tab == 0
                   ? Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                      const Icon(Icons.monetization_on_rounded, color: _gold, size: 18),
+                      Image.asset('assets/mindo_coin.png', width: 18, height: 18, fit: BoxFit.contain),
                       const SizedBox(width: 5),
                       Text('${product['price']}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
                     ])
@@ -6364,7 +6364,7 @@ class _MindoMallScreenState extends State<MindoMallScreen> {
                       Text('MINDO', style: TextStyle(color: _gold, fontSize: 21, fontWeight: FontWeight.w900, letterSpacing: 2)),
                       Text('VOICE CHAT', style: TextStyle(color: Color(0xFFD9A6FF), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 3)),
                     ])),
-                    const Icon(Icons.monetization_on_rounded, color: _gold),
+                    Image.asset('assets/mindo_coin.png', width: 24, height: 24, fit: BoxFit.contain),
                     const SizedBox(width: 5),
                     const Text('—', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
                   ],
@@ -8921,7 +8921,7 @@ Future<void> loadRoomMembers() async {
               const Divider(color: Color(0xFF59452F), height: 10),
               // Fixed bottom bar: coins left, quantity and send right.
               Row(children: [
-                Expanded(child: Row(children: [const Icon(Icons.monetization_on, color: Color(0xFFF5D58E), size: 20), const SizedBox(width: 4), Flexible(child: Text('$myCoins', overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFFFFE3A5), fontWeight: FontWeight.bold, fontSize: 12))), IconButton(onPressed: () {}, icon: const Icon(Icons.add_circle_outline, color: Color(0xFFD7B66D), size: 18), padding: EdgeInsets.zero, constraints: const BoxConstraints(minWidth: 26, minHeight: 28))])),
+                Expanded(child: Row(children: [Image.asset('assets/mindo_coin.png', width: 20, height: 20, fit: BoxFit.contain), const SizedBox(width: 4), Flexible(child: Text('$myCoins', overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFFFFE3A5), fontWeight: FontWeight.bold, fontSize: 12))), IconButton(onPressed: () {}, icon: const Icon(Icons.add_circle_outline, color: Color(0xFFD7B66D), size: 18), padding: EdgeInsets.zero, constraints: const BoxConstraints(minWidth: 26, minHeight: 28))])),
                 Container(padding: const EdgeInsets.symmetric(horizontal: 5), decoration: BoxDecoration(color: const Color(0xFF302541), borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFFD7B66D))), child: DropdownButtonHideUnderline(child: DropdownButton<int>(value: quantity, dropdownColor: const Color(0xFF302541), style: const TextStyle(color: Colors.white, fontSize: 12), items: [1, 5, 7, 10, 17, 20, 50, 100, 177].map((n) => DropdownMenuItem(value: n, child: Text('$n'))).toList(), onChanged: (v) => refresh(() => quantity = v ?? 1)))),
                 const SizedBox(width: 8),
                 ElevatedButton(onPressed: selectedGift == null || selectedRecipients.isEmpty ? null : () async {
@@ -10256,7 +10256,7 @@ class AgencyOwnerDashboardScreen extends StatelessWidget {
           const SizedBox(height: 18), Container(width: double.infinity, padding: const EdgeInsets.all(18), decoration: BoxDecoration(border: Border.all(color: Colors.white54), borderRadius: BorderRadius.circular(16), color: Colors.white.withOpacity(.08)), child: Column(children: [const Text('Balance', style: TextStyle(color: Colors.white, fontSize: 22)), const SizedBox(height: 8), const Text('0.00 USD', style: TextStyle(color: Colors.white, fontSize: 34, fontWeight: FontWeight.bold)), const SizedBox(height: 16), Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: const [Column(children: [Text('Total Coins', style: TextStyle(color: Colors.white)), Text('0', style: TextStyle(color: Colors.white, fontSize: 27, fontWeight: FontWeight.bold))]), Column(children: [Text('Members', style: TextStyle(color: Colors.white)), Text('1', style: TextStyle(color: Colors.white, fontSize: 27, fontWeight: FontWeight.bold))])])]))
         ])),
         const SizedBox(height: 8),
-        ...List.generate(items.length, (i) => ListTile(tileColor: Colors.white, contentPadding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12), leading: Icon(icons[i], color: const Color(0xFFC66AF0), size: 31), title: Text(items[i], style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600)), trailing: const Icon(Icons.chevron_right, color: Color(0xFFFF1685), size: 32), onTap: () {
+        ...List.generate(items.length, (i) => ListTile(tileColor: Colors.white, contentPadding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12), leading: i == 1 ? Image.asset('assets/mindo_coin.png', width: 31, height: 31, fit: BoxFit.contain) : Icon(icons[i], color: const Color(0xFFC66AF0), size: 31), title: Text(items[i], style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600)), trailing: const Icon(Icons.chevron_right, color: Color(0xFFFF1685), size: 32), onTap: () {
           final Widget page = switch (i) {
             0 => AgencyMemberRequestsScreen(agency: agency),
             1 => AgencyMemberIncomeScreen(agency: agency),
@@ -11313,7 +11313,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
           Text('Lv. $level', maxLines: 1,
             style: const TextStyle(color: Color(0xFFFFE4A0), fontWeight: FontWeight.w700, fontSize: 11)),
         ])),
-        const Icon(Icons.monetization_on_rounded, color: Color(0xFFFFD34F), size: 19),
+        Image.asset('assets/mindo_coin.png', width: 19, height: 19, fit: BoxFit.contain),
         const SizedBox(width: 4),
         Text(_compact(_coins(user)), style: const TextStyle(
           color: Color(0xFFFFE08A), fontWeight: FontWeight.w900, fontSize: 13)),
@@ -11446,7 +11446,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
               const SizedBox(height: 3),
               if (hasUser)
                 Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  const Icon(Icons.monetization_on, color: Color(0xFFFFD34F), size: 15),
+                  Image.asset('assets/mindo_coin.png', width: 15, height: 15, fit: BoxFit.contain),
                   const SizedBox(width: 3),
                   Flexible(child: Text(_compact(_coins(user)), maxLines: 1, style: TextStyle(color: _royalLight,
                     fontWeight: FontWeight.w900, fontSize: first ? 14 : 12))),
@@ -11467,14 +11467,18 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
     final avatar = _avatar(user);
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      constraints: const BoxConstraints(minHeight: 68),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         // Semi-transparent Rank 4+ row lets the ranking background show through.
-        gradient: LinearGradient(colors: [
-          const Color(0xFF4A280F).withOpacity(.58),
-          const Color(0xFF241208).withOpacity(.48),
-        ]),
+        gradient: LinearGradient(colors: _category == 'charm'
+            ? [
+                const Color(0xFF4A280F).withOpacity(.32),
+                const Color(0xFF241208).withOpacity(.25),
+              ]
+            : [
+                const Color(0xFF4A280F).withOpacity(.58),
+                const Color(0xFF241208).withOpacity(.48),
+              ]),
         borderRadius: BorderRadius.circular(13),
         border: Border.all(color: const Color(0xFFFFD15B), width: 1.5),
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(.25), blurRadius: 7, offset: const Offset(0, 3))],
@@ -11488,7 +11492,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
           child: CircleAvatar(radius: 22, backgroundColor: Colors.brown.shade700,
             backgroundImage: avatar.isNotEmpty ? NetworkImage(avatar) : null,
             child: avatar.isEmpty ? const Icon(Icons.person, color: Colors.white70) : null)),
-        const SizedBox(width: 6),
+        const SizedBox(width: 4),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           RoomCoverMarqueeRainbowText(
             text: _displayName(user),
@@ -11498,7 +11502,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
             startPause: const Duration(seconds: 2),
           ),
         ])),
-        const Icon(Icons.monetization_on, color: Color(0xFFFFD34F), size: 17),
+        Image.asset('assets/mindo_coin.png', width: 22, height: 22, fit: BoxFit.contain),
         const SizedBox(width: 4),
         Text(_compact(_coins(user)), style: const TextStyle(color: Color(0xFFFFE08A), fontWeight: FontWeight.w900, fontSize: 13)),
       ]),
@@ -11511,7 +11515,6 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
     final coins = mine == null ? 0 : _coins(mine);
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 7, 12, 12),
-      constraints: const BoxConstraints(minHeight: 68),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
       decoration: BoxDecoration(
         gradient: const LinearGradient(colors: [Color(0xFF63350D), Color(0xFF211006)]),
@@ -11528,7 +11531,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
         ),
         const SizedBox(width: 9),
         const Expanded(child: Text('MY RANK', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: .6))),
-        const Icon(Icons.circle, color: Color(0xFFFFD34F), size: 16),
+        Image.asset('assets/mindo_coin.png', width: 22, height: 22, fit: BoxFit.contain),
         const SizedBox(width: 5),
         Text(_compact(coins), style: const TextStyle(color: Color(0xFFFFE08A), fontWeight: FontWeight.w900, fontSize: 12)),
       ]),
@@ -11614,7 +11617,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                           color: _royalGold,
                           onRefresh: _load,
                           child: ListView(
-                            padding: const EdgeInsets.fromLTRB(13, 202, 13, 10),
+                            padding: const EdgeInsets.fromLTRB(13, 190, 13, 10),
                             children: [
                               if (rest.isNotEmpty)
                                 ...rest.asMap().entries.map((e) => _userRow(e.key, e.value)),
@@ -11819,7 +11822,7 @@ class _GlobalRoomRankingScreenState extends State<GlobalRoomRankingScreen> {
           Text('Room ID: ${(room['id'] ?? '—').toString()}', maxLines: 1, overflow: TextOverflow.ellipsis,
             style: const TextStyle(color: Colors.white60, fontSize: 9)),
         ])),
-        const Icon(Icons.monetization_on_rounded, color: _gold, size: 17), const SizedBox(width: 4),
+        Image.asset('assets/mindo_coin.png', width: 17, height: 17, fit: BoxFit.contain), const SizedBox(width: 4),
         Text(_compact(_coins(room)), style: const TextStyle(color: Color(0xFFFFE39A), fontWeight: FontWeight.w900, fontSize: 12)),
       ]),
     ));
@@ -12117,7 +12120,7 @@ class _RoomRankingScreenState extends State<RoomRankingScreen> {
             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13)),
           Text('ID: ${_uid(user)}', style: const TextStyle(color: Colors.white60, fontSize: 10)),
         ])),
-        const Icon(Icons.monetization_on_rounded, color: Color(0xFFFFD36A), size: 17),
+        Image.asset('assets/mindo_coin.png', width: 17, height: 17, fit: BoxFit.contain),
         const SizedBox(width: 4),
         Text(_coins(user).toString(), style: const TextStyle(color: Color(0xFFFFE39A), fontWeight: FontWeight.w900, fontSize: 12)),
       ]),
