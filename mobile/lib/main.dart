@@ -11123,10 +11123,10 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
   Widget _charmPodiumUser(int rank, Map<String, dynamic> user) {
     final isFirst = rank == 1;
     final asset = rank == 1
-        ? 'assets/ranking/charm/Charm_top1.png'
+        ? 'assets/ranking/charm/charm_top1.png'
         : rank == 2
-            ? 'assets/ranking/charm/Charm_top2.png'
-            : 'assets/ranking/charm/Charm_top3.png';
+            ? 'assets/ranking/charm/charm_top2.png'
+            : 'assets/ranking/charm/charm_top3.png';
 
     // These ratios follow the supplied Charm PNG dimensions and circular
     // portrait openings. The DP is painted behind the transparent frame.
@@ -11134,11 +11134,9 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
     // (expandedFrameHeight), so divide each source image's true H/W ratio
     // by 1.05. This keeps the artwork at its native aspect ratio instead of
     // stretching it vertically.
-    final frameAspect = rank == 1
-        ? (998 / 619) / 1.05
-        : rank == 2
-            ? (996 / 619) / 1.05
-            : (997 / 635) / 1.05;
+    // All three final Charm frame assets use 618 x 950 dimensions.
+    // The artwork is rendered 5% taller, so compensate in the layout ratio.
+    final frameAspect = (950 / 618) / 1.05;
     final apertureCenterX = .50;
     final apertureCenterY = rank == 2 ? .475 : .465;
     final avatarSizeFactor = .52;
