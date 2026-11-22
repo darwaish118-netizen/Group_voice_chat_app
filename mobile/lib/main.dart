@@ -11329,7 +11329,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
             ),
           ),
         ),
-        Image.asset('assets/mindo_coin.png', width: 19, height: 19, fit: BoxFit.contain),
+        Image.asset('assets/mindo_coin.png', width: 16, height: 16, fit: BoxFit.contain),
         const SizedBox(width: 4),
         Text(_compact(_coins(user)), style: const TextStyle(
           color: Color(0xFFFFE08A), fontWeight: FontWeight.w900, fontSize: 13)),
@@ -11634,7 +11634,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                           color: _royalGold,
                           onRefresh: _load,
                           child: ListView(
-                            padding: const EdgeInsets.fromLTRB(13, 195, 13, 10),
+                            padding: const EdgeInsets.fromLTRB(13, 180, 13, 10),
                             children: [
                               if (rest.isNotEmpty)
                                 ...rest.asMap().entries.map((e) => _wealthUserRow(e.key, e.value)),
