@@ -11252,7 +11252,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                   Positioned(
                     left: frameWidth * .19,
                     right: frameWidth * .19,
-                    top: frameHeight * .775,
+                    top: frameHeight * (.775 - (rank == 2 ? .01 : 0.0)),
                     height: frameHeight * .070,
                     child: Center(
                       child: Text(
@@ -11539,7 +11539,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
         ),
         const SizedBox(width: 9),
         const Expanded(child: Text('MY RANK', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: .6))),
-        Image.asset('assets/mindo_coin.png', width: 22, height: 22, fit: BoxFit.contain),
+        Image.asset('assets/mindo_coin.png', width: 16, height: 16, fit: BoxFit.contain),
         const SizedBox(width: 5),
         Text(_compact(coins), style: const TextStyle(color: Color(0xFFFFE08A), fontWeight: FontWeight.w900, fontSize: 12)),
       ]),
@@ -11634,10 +11634,9 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                         )),
                         Positioned(top: 0, left: 13, right: 13, child: Container(
                           padding: const EdgeInsets.only(bottom: 5),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
-                              colors: [const Color(0xFF1B0D08).withOpacity(.96), const Color(0xFF1B0D08).withOpacity(.82), const Color(0x001B0D08)]),
-                          ),
+                          // Keep the podium transparent so the ranking background
+                          // remains directly visible behind the three frame artworks.
+                          color: Colors.transparent,
                           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                             _charmPodiumUser(2, top.length > 1 ? top[1] : <String, dynamic>{}),
                             const SizedBox(width: 4),
