@@ -11098,7 +11098,11 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                             ? (rank == 1 ? .780 : .805)
                             : isMonthly
                                 ? .780
-                                : (adjustTopOne ? .780 : (isWeekly && rank == 2 ? .790 : .815))),
+                                : (adjustTopOne
+                                    ? .780
+                                    : (isWeekly && rank == 2
+                                        ? .790
+                                        : (isWeekly && rank == 3 ? .795 : .815)))),
                     height: frameHeight * (isMonthly ? .10 : (adjustTopOne ? .10 : .09)),
                     child: Center(
                       child: Text(
@@ -11280,13 +11284,13 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
   Widget _wealthUserRow(int index, Map<String, dynamic> user) {
     final rank = index + 4;
     final avatar = _avatar(user);
-    final level = user['wealth_level'] ?? user['level'] ?? 1;
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
       decoration: BoxDecoration(
+        // Semi-transparent Wealth rank row so the screen artwork remains visible.
         gradient: const LinearGradient(
-          colors: [Color(0xB8794B20), Color(0xC94A2A12), Color(0xB8794B20)],
+          colors: [Color(0x66794B20), Color(0x804A2A12), Color(0x66794B20)],
         ),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0x99F5C66A), width: 1),
@@ -11313,19 +11317,18 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
           ),
         ),
         const SizedBox(width: 10),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          RoomCoverMarqueeRainbowText(
-            text: _displayName(user),
-            fontSize: 13,
-            fontWeight: FontWeight.w900,
-            scrollPixelsPerSecond: 27,
-            startPause: const Duration(seconds: 2),
-            alignStart: true,
+        Expanded(
+          child: Center(
+            child: RoomCoverMarqueeRainbowText(
+              text: _displayName(user),
+              fontSize: 13,
+              fontWeight: FontWeight.w900,
+              scrollPixelsPerSecond: 27,
+              startPause: const Duration(seconds: 2),
+              alignStart: true,
+            ),
           ),
-          const SizedBox(height: 3),
-          Text('Lv. $level', maxLines: 1,
-            style: const TextStyle(color: Color(0xFFFFE4A0), fontWeight: FontWeight.w700, fontSize: 11)),
-        ])),
+        ),
         Image.asset('assets/mindo_coin.png', width: 19, height: 19, fit: BoxFit.contain),
         const SizedBox(width: 4),
         Text(_compact(_coins(user)), style: const TextStyle(
@@ -11631,7 +11634,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                           color: _royalGold,
                           onRefresh: _load,
                           child: ListView(
-                            padding: const EdgeInsets.fromLTRB(13, 205, 13, 10),
+                            padding: const EdgeInsets.fromLTRB(13, 195, 13, 10),
                             children: [
                               if (rest.isNotEmpty)
                                 ...rest.asMap().entries.map((e) => _wealthUserRow(e.key, e.value)),
