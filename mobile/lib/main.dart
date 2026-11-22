@@ -11556,8 +11556,30 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
   }
 
   void _openRoomRanking() {
-    Navigator.push(context, MaterialPageRoute(
-      builder: (_) => GlobalRoomRankingScreen(token: widget.token)));
+    Navigator.of(context).push(PageRouteBuilder(
+      opaque: true,
+      barrierDismissible: false,
+      pageBuilder: (_, __, ___) => GlobalRoomRankingScreen(token: widget.token),
+      transitionDuration: const Duration(milliseconds: 320),
+      reverseTransitionDuration: const Duration(milliseconds: 260),
+      transitionsBuilder: (_, animation, secondaryAnimation, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+          reverseCurve: Curves.easeInCubic,
+        );
+        return FadeTransition(
+          opacity: curved,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(.035, 0),
+              end: Offset.zero,
+            ).animate(curved),
+            child: child,
+          ),
+        );
+      },
+    ));
   }
 
   @override
@@ -11720,11 +11742,42 @@ class _GlobalRoomRankingScreenState extends State<GlobalRoomRankingScreen> {
   bool _loading = true;
   String? _error;
   List<Map<String, dynamic>> _ranking = [];
+  DateTime? _periodEnd;
+  Timer? _countdownTimer;
+  Duration _remaining = Duration.zero;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _countdownTimer = Timer.periodic(
+      const Duration(seconds: 1),
+      (_) => _updateCountdown(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _countdownTimer?.cancel();
+    super.dispose();
+  }
+
+  void _updateCountdown() {
+    final end = _periodEnd;
+    if (end == null || !mounted) return;
+    final next = end.difference(DateTime.now());
+    final remaining = next.isNegative ? Duration.zero : next;
+    if (remaining.inSeconds != _remaining.inSeconds) {
+      setState(() => _remaining = remaining);
+    }
+  }
+
+  String _countdownText() {
+    final days = _remaining.inDays;
+    final hours = _remaining.inHours.remainder(24).toString().padLeft(2, '0');
+    final minutes = _remaining.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = _remaining.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return days > 0 ? '${days}d  $hours:$minutes:$seconds' : '$hours:$minutes:$seconds';
   }
 
   Future<void> _load() async {
@@ -11736,8 +11789,17 @@ class _GlobalRoomRankingScreenState extends State<GlobalRoomRankingScreen> {
           ? raw.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList()
           : <Map<String, dynamic>>[];
       list.sort((a, b) => _coins(b).compareTo(_coins(a)));
+      final endRaw = result['period_end']?.toString();
+      final periodEnd = endRaw == null
+          ? null
+          : DateTime.tryParse(endRaw)?.toLocal();
       if (!mounted) return;
-      setState(() { _ranking = list.take(30).toList(); _loading = false; });
+      setState(() {
+        _ranking = list.take(30).toList();
+        _periodEnd = periodEnd;
+        _loading = false;
+      });
+      _updateCountdown();
     } catch (e) {
       if (!mounted) return;
       setState(() { _error = e.toString().replaceFirst('Exception: ', ''); _loading = false; });
@@ -12046,7 +12108,7 @@ class _GlobalRoomRankingScreenState extends State<GlobalRoomRankingScreen> {
             child: Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 7, 14, 5),
+                  padding: const EdgeInsets.fromLTRB(14, 7, 14, 3),
                   child: Row(
                     children: [
                       _periodButton('DAILY', 'daily'),
@@ -12055,6 +12117,25 @@ class _GlobalRoomRankingScreenState extends State<GlobalRoomRankingScreen> {
                       const SizedBox(width: 8),
                       _periodButton('MONTHLY', 'monthly'),
                     ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xE6210F06),
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(color: const Color(0xFFFFC84A), width: 1.2),
+                    ),
+                    child: Text(
+                      '◷  ENDS IN  ${_countdownText()}',
+                      style: const TextStyle(
+                        color: Color(0xFFFFE7A0),
+                        fontWeight: FontWeight.w900,
+                        fontSize: 11,
+                      ),
+                    ),
                   ),
                 ),
                 Expanded(
