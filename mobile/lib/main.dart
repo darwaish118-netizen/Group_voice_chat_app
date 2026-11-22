@@ -11374,13 +11374,11 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
     final selected = _category == value;
     return Expanded(child: GestureDetector(
       onTap: () {
-        if (value == 'room') {
-          _openRoomRanking();
-          return;
-        }
         if (_category == value) return;
         setState(() => _category = value);
-        _load();
+        if (value != 'room') {
+          _load();
+        }
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
@@ -11555,32 +11553,6 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
     );
   }
 
-  void _openRoomRanking() {
-    Navigator.of(context).push(PageRouteBuilder(
-      opaque: true,
-      barrierDismissible: false,
-      pageBuilder: (_, __, ___) => GlobalRoomRankingScreen(token: widget.token),
-      transitionDuration: const Duration(milliseconds: 320),
-      reverseTransitionDuration: const Duration(milliseconds: 260),
-      transitionsBuilder: (_, animation, secondaryAnimation, child) {
-        final curved = CurvedAnimation(
-          parent: animation,
-          curve: Curves.easeOutCubic,
-          reverseCurve: Curves.easeInCubic,
-        );
-        return FadeTransition(
-          opacity: curved,
-          child: SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(.035, 0),
-              end: Offset.zero,
-            ).animate(curved),
-            child: child,
-          ),
-        );
-      },
-    ));
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -11629,18 +11601,22 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
               _categoryButton('ROOM', 'room'), const SizedBox(width: 6),
               _categoryButton('AGENCY', 'agency'),
             ])),
-            Padding(padding: const EdgeInsets.fromLTRB(14, 2, 14, 7), child: Row(children: [
-              _periodButton('DAILY', 'daily'), const SizedBox(width: 8),
-              _periodButton('WEEKLY', 'weekly'), const SizedBox(width: 8),
-              _periodButton('MONTHLY', 'monthly'),
-            ])),
-            Padding(padding: const EdgeInsets.only(bottom: 8), child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Container(padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
-                decoration: BoxDecoration(color: const Color(0xFF210F06), borderRadius: BorderRadius.circular(22),
-                  border: Border.all(color: _royalGold, width: 1.2)),
-                child: Text('◷  ENDS IN  ${_countdownText()}', style: const TextStyle(color: _royalLight, fontWeight: FontWeight.w900, fontSize: 11))),
-            ])),
-            Expanded(child: _loading
+            if (_category != 'room') ...[
+              Padding(padding: const EdgeInsets.fromLTRB(14, 2, 14, 7), child: Row(children: [
+                _periodButton('DAILY', 'daily'), const SizedBox(width: 8),
+                _periodButton('WEEKLY', 'weekly'), const SizedBox(width: 8),
+                _periodButton('MONTHLY', 'monthly'),
+              ])),
+              Padding(padding: const EdgeInsets.only(bottom: 8), child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                Container(padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
+                  decoration: BoxDecoration(color: const Color(0xFF210F06), borderRadius: BorderRadius.circular(22),
+                    border: Border.all(color: _royalGold, width: 1.2)),
+                  child: Text('◷  ENDS IN  ${_countdownText()}', style: const TextStyle(color: _royalLight, fontWeight: FontWeight.w900, fontSize: 11))),
+              ])),
+            ],
+            Expanded(child: _category == 'room'
+              ? GlobalRoomRankingScreen(token: widget.token, embedded: true)
+              : _loading
               ? const Center(child: CircularProgressIndicator(color: _royalGold))
               : _error != null
                 ? Center(child: Padding(padding: const EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -11714,7 +11690,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                               ...rest.asMap().entries.map((e) => _userRow(e.key, e.value)),
                           ])),
             ),
-            _myRankPanel(),
+            if (_category != 'room') _myRankPanel(),
           ])),
         ]),
       ),
@@ -11729,7 +11705,12 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
 // ============================================================
 class GlobalRoomRankingScreen extends StatefulWidget {
   final String token;
-  const GlobalRoomRankingScreen({super.key, required this.token});
+  final bool embedded;
+  const GlobalRoomRankingScreen({
+    super.key,
+    required this.token,
+    this.embedded = false,
+  });
 
   @override
   State<GlobalRoomRankingScreen> createState() => _GlobalRoomRankingScreenState();
@@ -12072,21 +12053,23 @@ class _GlobalRoomRankingScreenState extends State<GlobalRoomRankingScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFF26060B),
-      appBar: AppBar(
-        backgroundColor: const Color(0xAA26060B),
-        foregroundColor: _gold,
-        elevation: 0,
-        centerTitle: true,
-        title: const Text(
-          'ROOM RANKING',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 17,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1.1,
-          ),
-        ),
-      ),
+      appBar: widget.embedded
+          ? null
+          : AppBar(
+              backgroundColor: const Color(0xAA26060B),
+              foregroundColor: _gold,
+              elevation: 0,
+              centerTitle: true,
+              title: const Text(
+                'ROOM RANKING',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.1,
+                ),
+              ),
+            ),
       body: Stack(
         fit: StackFit.expand,
         children: [
