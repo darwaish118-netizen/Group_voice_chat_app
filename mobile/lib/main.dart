@@ -11235,7 +11235,9 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                     left: frameWidth * .17,
                     right: frameWidth * .17,
                     top: nameTop,
-                    height: frameHeight * .070,
+                    // Give the marquee enough vertical room so glyphs are not
+                    // clipped at the bottom inside the name plate.
+                    height: frameHeight * .090,
                     child: Center(
                       child: RoomCoverMarqueeRainbowText(
                         text: user.isEmpty ? '*******' : _displayName(user),
