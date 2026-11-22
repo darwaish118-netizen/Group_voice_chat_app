@@ -11314,8 +11314,14 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
         ),
         const SizedBox(width: 10),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(_displayName(user), maxLines: 1, overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13)),
+          RoomCoverMarqueeRainbowText(
+            text: _displayName(user),
+            fontSize: 13,
+            fontWeight: FontWeight.w900,
+            scrollPixelsPerSecond: 27,
+            startPause: const Duration(seconds: 2),
+            alignStart: true,
+          ),
           const SizedBox(height: 3),
           Text('Lv. $level', maxLines: 1,
             style: const TextStyle(color: Color(0xFFFFE4A0), fontWeight: FontWeight.w700, fontSize: 11)),
@@ -11618,9 +11624,9 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                     const SizedBox(height: 7), Text(_error!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white70, fontSize: 11)),
                     const SizedBox(height: 12), OutlinedButton.icon(onPressed: _load, icon: const Icon(Icons.refresh), label: const Text('Retry')),
                   ])))
-                : _category == 'charm'
+                : _category == 'wealth'
                     ? Stack(children: [
-                        // Rank 4+ scrolls underneath the fixed top-three podium.
+                        // Wealth rank 4-30 scrolls behind the fixed top-three frames.
                         Positioned.fill(child: RefreshIndicator(
                           color: _royalGold,
                           onRefresh: _load,
@@ -11628,55 +11634,60 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                             padding: const EdgeInsets.fromLTRB(13, 205, 13, 10),
                             children: [
                               if (rest.isNotEmpty)
-                                ...rest.asMap().entries.map((e) => _userRow(e.key, e.value)),
+                                ...rest.asMap().entries.map((e) => _wealthUserRow(e.key, e.value)),
                             ],
                           ),
                         )),
                         Positioned(top: 0, left: 13, right: 13, child: Container(
                           padding: const EdgeInsets.only(bottom: 5),
-                          // Keep the podium transparent so the ranking background
-                          // remains directly visible behind the three frame artworks.
                           color: Colors.transparent,
                           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            _charmPodiumUser(2, top.length > 1 ? top[1] : <String, dynamic>{}),
+                            _wealthPodiumUser(2, top.length > 1 ? top[1] : <String, dynamic>{}),
                             const SizedBox(width: 4),
-                            _charmPodiumUser(1, top.isNotEmpty ? top[0] : <String, dynamic>{}),
+                            _wealthPodiumUser(1, top.isNotEmpty ? top[0] : <String, dynamic>{}),
                             const SizedBox(width: 4),
-                            _charmPodiumUser(3, top.length > 2 ? top[2] : <String, dynamic>{}),
+                            _wealthPodiumUser(3, top.length > 2 ? top[2] : <String, dynamic>{}),
                           ]),
                         )),
                       ])
-                    : RefreshIndicator(color: _royalGold, onRefresh: _load, child: ListView(padding: const EdgeInsets.fromLTRB(13, 8, 13, 10), children: [
-                        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          _category == 'wealth'
-                              ? _wealthPodiumUser(2, top.length > 1 ? top[1] : <String, dynamic>{})
-                              : _category == 'charm'
-                                  ? _charmPodiumUser(2, top.length > 1 ? top[1] : <String, dynamic>{})
-                                  : _podiumUser(2, top.length > 1 ? top[1] : <String, dynamic>{}),
-                          const SizedBox(width: 4),
-                          _category == 'wealth'
-                              ? _wealthPodiumUser(1, top.isNotEmpty ? top[0] : <String, dynamic>{})
-                              : _category == 'charm'
-                                  ? _charmPodiumUser(1, top.isNotEmpty ? top[0] : <String, dynamic>{})
-                                  : _podiumUser(1, top.isNotEmpty ? top[0] : <String, dynamic>{}),
-                          const SizedBox(width: 4),
-                          _category == 'wealth'
-                              ? _wealthPodiumUser(3, top.length > 2 ? top[2] : <String, dynamic>{})
-                              : _category == 'charm'
-                                  ? _charmPodiumUser(3, top.length > 2 ? top[2] : <String, dynamic>{})
-                                  : _podiumUser(3, top.length > 2 ? top[2] : <String, dynamic>{}),
-                        ]),
-                        const SizedBox(height: 13),
-                      if (rest.isNotEmpty) ...[
-                        Container(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-                          decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFF63350D), Color(0xFF2A1408)]),
-                            borderRadius: BorderRadius.circular(13), border: Border.all(color: _royalGold, width: 1.4)),
-                          child: Text(_category == 'wealth' ? 'RANK 4–30' : 'RANK 4–50',
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, letterSpacing: 1.1, fontSize: 15))),
-                        const SizedBox(height: 9),
-                        ...rest.asMap().entries.map((e) => _userRow(e.key, e.value)),
-                      ],
-                    ]))),
+                    : _category == 'charm'
+                        ? Stack(children: [
+                            // Rank 4+ scrolls underneath the fixed top-three podium.
+                            Positioned.fill(child: RefreshIndicator(
+                              color: _royalGold,
+                              onRefresh: _load,
+                              child: ListView(
+                                padding: const EdgeInsets.fromLTRB(13, 205, 13, 10),
+                                children: [
+                                  if (rest.isNotEmpty)
+                                    ...rest.asMap().entries.map((e) => _userRow(e.key, e.value)),
+                                ],
+                              ),
+                            )),
+                            Positioned(top: 0, left: 13, right: 13, child: Container(
+                              padding: const EdgeInsets.only(bottom: 5),
+                              color: Colors.transparent,
+                              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                _charmPodiumUser(2, top.length > 1 ? top[1] : <String, dynamic>{}),
+                                const SizedBox(width: 4),
+                                _charmPodiumUser(1, top.isNotEmpty ? top[0] : <String, dynamic>{}),
+                                const SizedBox(width: 4),
+                                _charmPodiumUser(3, top.length > 2 ? top[2] : <String, dynamic>{}),
+                              ]),
+                            )),
+                          ])
+                        : RefreshIndicator(color: _royalGold, onRefresh: _load, child: ListView(padding: const EdgeInsets.fromLTRB(13, 8, 13, 10), children: [
+                            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              _podiumUser(2, top.length > 1 ? top[1] : <String, dynamic>{}),
+                              const SizedBox(width: 4),
+                              _podiumUser(1, top.isNotEmpty ? top[0] : <String, dynamic>{}),
+                              const SizedBox(width: 4),
+                              _podiumUser(3, top.length > 2 ? top[2] : <String, dynamic>{}),
+                            ]),
+                            const SizedBox(height: 13),
+                            if (rest.isNotEmpty)
+                              ...rest.asMap().entries.map((e) => _userRow(e.key, e.value)),
+                          ])),
             _myRankPanel(),
           ])),
         ]),
