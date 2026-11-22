@@ -11688,6 +11688,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                             if (rest.isNotEmpty)
                               ...rest.asMap().entries.map((e) => _userRow(e.key, e.value)),
                           ])),
+            ),
             _myRankPanel(),
           ])),
         ]),
