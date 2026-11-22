@@ -9785,6 +9785,7 @@ class RoomCoverMarqueeRainbowText extends StatefulWidget {
   final Duration rainbowDuration;
   final double scrollPixelsPerSecond;
   final Duration startPause;
+  final bool alignStart;
 
   const RoomCoverMarqueeRainbowText({
     super.key,
@@ -9794,6 +9795,7 @@ class RoomCoverMarqueeRainbowText extends StatefulWidget {
     this.rainbowDuration = const Duration(seconds: 3),
     this.scrollPixelsPerSecond = 34,
     this.startPause = const Duration(seconds: 5),
+    this.alignStart = false,
   });
 
   @override
@@ -9932,7 +9934,8 @@ class _RoomCoverMarqueeRainbowTextState
             }
 
             if (!overflowing) {
-              return Center(
+              return Align(
+                alignment: widget.alignStart ? Alignment.centerLeft : Alignment.center,
                 child: _rainbowCopy(),
               );
             }
@@ -11175,6 +11178,8 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
             final rank2FrameUpShift = rank == 2 ? frameHeight * .015 : 0.0;
             final frameArtworkTop = -frameHeight * .05 +
                 allFramesDownShift - rank2FrameUpShift;
+            final nameTop = frameHeight * .625 -
+                (rank == 2 ? frameHeight * .02 : frameHeight * .01);
 
             return SizedBox(
               width: frameWidth,
@@ -11225,11 +11230,11 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                       errorBuilder: (_, __, ___) => const SizedBox.shrink(),
                     ),
                   ),
-                  // Username is centred in the first black nameplate.
+                  // Rank 2 name moves up 2%; Ranks 1 and 3 move up 1%.
                   Positioned(
                     left: frameWidth * .17,
                     right: frameWidth * .17,
-                    top: frameHeight * .625,
+                    top: nameTop,
                     height: frameHeight * .070,
                     child: Center(
                       child: RoomCoverMarqueeRainbowText(
@@ -11467,13 +11472,13 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
     final avatar = _avatar(user);
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         // Semi-transparent Rank 4+ row lets the ranking background show through.
         gradient: LinearGradient(colors: _category == 'charm'
             ? [
-                const Color(0xFF4A280F).withOpacity(.32),
-                const Color(0xFF241208).withOpacity(.25),
+                const Color(0xFF4A280F).withOpacity(.14),
+                const Color(0xFF241208).withOpacity(.10),
               ]
             : [
                 const Color(0xFF4A280F).withOpacity(.58),
@@ -11489,7 +11494,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
         const SizedBox(width: 8),
         Container(padding: const EdgeInsets.all(2), decoration: BoxDecoration(shape: BoxShape.circle,
           border: Border.all(color: const Color(0xFFFFD46A), width: 1.5)),
-          child: CircleAvatar(radius: 22, backgroundColor: Colors.brown.shade700,
+          child: CircleAvatar(radius: 20, backgroundColor: Colors.brown.shade700,
             backgroundImage: avatar.isNotEmpty ? NetworkImage(avatar) : null,
             child: avatar.isEmpty ? const Icon(Icons.person, color: Colors.white70) : null)),
         const SizedBox(width: 4),
@@ -11500,9 +11505,10 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
             fontWeight: FontWeight.w900,
             scrollPixelsPerSecond: 27,
             startPause: const Duration(seconds: 2),
+            alignStart: true,
           ),
         ])),
-        Image.asset('assets/mindo_coin.png', width: 22, height: 22, fit: BoxFit.contain),
+        Image.asset('assets/mindo_coin.png', width: 16, height: 16, fit: BoxFit.contain),
         const SizedBox(width: 4),
         Text(_compact(_coins(user)), style: const TextStyle(color: Color(0xFFFFE08A), fontWeight: FontWeight.w900, fontSize: 13)),
       ]),
@@ -11617,7 +11623,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                           color: _royalGold,
                           onRefresh: _load,
                           child: ListView(
-                            padding: const EdgeInsets.fromLTRB(13, 190, 13, 10),
+                            padding: const EdgeInsets.fromLTRB(13, 205, 13, 10),
                             children: [
                               if (rest.isNotEmpty)
                                 ...rest.asMap().entries.map((e) => _userRow(e.key, e.value)),
