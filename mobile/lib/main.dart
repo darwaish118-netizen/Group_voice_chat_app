@@ -11737,7 +11737,7 @@ class _GlobalRoomRankingScreenState extends State<GlobalRoomRankingScreen> {
           : <Map<String, dynamic>>[];
       list.sort((a, b) => _coins(b).compareTo(_coins(a)));
       if (!mounted) return;
-      setState(() { _ranking = list.take(100).toList(); _loading = false; });
+      setState(() { _ranking = list.take(30).toList(); _loading = false; });
     } catch (e) {
       if (!mounted) return;
       setState(() { _error = e.toString().replaceFirst('Exception: ', ''); _loading = false; });
@@ -11774,15 +11774,35 @@ class _GlobalRoomRankingScreenState extends State<GlobalRoomRankingScreen> {
     ));
   }
 
-  Widget _roomCover(Map<String, dynamic> room, {double radius = 29}) {
+  Widget _roomCover(Map<String, dynamic> room, {double size = 54}) {
     final url = (room['cover_image_url'] ?? '').toString();
     return Container(
-      padding: const EdgeInsets.all(2.5),
-      decoration: const BoxDecoration(shape: BoxShape.circle,
-        gradient: LinearGradient(colors: [_gold, Color(0xFFFF65B7), Color(0xFF9D70FF)])),
-      child: CircleAvatar(radius: radius, backgroundColor: const Color(0xFF50345D),
-        backgroundImage: url.isNotEmpty ? NetworkImage(url) : null,
-        child: url.isEmpty ? const Icon(Icons.mic_rounded, color: Colors.white, size: 25) : null),
+      width: size,
+      height: size,
+      padding: const EdgeInsets.all(2),
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          colors: [Color(0xFFFFE7A0), Color(0xFFFFB52E), Color(0xFFFF65B7)],
+        ),
+      ),
+      child: ClipOval(
+        child: url.isNotEmpty
+            ? Image.network(
+                url,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  color: const Color(0xFF3A1015),
+                  alignment: Alignment.center,
+                  child: const Icon(Icons.mic_rounded, color: Colors.white, size: 24),
+                ),
+              )
+            : Container(
+                color: const Color(0xFF3A1015),
+                alignment: Alignment.center,
+                child: const Icon(Icons.mic_rounded, color: Colors.white, size: 24),
+              ),
+      ),
     );
   }
 
@@ -11799,91 +11819,321 @@ class _GlobalRoomRankingScreenState extends State<GlobalRoomRankingScreen> {
     )));
   }
 
-  Widget _podium(int rank, Map<String, dynamic> room) {
-    final first = rank == 1;
-    final colors = rank == 1 ? [const Color(0xFFEF3D9B), const Color(0xFF9A267E)]
-      : rank == 2 ? [const Color(0xFF9C56D9), const Color(0xFF54318C)]
-      : [const Color(0xFF19B9CF), const Color(0xFF176C9B)];
-    return Expanded(child: Padding(
-      padding: EdgeInsets.only(top: first ? 0 : 27),
-      child: GestureDetector(onTap: () => _openRoom(room), child: Container(
-        height: first ? 196 : 166,
-        padding: const EdgeInsets.fromLTRB(7, 10, 7, 9),
-        decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: colors),
-          borderRadius: BorderRadius.circular(19), border: Border.all(color: _gold.withOpacity(.9), width: first ? 1.8 : 1),
-          boxShadow: [BoxShadow(color: colors.first.withOpacity(.3), blurRadius: 15, offset: const Offset(0, 5))]),
-        child: Column(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Icon(first ? Icons.workspace_premium_rounded : Icons.military_tech_rounded, color: const Color(0xFFFFE28A), size: first ? 27 : 22),
-          _roomCover(room, radius: first ? 32 : 27),
-          Text((room['name'] ?? 'Voice Room').toString(), maxLines: 1, overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900)),
-          Text('Room ID: ${(room['id'] ?? '').toString().length > 8 ? (room['id'] as String).substring(0, 8) : room['id'] ?? '—'}',
-            maxLines: 1, style: const TextStyle(color: Colors.white70, fontSize: 8)),
-          Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-            decoration: BoxDecoration(color: const Color(0xFF4A251C).withOpacity(.8), borderRadius: BorderRadius.circular(20), border: Border.all(color: _gold.withOpacity(.7))),
-            child: Text('${_compact(_coins(room))} coins', style: const TextStyle(color: Color(0xFFFFE49B), fontSize: 10, fontWeight: FontWeight.w900))),
-        ]),
-      )),
-    ));
+  Widget _roomTopThree(List<Map<String, dynamic>> top) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final height = width * 942 / 1670;
+
+        Widget avatar(int rank, Map<String, dynamic> room) {
+          final leftFactor = rank == 1 ? .389 : rank == 2 ? .087 : .759;
+          final topFactor = rank == 1 ? .159 : rank == 2 ? .265 : .250;
+          final sizeFactor = rank == 1 ? .215 : .142;
+          final size = width * sizeFactor;
+          return Positioned(
+            left: width * leftFactor,
+            top: height * topFactor,
+            width: size,
+            height: size,
+            child: GestureDetector(
+              onTap: () => _openRoom(room),
+              child: ClipOval(
+                child: (room['cover_image_url'] ?? '').toString().isNotEmpty
+                    ? Image.network(
+                        room['cover_image_url'].toString(),
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          color: const Color(0xFF351018),
+                          alignment: Alignment.center,
+                          child: const Icon(Icons.mic_rounded, color: Colors.white),
+                        ),
+                      )
+                    : Container(
+                        color: const Color(0xFF351018),
+                        alignment: Alignment.center,
+                        child: const Icon(Icons.mic_rounded, color: Colors.white),
+                      ),
+              ),
+            ),
+          );
+        }
+
+        Widget nameBar(int rank, Map<String, dynamic> room) {
+          final left = rank == 1 ? .335 : rank == 2 ? .025 : .715;
+          final barWidth = rank == 1 ? .330 : .260;
+          return Positioned(
+            left: width * left,
+            top: height * .665,
+            width: width * barWidth,
+            height: height * .105,
+            child: Center(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  (room['name'] ?? 'Voice Room').toString(),
+                  maxLines: 1,
+                  style: const TextStyle(
+                    color: Color(0xFFFFE9A6),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+
+        Widget coinValue(int rank, Map<String, dynamic> room) {
+          final left = rank == 1 ? .445 : rank == 2 ? .130 : .795;
+          final valueWidth = rank == 1 ? .145 : .125;
+          return Positioned(
+            left: width * left,
+            top: height * .765,
+            width: width * valueWidth,
+            height: height * .085,
+            child: Center(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  _compact(_coins(room)),
+                  maxLines: 1,
+                  style: const TextStyle(
+                    color: Color(0xFFFFE08A),
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+
+        return SizedBox(
+          width: width,
+          height: height,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              // Avatars sit behind the transparent circular openings in the frame sheet.
+              for (var i = 0; i < top.length && i < 3; i++)
+                avatar(i + 1, top[i]),
+              Positioned.fill(
+                child: Image.asset(
+                  'assets/ranking/room/room_ranking_frames.png',
+                  fit: BoxFit.fill,
+                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                ),
+              ),
+              for (var i = 0; i < top.length && i < 3; i++) ...[
+                nameBar(i + 1, top[i]),
+                coinValue(i + 1, top[i]),
+              ],
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Widget _roomRow(int index, Map<String, dynamic> room) {
     final rank = index + 4;
-    return GestureDetector(onTap: () => _openRoom(room), child: Container(
-      margin: const EdgeInsets.only(bottom: 9), padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
-      decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFF56331F), Color(0xFF2D1B24)]),
-        borderRadius: BorderRadius.circular(15), border: Border.all(color: _gold.withOpacity(.45)),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(.18), blurRadius: 7, offset: const Offset(0, 3))]),
-      child: Row(children: [
-        SizedBox(width: 29, child: Text('$rank', textAlign: TextAlign.center,
-          style: const TextStyle(color: _gold, fontWeight: FontWeight.w900, fontSize: 17))),
-        const SizedBox(width: 9), _roomCover(room, radius: 22), const SizedBox(width: 10),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text((room['name'] ?? 'Voice Room').toString(), maxLines: 1, overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13)),
-          Text('Room ID: ${(room['id'] ?? '—').toString()}', maxLines: 1, overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Colors.white60, fontSize: 9)),
-        ])),
-        Image.asset('assets/mindo_coin.png', width: 17, height: 17, fit: BoxFit.contain), const SizedBox(width: 4),
-        Text(_compact(_coins(room)), style: const TextStyle(color: Color(0xFFFFE39A), fontWeight: FontWeight.w900, fontSize: 12)),
-      ]),
-    ));
+    return GestureDetector(
+      onTap: () => _openRoom(room),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+        decoration: BoxDecoration(
+          // Match the semi-transparent gold-outlined 4–30 rows used by Wealth/Charm.
+          gradient: const LinearGradient(
+            colors: [Color(0x66794B20), Color(0x804A2A12), Color(0x66794B20)],
+          ),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0x99F5C66A), width: 1),
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 27,
+              child: Text(
+                '$rank',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            const SizedBox(width: 7),
+            GestureDetector(
+              onTap: () => _openRoom(room),
+              child: _roomCover(room, size: 49),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Center(
+                child: RoomCoverMarqueeRainbowText(
+                  text: (room['name'] ?? 'Voice Room').toString(),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                  scrollPixelsPerSecond: 27,
+                  startPause: const Duration(seconds: 2),
+                  alignStart: true,
+                ),
+              ),
+            ),
+            Image.asset(
+              'assets/mindo_coin.png',
+              width: 16,
+              height: 16,
+              fit: BoxFit.contain,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              _compact(_coins(room)),
+              style: const TextStyle(
+                color: Color(0xFFFFE08A),
+                fontWeight: FontWeight.w900,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final top = _ranking.take(3).toList();
-    final rest = _ranking.length > 3 ? _ranking.skip(3).toList() : <Map<String, dynamic>>[];
+    final rest = _ranking.length > 3 ? _ranking.skip(3).take(27).toList() : <Map<String, dynamic>>[];
+
     return Scaffold(
-      backgroundColor: _deep,
-      appBar: AppBar(backgroundColor: _deep, foregroundColor: _gold, elevation: 0,
-        title: const SizedBox.shrink(), centerTitle: true),
-      body: Container(decoration: const BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
-        colors: [Color(0xFF32152D), Color(0xFF1A0C22), Color(0xFF100A19)])),
-        child: Column(children: [
-          Padding(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8), child: Row(children: [
-            _periodButton('DAILY', 'daily'), const SizedBox(width: 8), _periodButton('WEEKLY', 'weekly'), const SizedBox(width: 8), _periodButton('MONTHLY', 'monthly'),
-          ])),
-          Expanded(child: _loading ? const Center(child: CircularProgressIndicator(color: _gold))
-            : _error != null ? Center(child: Padding(padding: const EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(Icons.emoji_events_rounded, color: _gold, size: 54), const SizedBox(height: 12),
-                const Text('Global ranking could not be loaded.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8), Text(_error!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white60, fontSize: 11)),
-                const SizedBox(height: 14), OutlinedButton.icon(onPressed: _load, icon: const Icon(Icons.refresh), label: const Text('Retry')),
-              ])))
-            : _ranking.isEmpty ? const Center(child: Text('No gift activity recorded for this period yet.', style: TextStyle(color: Colors.white70)))
-            : RefreshIndicator(color: _gold, onRefresh: _load, child: ListView(padding: const EdgeInsets.fromLTRB(13, 12, 13, 22), children: [
-                if (top.isNotEmpty) ...[
-                  Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                    if (top.length > 1) _podium(2, top[1]), const SizedBox(width: 7), _podium(1, top[0]), const SizedBox(width: 7), if (top.length > 2) _podium(3, top[2]),
-                  ]), const SizedBox(height: 20),
-                ],
-                Container(padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
-                  decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFFFFD66B), Color(0xFFB9792D)]), borderRadius: BorderRadius.circular(12)),
-                  child: Text('TOP ${_ranking.length} ROOMS', style: const TextStyle(color: Color(0xFF44220C), fontWeight: FontWeight.w900, letterSpacing: 1))),
-                const SizedBox(height: 11), ...rest.asMap().entries.map((e) => _roomRow(e.key, e.value)),
-              ]))),
-        ]),
+      backgroundColor: const Color(0xFF26060B),
+      appBar: AppBar(
+        backgroundColor: const Color(0xAA26060B),
+        foregroundColor: _gold,
+        elevation: 0,
+        centerTitle: true,
+        title: const Text(
+          'ROOM RANKING',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 17,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.1,
+          ),
+        ),
+      ),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.asset(
+            'assets/ranking/room/room_ranking_background.png',
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0xFF650B12), Color(0xFF26060B), Color(0xFF130509)],
+                ),
+              ),
+            ),
+          ),
+          Container(color: Colors.black.withOpacity(.06)),
+          SafeArea(
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 7, 14, 5),
+                  child: Row(
+                    children: [
+                      _periodButton('DAILY', 'daily'),
+                      const SizedBox(width: 8),
+                      _periodButton('WEEKLY', 'weekly'),
+                      const SizedBox(width: 8),
+                      _periodButton('MONTHLY', 'monthly'),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: _loading
+                      ? const Center(child: CircularProgressIndicator(color: _gold))
+                      : _error != null
+                          ? Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(24),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.emoji_events_rounded, color: _gold, size: 48),
+                                    const SizedBox(height: 12),
+                                    const Text(
+                                      'Room ranking could not be loaded.',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      _error!,
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(color: Colors.white70, fontSize: 11),
+                                    ),
+                                    const SizedBox(height: 14),
+                                    OutlinedButton.icon(
+                                      onPressed: _load,
+                                      icon: const Icon(Icons.refresh),
+                                      label: const Text('Retry'),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                          : _ranking.isEmpty
+                              ? const Center(
+                                  child: Text(
+                                    'No room ranking activity for this period yet.',
+                                    style: TextStyle(color: Colors.white70),
+                                  ),
+                                )
+                              : LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    final frameHeight = constraints.maxWidth * 942 / 1670;
+                                    return Stack(
+                                      children: [
+                                        // Rank 4–30 scrolls upward behind the fixed Top 3 frames.
+                                        Positioned.fill(
+                                          child: RefreshIndicator(
+                                            color: _gold,
+                                            onRefresh: _load,
+                                            child: ListView.builder(
+                                              padding: EdgeInsets.fromLTRB(
+                                                13,
+                                                frameHeight - 18,
+                                                13,
+                                                20,
+                                              ),
+                                              itemCount: rest.length,
+                                              itemBuilder: (_, index) => _roomRow(index, rest[index]),
+                                            ),
+                                          ),
+                                        ),
+                                        Positioned(
+                                          top: 0,
+                                          left: 0,
+                                          right: 0,
+                                          child: _roomTopThree(top),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
