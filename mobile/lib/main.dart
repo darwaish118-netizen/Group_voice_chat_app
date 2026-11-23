@@ -10904,7 +10904,10 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
           _periodEnd = _periodEndCache[cacheKey];
           _loading = false;
         } else {
-          _loading = true;
+          // Keep the last visible ranking on screen while the newly selected
+          // category/period is fetched. Only show the initial loader when there
+          // is no content to display yet.
+          _loading = _ranking.isEmpty;
         }
       });
     }
@@ -11422,11 +11425,9 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
           setState(() => _category = value);
           if (value != 'room') _load();
         },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 110),
-          curve: Curves.easeOutCubic,
+        child: Container(
           margin: const EdgeInsets.all(2),
-          padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 2),
+          padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 2),
           decoration: BoxDecoration(
             gradient: selected
                 ? const LinearGradient(
@@ -11475,11 +11476,9 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
           setState(() => _period = value);
           _load();
         },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 110),
-          curve: Curves.easeOutCubic,
+        child: Container(
           margin: const EdgeInsets.all(2),
-          padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 3),
+          padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 3),
           decoration: BoxDecoration(
             gradient: selected
                 ? const LinearGradient(
@@ -11968,11 +11967,9 @@ class _GlobalRoomRankingScreenState extends State<GlobalRoomRankingScreen> {
           setState(() => _period = value);
           _load();
         },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 110),
-          curve: Curves.easeOutCubic,
+        child: Container(
           margin: const EdgeInsets.all(2),
-          padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 3),
+          padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 3),
           decoration: BoxDecoration(
             gradient: selected
                 ? const LinearGradient(
