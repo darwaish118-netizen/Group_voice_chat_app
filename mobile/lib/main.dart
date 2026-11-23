@@ -12100,10 +12100,20 @@ class _GlobalRoomRankingScreenState extends State<GlobalRoomRankingScreen> {
         final height = width * 942 / 1670;
 
         Widget avatar(int rank, Map<String, dynamic> room) {
-          final leftFactor = rank == 1 ? .389 : rank == 2 ? .087 : .759;
-          // Room podium DP vertical alignment: rank 1 +1.5%, rank 2 +3.5%, rank 3 +5%.
-          final topFactor = rank == 1 ? .174 : rank == 2 ? .300 : .300;
-          final sizeFactor = rank == 1 ? .215 : .142;
+          // Keep the existing Room podium DP positions and apply only the
+          // requested per-frame fine adjustments across Daily, Weekly, Monthly.
+          final baseLeftFactor = rank == 1 ? .389 : rank == 2 ? .087 : .759;
+          final baseTopFactor = rank == 1 ? .174 : rank == 2 ? .300 : .300;
+          final baseSizeFactor = rank == 1 ? .215 : .142;
+
+          // Rank 1: 1% larger.
+          // Rank 2: 1% right, 1% down, and 1% larger.
+          // Rank 3: 1.5% right, 1% down, and 1% larger.
+          final leftFactor = baseLeftFactor +
+              (rank == 2 ? .01 : rank == 3 ? .015 : 0.0);
+          final topFactor = baseTopFactor +
+              (rank == 1 ? 0.0 : .01);
+          final sizeFactor = baseSizeFactor * 1.01;
           final size = width * sizeFactor;
           return Positioned(
             left: width * leftFactor,
