@@ -11617,7 +11617,11 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
       ),
       child: Row(children: [
         SizedBox(width: 28, child: Text('$rank', textAlign: TextAlign.center,
-          style: const TextStyle(color: Color(0xFFFFD46A), fontSize: 17, fontWeight: FontWeight.w900))),
+          style: TextStyle(
+            color: _category == 'charm' ? Colors.white : const Color(0xFFFFD46A),
+            fontSize: 17,
+            fontWeight: FontWeight.w900,
+          ))),
         const SizedBox(width: 8),
         Container(padding: const EdgeInsets.all(2), decoration: BoxDecoration(shape: BoxShape.circle,
           border: Border.all(color: const Color(0xFFFFD46A), width: 1.5)),
@@ -11699,14 +11703,19 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                       image: AssetImage('assets/ranking/charm/charm_rankings_daily_weekly_monthly.png'),
                       fit: BoxFit.cover,
                     )
-                  : null,
-          gradient: (_category == 'wealth' || _category == 'charm') ? null : const LinearGradient(
+                  : _category == 'room'
+                      ? const DecorationImage(
+                          image: AssetImage('assets/ranking/room/room_ranking_background.png'),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
+          gradient: (_category == 'wealth' || _category == 'charm' || _category == 'room') ? null : const LinearGradient(
             begin: Alignment.topCenter, end: Alignment.bottomCenter,
             colors: [Color(0xFF6A370C), Color(0xFF321807), Color(0xFF160B06)]),
         ),
         child: Stack(children: [
           // Subtle palace columns and warm royal lighting, kept behind live ranking data.
-          if (_category != 'charm') ...[
+          if (_category != 'charm' && _category != 'room') ...[
             Positioned(left: 0, top: 0, bottom: 0, child: Container(width: 9,
               decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFFFFE9A0), Color(0xFF8C4B12), Color(0xFFFFD15B)])))),
             Positioned(right: 0, top: 0, bottom: 0, child: Container(width: 9,
