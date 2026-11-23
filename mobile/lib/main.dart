@@ -12101,7 +12101,8 @@ class _GlobalRoomRankingScreenState extends State<GlobalRoomRankingScreen> {
 
         Widget avatar(int rank, Map<String, dynamic> room) {
           final leftFactor = rank == 1 ? .389 : rank == 2 ? .087 : .759;
-          final topFactor = rank == 1 ? .159 : rank == 2 ? .265 : .250;
+          // Room podium DP vertical alignment: rank 1 +1.5%, rank 2 +3.5%, rank 3 +5%.
+          final topFactor = rank == 1 ? .174 : rank == 2 ? .300 : .300;
           final sizeFactor = rank == 1 ? .215 : .142;
           final size = width * sizeFactor;
           return Positioned(
