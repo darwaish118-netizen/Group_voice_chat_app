@@ -10860,6 +10860,10 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
   List<Map<String, dynamic>> _ranking = [];
   Map<String, dynamic>? _myRank;
   DateTime? _periodEnd;
+  final Map<String, List<Map<String, dynamic>>> _rankingCache = {};
+  final Map<String, Map<String, dynamic>?> _myRankCache = {};
+  final Map<String, DateTime?> _periodEndCache = {};
+  int _loadRequestId = 0;
   Timer? _countdownTimer;
   Duration _remaining = Duration.zero;
 
@@ -10883,11 +10887,32 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
   }
 
   Future<void> _load() async {
-    if (mounted) setState(() { _loading = true; _error = null; });
+    final requestId = ++_loadRequestId;
+    final requestCategory = _category;
+    final requestPeriod = _period;
+    final cacheKey = '$requestCategory|$requestPeriod';
+    final cachedRanking = _rankingCache[cacheKey];
+    final hasCachedData = cachedRanking != null;
+
+    // Keep the current/previous ranking visible while a new tab refreshes.
+    if (mounted) {
+      setState(() {
+        _error = null;
+        if (hasCachedData) {
+          _ranking = List<Map<String, dynamic>>.from(cachedRanking);
+          _myRank = _myRankCache[cacheKey];
+          _periodEnd = _periodEndCache[cacheKey];
+          _loading = false;
+        } else {
+          _loading = true;
+        }
+      });
+    }
+
     try {
-      final result = _category == 'agency'
-          ? await api.getGlobalAgencyRanking(widget.token, _period)
-          : await api.getGlobalUserRanking(widget.token, _category, _period);
+      final result = requestCategory == 'agency'
+          ? await api.getGlobalAgencyRanking(widget.token, requestPeriod)
+          : await api.getGlobalUserRanking(widget.token, requestCategory, requestPeriod);
       final raw = result['ranking'];
       final list = raw is List
           ? raw.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList()
@@ -10895,17 +10920,33 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
       final me = result['my_rank'];
       final endRaw = result['period_end']?.toString();
       final end = endRaw == null ? null : DateTime.tryParse(endRaw)?.toLocal();
-      if (!mounted) return;
+      final limited = list.take(
+        (requestCategory == 'wealth' || requestCategory == 'charm') ? 30 : 50,
+      ).toList();
+
+      // Cache the result for instant return when the user revisits this tab.
+      _rankingCache[cacheKey] = limited;
+      _myRankCache[cacheKey] =
+          me is Map ? Map<String, dynamic>.from(me) : null;
+      _periodEndCache[cacheKey] = end;
+
+      if (!mounted || requestId != _loadRequestId) return;
       setState(() {
-        _ranking = list.take((_category == 'wealth' || _category == 'charm') ? 30 : 50).toList();
-        _myRank = me is Map ? Map<String, dynamic>.from(me) : null;
+        _ranking = limited;
+        _myRank = _myRankCache[cacheKey];
         _periodEnd = end;
         _loading = false;
+        _error = null;
       });
       _updateCountdown();
     } catch (e) {
-      if (!mounted) return;
-      setState(() { _error = e.toString().replaceFirst('Exception: ', ''); _loading = false; });
+      if (!mounted || requestId != _loadRequestId) return;
+      setState(() {
+        _error = hasCachedData
+            ? null
+            : e.toString().replaceFirst('Exception: ', '');
+        _loading = false;
+      });
     }
   }
 
@@ -11382,7 +11423,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
           if (value != 'room') _load();
         },
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 240),
+          duration: const Duration(milliseconds: 110),
           curve: Curves.easeOutCubic,
           margin: const EdgeInsets.all(2),
           padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 2),
@@ -11435,7 +11476,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
           _load();
         },
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 240),
+          duration: const Duration(milliseconds: 110),
           curve: Curves.easeOutCubic,
           margin: const EdgeInsets.all(2),
           padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 3),
@@ -11812,6 +11853,9 @@ class _GlobalRoomRankingScreenState extends State<GlobalRoomRankingScreen> {
   String? _error;
   List<Map<String, dynamic>> _ranking = [];
   DateTime? _periodEnd;
+  static final Map<String, List<Map<String, dynamic>>> _roomRankingCache = {};
+  static final Map<String, DateTime?> _roomPeriodEndCache = {};
+  int _roomLoadRequestId = 0;
   Timer? _countdownTimer;
   Duration _remaining = Duration.zero;
 
@@ -11850,9 +11894,26 @@ class _GlobalRoomRankingScreenState extends State<GlobalRoomRankingScreen> {
   }
 
   Future<void> _load() async {
-    setState(() { _loading = true; _error = null; });
+    final requestId = ++_roomLoadRequestId;
+    final cacheKey = _period;
+    final cached = _roomRankingCache[cacheKey];
+    final hasCachedData = cached != null;
+
+    if (mounted) {
+      setState(() {
+        _error = null;
+        if (hasCachedData) {
+          _ranking = List<Map<String, dynamic>>.from(cached);
+          _periodEnd = _roomPeriodEndCache[cacheKey];
+          _loading = false;
+        } else {
+          _loading = true;
+        }
+      });
+    }
+
     try {
-      final result = await api.getGlobalRoomRanking(widget.token, _period);
+      final result = await api.getGlobalRoomRanking(widget.token, cacheKey);
       final raw = result['ranking'] ?? result['rooms'] ?? [];
       final list = raw is List
           ? raw.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList()
@@ -11862,16 +11923,27 @@ class _GlobalRoomRankingScreenState extends State<GlobalRoomRankingScreen> {
       final periodEnd = endRaw == null
           ? null
           : DateTime.tryParse(endRaw)?.toLocal();
-      if (!mounted) return;
+      final limited = list.take(30).toList();
+
+      _roomRankingCache[cacheKey] = limited;
+      _roomPeriodEndCache[cacheKey] = periodEnd;
+
+      if (!mounted || requestId != _roomLoadRequestId) return;
       setState(() {
-        _ranking = list.take(30).toList();
+        _ranking = limited;
         _periodEnd = periodEnd;
         _loading = false;
+        _error = null;
       });
       _updateCountdown();
     } catch (e) {
-      if (!mounted) return;
-      setState(() { _error = e.toString().replaceFirst('Exception: ', ''); _loading = false; });
+      if (!mounted || requestId != _roomLoadRequestId) return;
+      setState(() {
+        _error = hasCachedData
+            ? null
+            : e.toString().replaceFirst('Exception: ', '');
+        _loading = false;
+      });
     }
   }
 
@@ -11897,7 +11969,7 @@ class _GlobalRoomRankingScreenState extends State<GlobalRoomRankingScreen> {
           _load();
         },
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 240),
+          duration: const Duration(milliseconds: 110),
           curve: Curves.easeOutCubic,
           margin: const EdgeInsets.all(2),
           padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 3),
