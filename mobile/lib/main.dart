@@ -12106,14 +12106,19 @@ class _GlobalRoomRankingScreenState extends State<GlobalRoomRankingScreen> {
           final baseTopFactor = rank == 1 ? .174 : rank == 2 ? .300 : .300;
           final baseSizeFactor = rank == 1 ? .215 : .142;
 
-          // Rank 1: 1% larger.
-          // Rank 2: 1% right, 1% down, and 1% larger.
-          // Rank 3: 1.5% right, 1% down, and 1% larger.
-          final leftFactor = baseLeftFactor +
+          // Preserve the previous DP positions, then apply this adjustment:
+          // Rank 1: reduce its current overall size by 1%.
+          // Ranks 2 and 3: shift each current position 1.5% to the left.
+          final previousLeftFactor = baseLeftFactor +
               (rank == 2 ? .01 : rank == 3 ? .015 : 0.0);
+          final leftFactor = previousLeftFactor -
+              (rank == 2 || rank == 3 ? .015 : 0.0);
           final topFactor = baseTopFactor +
               (rank == 1 ? 0.0 : .01);
-          final sizeFactor = baseSizeFactor * 1.01;
+          final previousSizeFactor = baseSizeFactor * 1.01;
+          final sizeFactor = rank == 1
+              ? previousSizeFactor * .99
+              : previousSizeFactor;
           final size = width * sizeFactor;
           return Positioned(
             left: width * leftFactor,
