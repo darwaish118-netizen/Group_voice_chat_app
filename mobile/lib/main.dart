@@ -11423,7 +11423,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
         onTap: () {
           if (_category == value) return;
           setState(() => _category = value);
-          if (value != 'room') _load();
+          if (value != 'room' && value != 'reward') _load();
         },
         child: Container(
           margin: const EdgeInsets.all(2),
@@ -11477,8 +11477,8 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
           _load();
         },
         child: Container(
-          margin: const EdgeInsets.all(2),
-          padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 3),
+          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+          padding: const EdgeInsets.symmetric(vertical: 6.5, horizontal: 3),
           decoration: BoxDecoration(
             gradient: selected
                 ? const LinearGradient(
@@ -11709,13 +11709,14 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                           fit: BoxFit.cover,
                         )
                       : null,
-          gradient: (_category == 'wealth' || _category == 'charm' || _category == 'room') ? null : const LinearGradient(
+          color: _category == 'reward' ? Colors.black : null,
+          gradient: (_category == 'wealth' || _category == 'charm' || _category == 'room' || _category == 'reward') ? null : const LinearGradient(
             begin: Alignment.topCenter, end: Alignment.bottomCenter,
             colors: [Color(0xFF6A370C), Color(0xFF321807), Color(0xFF160B06)]),
         ),
         child: Stack(children: [
           // Subtle palace columns and warm royal lighting, kept behind live ranking data.
-          if (_category != 'charm' && _category != 'room') ...[
+          if (_category != 'charm' && _category != 'room' && _category != 'reward') ...[
             Positioned(left: 0, top: 0, bottom: 0, child: Container(width: 9,
               decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFFFFE9A0), Color(0xFF8C4B12), Color(0xFFFFD15B)])))),
             Positioned(right: 0, top: 0, bottom: 0, child: Container(width: 9,
@@ -11730,10 +11731,11 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                   _categoryButton('CHARM', 'charm'),
                   _categoryButton('ROOM', 'room'),
                   _categoryButton('AGENCY', 'agency'),
+                  _categoryButton('REWARD', 'reward'),
                 ]),
               ),
             ),
-            if (_category != 'room') ...[
+            if (_category != 'room' && _category != 'reward') ...[
               Padding(
                 padding: const EdgeInsets.fromLTRB(14, 2, 14, 7),
                 child: _rankingSegmentShell(
@@ -11751,9 +11753,11 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                   child: Text('◷  ENDS IN  ${_countdownText()}', style: const TextStyle(color: _royalLight, fontWeight: FontWeight.w900, fontSize: 11))),
               ])),
             ],
-            Expanded(child: _category == 'room'
-              ? GlobalRoomRankingScreen(token: widget.token, embedded: true)
-              : _loading
+            Expanded(child: _category == 'reward'
+              ? const ColoredBox(color: Colors.black)
+              : _category == 'room'
+                ? GlobalRoomRankingScreen(token: widget.token, embedded: true)
+                : _loading
               ? const Center(child: CircularProgressIndicator(color: _royalGold))
               : _error != null
                 ? Center(child: Padding(padding: const EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, children: [
