@@ -11455,8 +11455,8 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
               style: TextStyle(
                 color: selected ? const Color(0xFF48200A) : Colors.white,
                 fontWeight: FontWeight.w900,
-                fontSize: 11,
-                letterSpacing: .25,
+                fontSize: 12,
+                letterSpacing: .3,
               ),
             ),
           ),
@@ -11715,12 +11715,14 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
           SafeArea(child: Column(children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 9, 14, 7),
-              child: Row(children: [
-                _categoryButton('WEALTH', 'wealth'),
-                _categoryButton('CHARM', 'charm'),
-                _categoryButton('ROOM', 'room'),
-                _categoryButton('AGENCY', 'agency'),
-              ]),
+              child: _rankingSegmentShell(
+                child: Row(children: [
+                  _categoryButton('WEALTH', 'wealth'),
+                  _categoryButton('CHARM', 'charm'),
+                  _categoryButton('ROOM', 'room'),
+                  _categoryButton('AGENCY', 'agency'),
+                ]),
+              ),
             ),
             if (_category != 'room') ...[
               Padding(
