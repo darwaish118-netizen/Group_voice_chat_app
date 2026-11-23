@@ -12114,14 +12114,14 @@ class _GlobalRoomRankingScreenState extends State<GlobalRoomRankingScreen> {
           final leftFactor = previousLeftFactor -
               (rank == 2 || rank == 3 ? .01 : 0.0);
           final topFactor = baseTopFactor +
-              (rank == 1 ? .005 : .004);
+              (rank == 1 ? .025 : .004);
           final previousSizeFactor = baseSizeFactor * 1.01;
           final currentSizeFactor = rank == 1
               ? previousSizeFactor * .99
               : previousSizeFactor;
           final sizeFactor = rank == 1
               ? currentSizeFactor * .9702
-              : currentSizeFactor * 1.0252005;
+              : currentSizeFactor * 1.0303265;
           final size = width * sizeFactor;
           return Positioned(
             left: width * leftFactor,
@@ -12164,6 +12164,7 @@ class _GlobalRoomRankingScreenState extends State<GlobalRoomRankingScreen> {
                 fit: BoxFit.scaleDown,
                 child: Text(
                   (room['name'] ?? 'Voice Room').toString(),
+                  textAlign: TextAlign.center,
                   maxLines: 1,
                   style: const TextStyle(
                     color: Color(0xFFFFE9A6),
@@ -12177,8 +12178,9 @@ class _GlobalRoomRankingScreenState extends State<GlobalRoomRankingScreen> {
         }
 
         Widget coinValue(int rank, Map<String, dynamic> room) {
-          final left = rank == 1 ? .445 : rank == 2 ? .130 : .795;
-          final valueWidth = rank == 1 ? .145 : .125;
+          // Center the coin amount across the full horizontal coin bar.
+          final left = rank == 1 ? .350 : rank == 2 ? .050 : .720;
+          final valueWidth = rank == 1 ? .300 : .230;
           return Positioned(
             left: width * left,
             top: height * .765,
@@ -12189,6 +12191,7 @@ class _GlobalRoomRankingScreenState extends State<GlobalRoomRankingScreen> {
                 fit: BoxFit.scaleDown,
                 child: Text(
                   _compact(_coins(room)),
+                  textAlign: TextAlign.center,
                   maxLines: 1,
                   style: const TextStyle(
                     color: Color(0xFFFFE08A),
