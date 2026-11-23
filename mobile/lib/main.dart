@@ -11370,48 +11370,126 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
     );
   }
 
+  // Shared capsule-style segmented control for the four ranking categories.
   Widget _categoryButton(String label, String value) {
     final selected = _category == value;
-    return Expanded(child: GestureDetector(
-      onTap: () {
-        if (_category == value) return;
-        setState(() => _category = value);
-        if (value != 'room') {
-          _load();
-        }
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(vertical: 9),
-        decoration: BoxDecoration(
-          color: selected ? const Color(0xFFFFD76A) : const Color(0xFF241006),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: selected ? const Color(0xFFFFF0B5) : const Color(0xFFB47A2B), width: 1.2),
+    return Expanded(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          if (_category == value) return;
+          setState(() => _category = value);
+          if (value != 'room') _load();
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 240),
+          curve: Curves.easeOutCubic,
+          margin: const EdgeInsets.all(2),
+          padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 2),
+          decoration: BoxDecoration(
+            gradient: selected
+                ? const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFFFFF0A8), Color(0xFFFFC12F), Color(0xFFE98716)],
+                  )
+                : null,
+            color: selected ? null : Colors.transparent,
+            borderRadius: BorderRadius.circular(40),
+            border: selected
+                ? Border.all(color: const Color(0xFFFFF4C9), width: 1)
+                : null,
+            boxShadow: selected
+                ? const [BoxShadow(color: Color(0x99FFB52E), blurRadius: 12, spreadRadius: 1)]
+                : const [],
+          ),
+          alignment: Alignment.center,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label,
+              maxLines: 1,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: selected ? const Color(0xFF48200A) : Colors.white,
+                fontWeight: FontWeight.w900,
+                fontSize: 11,
+                letterSpacing: .25,
+              ),
+            ),
+          ),
         ),
-        child: Text(label, textAlign: TextAlign.center,
-          style: TextStyle(color: selected ? const Color(0xFF44220C) : Colors.white,
-            fontWeight: FontWeight.w900, fontSize: 11)),
       ),
-    ));
+    );
   }
 
+  // Same capsule style is reused for Daily / Weekly / Monthly.
   Widget _periodButton(String label, String value) {
     final selected = _period == value;
-    return Expanded(child: GestureDetector(
-      onTap: () { if (_period == value) return; setState(() => _period = value); _load(); },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: selected ? const Color(0xFFFFD76A) : Colors.black.withOpacity(.30),
-          borderRadius: BorderRadius.circular(13),
-          border: Border.all(color: selected ? const Color(0xFFFFF0B5) : Colors.white38),
+    return Expanded(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          if (_period == value) return;
+          setState(() => _period = value);
+          _load();
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 240),
+          curve: Curves.easeOutCubic,
+          margin: const EdgeInsets.all(2),
+          padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 3),
+          decoration: BoxDecoration(
+            gradient: selected
+                ? const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFFFFF0A8), Color(0xFFFFC12F), Color(0xFFE98716)],
+                  )
+                : null,
+            color: selected ? null : Colors.transparent,
+            borderRadius: BorderRadius.circular(40),
+            border: selected
+                ? Border.all(color: const Color(0xFFFFF4C9), width: 1)
+                : null,
+            boxShadow: selected
+                ? const [BoxShadow(color: Color(0x99FFB52E), blurRadius: 12, spreadRadius: 1)]
+                : const [],
+          ),
+          alignment: Alignment.center,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label,
+              maxLines: 1,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: selected ? const Color(0xFF48200A) : Colors.white,
+                fontWeight: FontWeight.w900,
+                fontSize: 12,
+                letterSpacing: .3,
+              ),
+            ),
+          ),
         ),
-        child: Text(label, textAlign: TextAlign.center,
-          style: TextStyle(color: selected ? const Color(0xFF44220C) : Colors.white,
-            fontWeight: FontWeight.w900, fontSize: 12)),
       ),
-    ));
+    );
+  }
+
+  Widget _rankingSegmentShell({required Widget child}) {
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: const Color(0xCC260B35),
+        borderRadius: BorderRadius.circular(50),
+        border: Border.all(color: const Color(0xFFFFC84A), width: 1.2),
+        boxShadow: const [
+          BoxShadow(color: Color(0x665E19A8), blurRadius: 13, spreadRadius: 1),
+          BoxShadow(color: Color(0x44FFB52E), blurRadius: 7),
+        ],
+      ),
+      child: child,
+    );
   }
 
   Widget _podiumUser(int rank, Map<String, dynamic> user) {
@@ -11595,18 +11673,28 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
               decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFFFFE9A0), Color(0xFF8C4B12), Color(0xFFFFD15B)])))),
           ],
           SafeArea(child: Column(children: [
-            Padding(padding: const EdgeInsets.fromLTRB(14, 9, 14, 7), child: Row(children: [
-              _categoryButton('WEALTH', 'wealth'), const SizedBox(width: 6),
-              _categoryButton('CHARM', 'charm'), const SizedBox(width: 6),
-              _categoryButton('ROOM', 'room'), const SizedBox(width: 6),
-              _categoryButton('AGENCY', 'agency'),
-            ])),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 9, 14, 7),
+              child: _rankingSegmentShell(
+                child: Row(children: [
+                  _categoryButton('WEALTH', 'wealth'),
+                  _categoryButton('CHARM', 'charm'),
+                  _categoryButton('ROOM', 'room'),
+                  _categoryButton('AGENCY', 'agency'),
+                ]),
+              ),
+            ),
             if (_category != 'room') ...[
-              Padding(padding: const EdgeInsets.fromLTRB(14, 2, 14, 7), child: Row(children: [
-                _periodButton('DAILY', 'daily'), const SizedBox(width: 8),
-                _periodButton('WEEKLY', 'weekly'), const SizedBox(width: 8),
-                _periodButton('MONTHLY', 'monthly'),
-              ])),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 2, 14, 7),
+                child: _rankingSegmentShell(
+                  child: Row(children: [
+                    _periodButton('DAILY', 'daily'),
+                    _periodButton('WEEKLY', 'weekly'),
+                    _periodButton('MONTHLY', 'monthly'),
+                  ]),
+                ),
+              ),
               Padding(padding: const EdgeInsets.only(bottom: 8), child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                 Container(padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
                   decoration: BoxDecoration(color: const Color(0xFF210F06), borderRadius: BorderRadius.circular(22),
@@ -11800,21 +11888,70 @@ class _GlobalRoomRankingScreenState extends State<GlobalRoomRankingScreen> {
 
   Widget _periodButton(String label, String value) {
     final selected = _period == value;
-    return Expanded(child: GestureDetector(
-      onTap: () { if (_period == value) return; setState(() => _period = value); _load(); },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 11),
-        decoration: BoxDecoration(
-          gradient: selected ? const LinearGradient(colors: [Color(0xFFFFB52E), Color(0xFFE66B19)]) : null,
-          color: selected ? null : const Color(0xFF38233E),
-          borderRadius: BorderRadius.circular(13),
-          border: Border.all(color: selected ? const Color(0xFFFFE4A0) : Colors.white24),
+    return Expanded(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          if (_period == value) return;
+          setState(() => _period = value);
+          _load();
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 240),
+          curve: Curves.easeOutCubic,
+          margin: const EdgeInsets.all(2),
+          padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 3),
+          decoration: BoxDecoration(
+            gradient: selected
+                ? const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFFFFF0A8), Color(0xFFFFC12F), Color(0xFFE98716)],
+                  )
+                : null,
+            color: selected ? null : Colors.transparent,
+            borderRadius: BorderRadius.circular(40),
+            border: selected
+                ? Border.all(color: const Color(0xFFFFF4C9), width: 1)
+                : null,
+            boxShadow: selected
+                ? const [BoxShadow(color: Color(0x99FFB52E), blurRadius: 12, spreadRadius: 1)]
+                : const [],
+          ),
+          alignment: Alignment.center,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label,
+              maxLines: 1,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: selected ? const Color(0xFF48200A) : Colors.white,
+                fontWeight: FontWeight.w900,
+                fontSize: 12,
+                letterSpacing: .3,
+              ),
+            ),
+          ),
         ),
-        child: Text(label, textAlign: TextAlign.center,
-          style: TextStyle(color: selected ? const Color(0xFF401C0B) : Colors.white70, fontWeight: FontWeight.w900)),
       ),
-    ));
+    );
+  }
+
+  Widget _roomPeriodSegmentShell({required Widget child}) {
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: const Color(0xCC260B35),
+        borderRadius: BorderRadius.circular(50),
+        border: Border.all(color: const Color(0xFFFFC84A), width: 1.2),
+        boxShadow: const [
+          BoxShadow(color: Color(0x665E19A8), blurRadius: 13, spreadRadius: 1),
+          BoxShadow(color: Color(0x44FFB52E), blurRadius: 7),
+        ],
+      ),
+      child: child,
+    );
   }
 
   Widget _roomCover(Map<String, dynamic> room, {double size = 54}) {
@@ -12092,14 +12229,14 @@ class _GlobalRoomRankingScreenState extends State<GlobalRoomRankingScreen> {
               children: [
                 Padding(
                   padding: const EdgeInsets.fromLTRB(14, 7, 14, 3),
-                  child: Row(
-                    children: [
-                      _periodButton('DAILY', 'daily'),
-                      const SizedBox(width: 8),
-                      _periodButton('WEEKLY', 'weekly'),
-                      const SizedBox(width: 8),
-                      _periodButton('MONTHLY', 'monthly'),
-                    ],
+                  child: _roomPeriodSegmentShell(
+                    child: Row(
+                      children: [
+                        _periodButton('DAILY', 'daily'),
+                        _periodButton('WEEKLY', 'weekly'),
+                        _periodButton('MONTHLY', 'monthly'),
+                      ],
+                    ),
                   ),
                 ),
                 Padding(
