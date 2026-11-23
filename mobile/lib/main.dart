@@ -12156,20 +12156,24 @@ class _GlobalRoomRankingScreenState extends State<GlobalRoomRankingScreen> {
           final barWidth = rank == 1 ? .330 : .260;
           return Positioned(
             left: width * left,
-            top: height * .665,
+            // Align the name text to the visual center of the frame's name bar.
+            top: height * .642,
             width: width * barWidth,
             height: height * .105,
-            child: Center(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  (room['name'] ?? 'Voice Room').toString(),
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  style: const TextStyle(
-                    color: Color(0xFFFFE9A6),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w900,
+            child: SizedBox.expand(
+              child: Align(
+                alignment: Alignment.center,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    (room['name'] ?? 'Voice Room').toString(),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    style: const TextStyle(
+                      color: Color(0xFFFFE9A6),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                 ),
               ),
@@ -12178,25 +12182,28 @@ class _GlobalRoomRankingScreenState extends State<GlobalRoomRankingScreen> {
         }
 
         Widget coinValue(int rank, Map<String, dynamic> room) {
-          // Center the coin amount across the full horizontal coin bar.
+          // Center the coin amount horizontally and vertically in the coin bar.
           final left = rank == 1 ? .350 : rank == 2 ? .050 : .720;
           final valueWidth = rank == 1 ? .300 : .230;
           return Positioned(
             left: width * left,
-            top: height * .765,
+            top: height * .755,
             width: width * valueWidth,
             height: height * .085,
-            child: Center(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  _compact(_coins(room)),
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  style: const TextStyle(
-                    color: Color(0xFFFFE08A),
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w900,
+            child: SizedBox.expand(
+              child: Align(
+                alignment: Alignment.center,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    _compact(_coins(room)),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    style: const TextStyle(
+                      color: Color(0xFFFFE08A),
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                 ),
               ),
