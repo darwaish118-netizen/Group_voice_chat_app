@@ -11715,14 +11715,12 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
           SafeArea(child: Column(children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 9, 14, 7),
-              child: _rankingSegmentShell(
-                child: Row(children: [
-                  _categoryButton('WEALTH', 'wealth'),
-                  _categoryButton('CHARM', 'charm'),
-                  _categoryButton('ROOM', 'room'),
-                  _categoryButton('AGENCY', 'agency'),
-                ]),
-              ),
+              child: Row(children: [
+                _categoryButton('WEALTH', 'wealth'),
+                _categoryButton('CHARM', 'charm'),
+                _categoryButton('ROOM', 'room'),
+                _categoryButton('AGENCY', 'agency'),
+              ]),
             ),
             if (_category != 'room') ...[
               Padding(
@@ -11756,17 +11754,25 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                 : _category == 'wealth'
                     ? Stack(children: [
                         // Wealth rank 4-30 scrolls behind the fixed top-three frames.
-                        Positioned.fill(child: RefreshIndicator(
-                          color: _royalGold,
-                          onRefresh: _load,
-                          child: ListView(
-                            padding: const EdgeInsets.fromLTRB(13, 180, 13, 10),
-                            children: [
-                              if (rest.isNotEmpty)
-                                ...rest.asMap().entries.map((e) => _wealthUserRow(e.key, e.value)),
-                            ],
+                        Positioned(
+                          top: 180,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          child: ClipRect(
+                            child: RefreshIndicator(
+                              color: _royalGold,
+                              onRefresh: _load,
+                              child: ListView(
+                                padding: const EdgeInsets.fromLTRB(13, 0, 13, 10),
+                                children: [
+                                  if (rest.isNotEmpty)
+                                    ...rest.asMap().entries.map((e) => _wealthUserRow(e.key, e.value)),
+                                ],
+                              ),
+                            ),
                           ),
-                        )),
+                        ),
                         Positioned(top: 0, left: 13, right: 13, child: Container(
                           padding: const EdgeInsets.only(bottom: 5),
                           color: Colors.transparent,
@@ -11782,17 +11788,25 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                     : _category == 'charm'
                         ? Stack(children: [
                             // Rank 4+ scrolls underneath the fixed top-three podium.
-                            Positioned.fill(child: RefreshIndicator(
-                              color: _royalGold,
-                              onRefresh: _load,
-                              child: ListView(
-                                padding: const EdgeInsets.fromLTRB(13, 205, 13, 10),
-                                children: [
-                                  if (rest.isNotEmpty)
-                                    ...rest.asMap().entries.map((e) => _userRow(e.key, e.value)),
-                                ],
+                            Positioned(
+                              top: 205,
+                              left: 0,
+                              right: 0,
+                              bottom: 0,
+                              child: ClipRect(
+                                child: RefreshIndicator(
+                                  color: _royalGold,
+                                  onRefresh: _load,
+                                  child: ListView(
+                                    padding: const EdgeInsets.fromLTRB(13, 0, 13, 10),
+                                    children: [
+                                      if (rest.isNotEmpty)
+                                        ...rest.asMap().entries.map((e) => _userRow(e.key, e.value)),
+                                    ],
+                                  ),
+                                ),
                               ),
-                            )),
+                            ),
                             Positioned(top: 0, left: 13, right: 13, child: Container(
                               padding: const EdgeInsets.only(bottom: 5),
                               color: Colors.transparent,
@@ -12372,20 +12386,22 @@ class _GlobalRoomRankingScreenState extends State<GlobalRoomRankingScreen> {
                                     final frameHeight = constraints.maxWidth * 942 / 1670;
                                     return Stack(
                                       children: [
-                                        // Rank 4–30 scrolls upward behind the fixed Top 3 frames.
-                                        Positioned.fill(
-                                          child: RefreshIndicator(
-                                            color: _gold,
-                                            onRefresh: _load,
-                                            child: ListView.builder(
-                                              padding: EdgeInsets.fromLTRB(
-                                                13,
-                                                frameHeight - 18,
-                                                13,
-                                                20,
+                                        // Rank 4–30 scrolls only in the clipped area below Top 3.
+                                        // Rows can no longer paint through transparent parts of the podium frames.
+                                        Positioned(
+                                          top: frameHeight,
+                                          left: 0,
+                                          right: 0,
+                                          bottom: 0,
+                                          child: ClipRect(
+                                            child: RefreshIndicator(
+                                              color: _gold,
+                                              onRefresh: _load,
+                                              child: ListView.builder(
+                                                padding: const EdgeInsets.fromLTRB(13, 0, 13, 20),
+                                                itemCount: rest.length,
+                                                itemBuilder: (_, index) => _roomRow(index, rest[index]),
                                               ),
-                                              itemCount: rest.length,
-                                              itemBuilder: (_, index) => _roomRow(index, rest[index]),
                                             ),
                                           ),
                                         ),
