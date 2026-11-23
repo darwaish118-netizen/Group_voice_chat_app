@@ -12163,18 +12163,13 @@ class _GlobalRoomRankingScreenState extends State<GlobalRoomRankingScreen> {
             child: SizedBox.expand(
               child: Align(
                 alignment: Alignment.center,
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    (room['name'] ?? 'Voice Room').toString(),
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    style: const TextStyle(
-                      color: Color(0xFFFFE9A6),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
+                child: RoomCoverMarqueeRainbowText(
+                  text: (room['name'] ?? 'Voice Room').toString(),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                  scrollPixelsPerSecond: 27,
+                  startPause: const Duration(seconds: 2),
+                  alignStart: false,
                 ),
               ),
             ),
@@ -12187,7 +12182,7 @@ class _GlobalRoomRankingScreenState extends State<GlobalRoomRankingScreen> {
           final valueWidth = rank == 1 ? .300 : .230;
           return Positioned(
             left: width * left,
-            top: height * .755,
+            top: height * (rank == 1 ? .775 : .745),
             width: width * valueWidth,
             height: height * .085,
             child: SizedBox.expand(
