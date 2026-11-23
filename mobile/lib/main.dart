@@ -12157,7 +12157,7 @@ class _GlobalRoomRankingScreenState extends State<GlobalRoomRankingScreen> {
           return Positioned(
             left: width * left,
             // Align the name text to the visual center of the frame's name bar.
-            top: height * .642,
+            top: height * .657,
             width: width * barWidth,
             height: height * .105,
             child: SizedBox.expand(
@@ -12178,7 +12178,7 @@ class _GlobalRoomRankingScreenState extends State<GlobalRoomRankingScreen> {
 
         Widget coinValue(int rank, Map<String, dynamic> room) {
           // Center the coin amount horizontally and vertically in the coin bar.
-          final left = rank == 1 ? .350 : rank == 2 ? .050 : .720;
+          final left = rank == 1 ? .350 : rank == 2 ? .050 : .740;
           final valueWidth = rank == 1 ? .300 : .230;
           return Positioned(
             left: width * left,
