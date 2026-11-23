@@ -12114,14 +12114,14 @@ class _GlobalRoomRankingScreenState extends State<GlobalRoomRankingScreen> {
           final leftFactor = previousLeftFactor -
               (rank == 2 || rank == 3 ? .01 : 0.0);
           final topFactor = baseTopFactor +
-              (rank == 1 ? .005 : .006);
+              (rank == 1 ? .005 : .004);
           final previousSizeFactor = baseSizeFactor * 1.01;
           final currentSizeFactor = rank == 1
               ? previousSizeFactor * .99
               : previousSizeFactor;
           final sizeFactor = rank == 1
-              ? currentSizeFactor * .99
-              : currentSizeFactor * 1.01505;
+              ? currentSizeFactor * .9702
+              : currentSizeFactor * 1.0252005;
           final size = width * sizeFactor;
           return Positioned(
             left: width * leftFactor,
