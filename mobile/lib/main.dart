@@ -11617,7 +11617,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
           final latestSizeFactor = rank == 1 ? 1.01 : 1.02;
           // Latest request: Frame 1 +1%, Frame 2 +2%, Frame 3 +2%.
           final requestedSizeFactor = rank == 1 ? 1.01 : 1.02;
-          final diameter = baseDiameter * previousSizeFactor * 1.02 * 1.02 * latestSizeFactor * 1.02 * requestedSizeFactor;
+          final diameter = baseDiameter * previousSizeFactor * 1.02 * 1.02 * latestSizeFactor * 1.02 * requestedSizeFactor * (rank == 1 ? 1.0 : 1.01);
           final url = _avatar(user);
           return Positioned(
             left: centerX - diameter / 2,
@@ -11647,7 +11647,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
           final barWidth = width * (rank == 1 ? 456 / 1670 : 360 / 1670);
           // Move each Agency name label 3% lower while keeping it centered in its bar.
           // Preserve the previous 3% downward name shift and add 0.30%.
-          final top = height * ((rank == 1 ? 594 / 941 : 596 / 941) + .033);
+          final top = height * ((rank == 1 ? 594 / 941 : 596 / 941) + .038);
           final barHeight = height * (rank == 1 ? 110 / 941 : 104 / 941);
           return Positioned(
             left: left,
@@ -11879,7 +11879,6 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                   _categoryButton('CHARM', 'charm'),
                   _categoryButton('ROOM', 'room'),
                   _categoryButton('AGENCY', 'agency'),
-                  _categoryButton('REWARD', 'reward'),
                 ]),
               ),
             ),
@@ -11901,9 +11900,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                   child: Text('◷  ENDS IN  ${_countdownText()}', style: const TextStyle(color: _royalLight, fontWeight: FontWeight.w900, fontSize: 11))),
               ])),
             ],
-            Expanded(child: _category == 'reward'
-              ? const ColoredBox(color: Colors.black)
-              : _category == 'room'
+            Expanded(child: _category == 'room'
                 ? GlobalRoomRankingScreen(token: widget.token, embedded: true)
                 : _loading
               ? const Center(child: CircularProgressIndicator(color: _royalGold))
