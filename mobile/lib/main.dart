@@ -11605,20 +11605,17 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
           final baseCenterX = width * (rank == 1 ? 821 / 1670 : rank == 2 ? 275 / 1670 : 1372 / 1670);
           final baseCenterY = height * (rank == 1 ? 383 / 941 : 431 / 941);
           // Daily, Weekly and Monthly Agency DP adjustments:
-          // Frame 1: +1.5% right, +1.5% overall size.
-          // Frame 2: +1.5% down, +2% overall size.
-          // Frame 3: +1.5% right, +1.5% down, +2% overall size.
-          // Preserve previous adjustments, then apply the latest fine-tuning:
-          // Frame 1: additional 0.30% right; Frame 2: no position change;
-          // Frame 3: additional 0.70% right.
+          // Preserve all earlier positioning, then apply the latest request:
+          // Frame 1: additional 0.20% left; Frame 2: no horizontal change;
+          // Frame 3: additional 0.50% left.
           final centerX = baseCenterX +
-              (rank == 1 ? width * (.015 - .01 + .003) :
-               rank == 3 ? width * (.015 - .01 + .007) : 0);
+              (rank == 1 ? width * (.015 - .01 + .003 - .002) :
+               rank == 3 ? width * (.015 - .01 + .007 - .005) : 0);
           final centerY = baseCenterY +
               (rank == 2 || rank == 3 ? height * (.015 - (rank == 2 ? .005 : 0)) : 0);
           final baseDiameter = width * (rank == 1 ? 302 / 1670 : 224 / 1670);
           final previousSizeFactor = rank == 1 ? 1.015 : 1.02;
-          final latestSizeFactor = rank == 1 ? 1.02 : 1.035;
+          final latestSizeFactor = rank == 1 ? 1.01 : 1.02;
           final diameter = baseDiameter * previousSizeFactor * 1.02 * 1.02 * latestSizeFactor * 1.02;
           final url = _avatar(user);
           return Positioned(
