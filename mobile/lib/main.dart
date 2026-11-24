@@ -11265,9 +11265,9 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
             children: [
               // Draw all three DPs underneath the single combined transparent frame.
               // Frame 2: 3% larger; position unchanged.
-              avatarFor(2, 280 / 1671, 473 / 941, width * .145 * 1.03 * 1.03),
+              avatarFor(2, 280 / 1671, 473 / 941, width * .145 * 1.03 * 1.03 * 1.02),
               // Frame 1: shift 0.50% right and enlarge by 2%.
-              avatarFor(1, (831 / 1671) + .005, 382 / 941, width * .185 * 1.02 * 1.03),
+              avatarFor(1, (831 / 1671) + .005, 382 / 941, width * .185 * 1.02 * 1.03 * 1.02),
               // Frame 3: shift 1% right and enlarge by 3%.
               avatarFor(3, (1376 / 1671) + .01, 473 / 941, width * .145 * 1.03 * 1.03),
               Positioned.fill(
@@ -11277,12 +11277,12 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                   errorBuilder: (_, __, ___) => const SizedBox.shrink(),
                 ),
               ),
-              nameFor(2, .075, .705, .19, .075),
-              nameFor(1, .365, .620, .255, .075),
-              nameFor(3, .735, .705, .19, .075),
+              nameFor(2, .075, .685, .19, .075),
+              nameFor(1, .365, .630, .255, .075),
+              nameFor(3, .735, .685, .19, .075),
               coinsFor(2, .075, .790, .19, .070),
-              coinsFor(1, .365, .785, .255, .070),
-              coinsFor(3, .735, .790, .19, .070),
+              coinsFor(1, .375, .765, .255, .070),
+              coinsFor(3, .755, .790, .19, .070),
             ],
           ),
         );
