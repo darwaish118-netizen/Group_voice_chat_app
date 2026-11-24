@@ -11608,10 +11608,16 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
           // Frame 1: +1.5% right, +1.5% overall size.
           // Frame 2: +1.5% down, +2% overall size.
           // Frame 3: +1.5% right, +1.5% down, +2% overall size.
-          final centerX = baseCenterX + (rank == 1 || rank == 3 ? width * .015 : 0);
-          final centerY = baseCenterY + (rank == 2 || rank == 3 ? height * .015 : 0);
+          // Preserve previous adjustments, then apply the latest fine-tuning:
+          // Frame 1: move 1% left; Frame 2: move 0.5% up;
+          // Frame 3: move 1% left. Increase every DP by a further 2%.
+          final centerX = baseCenterX +
+              (rank == 1 || rank == 3 ? width * (.015 - .01) : 0);
+          final centerY = baseCenterY +
+              (rank == 2 || rank == 3 ? height * (.015 - (rank == 2 ? .005 : 0)) : 0);
           final baseDiameter = width * (rank == 1 ? 302 / 1670 : 224 / 1670);
-          final diameter = baseDiameter * (rank == 1 ? 1.015 : 1.02);
+          final previousSizeFactor = rank == 1 ? 1.015 : 1.02;
+          final diameter = baseDiameter * previousSizeFactor * 1.02;
           final url = _avatar(user);
           return Positioned(
             left: centerX - diameter / 2,
@@ -11640,7 +11646,8 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
           final left = width * (rank == 1 ? 594 / 1670 : rank == 2 ? 96 / 1670 : 1200 / 1670);
           final barWidth = width * (rank == 1 ? 456 / 1670 : 360 / 1670);
           // Move each Agency name label 3% lower while keeping it centered in its bar.
-          final top = height * ((rank == 1 ? 594 / 941 : 596 / 941) + .03);
+          // Preserve the previous 3% downward name shift and add 0.30%.
+          final top = height * ((rank == 1 ? 594 / 941 : 596 / 941) + .033);
           final barHeight = height * (rank == 1 ? 110 / 941 : 104 / 941);
           return Positioned(
             left: left,
