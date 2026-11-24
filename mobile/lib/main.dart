@@ -11619,7 +11619,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
           final baseDiameter = width * (rank == 1 ? 302 / 1670 : 224 / 1670);
           final previousSizeFactor = rank == 1 ? 1.015 : 1.02;
           final latestSizeFactor = rank == 1 ? 1.02 : 1.035;
-          final diameter = baseDiameter * previousSizeFactor * 1.02 * 1.02 * latestSizeFactor;
+          final diameter = baseDiameter * previousSizeFactor * 1.02 * 1.02 * latestSizeFactor * 1.02;
           final url = _avatar(user);
           return Positioned(
             left: centerX - diameter / 2,
