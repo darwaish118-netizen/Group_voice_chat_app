@@ -47,4 +47,6 @@ flutter:
     - assets/ranking/charm/charm_rankings_daily_weekly_monthly.png
     - assets/ranking/room/room_ranking_frames.png
     - assets/ranking/room/room_ranking_background.png
+    - assets/ranking/agency/Agency_ranking_background.png
+    - assets/ranking/agency/agency_ranking_frames.png
     - assets/mindo_coin.png
