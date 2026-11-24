@@ -11602,9 +11602,16 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
         final height = width * 941 / 1670;
 
         Widget avatar(int rank, Map<String, dynamic> user) {
-          final centerX = width * (rank == 1 ? 821 / 1670 : rank == 2 ? 275 / 1670 : 1372 / 1670);
-          final centerY = height * (rank == 1 ? 383 / 941 : 431 / 941);
-          final diameter = width * (rank == 1 ? 302 / 1670 : 224 / 1670);
+          final baseCenterX = width * (rank == 1 ? 821 / 1670 : rank == 2 ? 275 / 1670 : 1372 / 1670);
+          final baseCenterY = height * (rank == 1 ? 383 / 941 : 431 / 941);
+          // Daily, Weekly and Monthly Agency DP adjustments:
+          // Frame 1: +1.5% right, +1.5% overall size.
+          // Frame 2: +1.5% down, +2% overall size.
+          // Frame 3: +1.5% right, +1.5% down, +2% overall size.
+          final centerX = baseCenterX + (rank == 1 || rank == 3 ? width * .015 : 0);
+          final centerY = baseCenterY + (rank == 2 || rank == 3 ? height * .015 : 0);
+          final baseDiameter = width * (rank == 1 ? 302 / 1670 : 224 / 1670);
+          final diameter = baseDiameter * (rank == 1 ? 1.015 : 1.02);
           final url = _avatar(user);
           return Positioned(
             left: centerX - diameter / 2,
@@ -11632,7 +11639,8 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
         Widget nameBar(int rank, Map<String, dynamic> user) {
           final left = width * (rank == 1 ? 594 / 1670 : rank == 2 ? 96 / 1670 : 1200 / 1670);
           final barWidth = width * (rank == 1 ? 456 / 1670 : 360 / 1670);
-          final top = height * (rank == 1 ? 594 / 941 : 596 / 941);
+          // Move each Agency name label 3% lower while keeping it centered in its bar.
+          final top = height * ((rank == 1 ? 594 / 941 : 596 / 941) + .03);
           final barHeight = height * (rank == 1 ? 110 / 941 : 104 / 941);
           return Positioned(
             left: left,
@@ -11657,11 +11665,12 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
 
         Widget coinValue(int rank, Map<String, dynamic> user) {
           // The two-coin stack is part of the artwork; place the value in the free right-hand area.
-          final left = width * (rank == 1 ? 760 / 1670 : rank == 2 ? 250 / 1670 : 1350 / 1670);
+          // Move coin values 2% upward and 2% left; Center keeps them centered in the bar.
+          final left = width * ((rank == 1 ? 760 / 1670 : rank == 2 ? 250 / 1670 : 1350 / 1670) - .02);
           final valueWidth = width * (rank == 1 ? 245 / 1670 : 190 / 1670);
           return Positioned(
             left: left,
-            top: height * 735 / 941,
+            top: height * (735 / 941 - .02),
             width: valueWidth,
             height: height * 72 / 941,
             child: Center(
