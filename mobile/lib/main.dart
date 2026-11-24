@@ -11263,18 +11263,20 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
           child: Stack(
             clipBehavior: Clip.none,
             children: [
-              // Draw all three DPs underneath the single combined transparent frame.
-              // Frame 2: 3% larger; position unchanged.
+              // 1) Render avatars first, at their already-approved positions and sizes.
+              // The circular DP clipping remains unchanged.
               avatarFor(2, 280 / 1671, 473 / 941, width * .145 * 1.03 * 1.03 * 1.02),
-              // Frame 1: shift 0.50% right and enlarge by 2%.
               avatarFor(1, (831 / 1671) + .005, 382 / 941, width * .185 * 1.02 * 1.03 * 1.02),
-              // Frame 3: shift 1% right and enlarge by 3%.
               avatarFor(3, (1376 / 1671) + .01, 473 / 941, width * .145 * 1.03 * 1.03),
+              // 2) Render the complete combined frame AFTER the DPs.
+              // This keeps the 1/2/3 number badges and metallic rims in the foreground.
               Positioned.fill(
-                child: Image.asset(
-                  asset,
-                  fit: BoxFit.fill,
-                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                child: IgnorePointer(
+                  child: Image.asset(
+                    asset,
+                    fit: BoxFit.fill,
+                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                  ),
                 ),
               ),
               nameFor(2, .075, .685, .19, .075),
