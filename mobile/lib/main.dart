@@ -11593,6 +11593,118 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
     );
   }
 
+  // Agency Top 3 podium uses the dedicated transparent three-frame sprite sheet.
+  // Daily, Weekly and Monthly share this renderer.
+  Widget _agencyTopThree(List<Map<String, dynamic>> top) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final height = width * 941 / 1670;
+
+        Widget avatar(int rank, Map<String, dynamic> user) {
+          final centerX = width * (rank == 1 ? 821 / 1670 : rank == 2 ? 275 / 1670 : 1372 / 1670);
+          final centerY = height * (rank == 1 ? 383 / 941 : 431 / 941);
+          final diameter = width * (rank == 1 ? 302 / 1670 : 224 / 1670);
+          final url = _avatar(user);
+          return Positioned(
+            left: centerX - diameter / 2,
+            top: centerY - diameter / 2,
+            width: diameter,
+            height: diameter,
+            child: ClipOval(
+              child: url.isNotEmpty
+                  ? Image.network(url, fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        color: const Color(0xFF351018),
+                        alignment: Alignment.center,
+                        child: const Icon(Icons.person, color: Colors.white),
+                      ))
+                  : Container(
+                      color: const Color(0xFF351018),
+                      alignment: Alignment.center,
+                      child: const Icon(Icons.person, color: Colors.white),
+                    ),
+            ),
+          );
+        }
+
+        Widget nameBar(int rank, Map<String, dynamic> user) {
+          final left = width * (rank == 1 ? 594 / 1670 : rank == 2 ? 96 / 1670 : 1200 / 1670);
+          final barWidth = width * (rank == 1 ? 456 / 1670 : 360 / 1670);
+          final top = height * (rank == 1 ? 594 / 941 : 596 / 941);
+          final barHeight = height * (rank == 1 ? 110 / 941 : 104 / 941);
+          return Positioned(
+            left: left,
+            top: top,
+            width: barWidth,
+            height: barHeight,
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 5),
+                child: RoomCoverMarqueeRainbowText(
+                  text: _displayName(user),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                  scrollPixelsPerSecond: 25,
+                  startPause: const Duration(seconds: 2),
+                  alignStart: false,
+                ),
+              ),
+            ),
+          );
+        }
+
+        Widget coinValue(int rank, Map<String, dynamic> user) {
+          // The two-coin stack is part of the artwork; place the value in the free right-hand area.
+          final left = width * (rank == 1 ? 760 / 1670 : rank == 2 ? 250 / 1670 : 1350 / 1670);
+          final valueWidth = width * (rank == 1 ? 245 / 1670 : 190 / 1670);
+          return Positioned(
+            left: left,
+            top: height * 735 / 941,
+            width: valueWidth,
+            height: height * 72 / 941,
+            child: Center(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  _compact(_coins(user)),
+                  maxLines: 1,
+                  style: const TextStyle(
+                    color: Color(0xFFFFE7A0),
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+
+        return SizedBox(
+          width: width,
+          height: height,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              for (var i = 0; i < top.length && i < 3; i++) avatar(i + 1, top[i]),
+              Positioned.fill(
+                child: Image.asset(
+                  'assets/ranking/agency/agency_ranking_frames.png',
+                  fit: BoxFit.fill,
+                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                ),
+              ),
+              for (var i = 0; i < top.length && i < 3; i++) ...[
+                nameBar(i + 1, top[i]),
+                coinValue(i + 1, top[i]),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _userRow(int index, Map<String, dynamic> user) {
     if (_category == 'wealth') return _wealthUserRow(index, user);
     final rank = index + 4;
@@ -11708,15 +11820,20 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                           image: AssetImage('assets/ranking/room/room_ranking_background.png'),
                           fit: BoxFit.cover,
                         )
-                      : null,
+                      : _category == 'agency'
+                          ? const DecorationImage(
+                              image: AssetImage('assets/ranking/agency/Agency_ranking_background.png'),
+                              fit: BoxFit.cover,
+                            )
+                          : null,
           color: _category == 'reward' ? Colors.black : null,
-          gradient: (_category == 'wealth' || _category == 'charm' || _category == 'room' || _category == 'reward') ? null : const LinearGradient(
+          gradient: (_category == 'wealth' || _category == 'charm' || _category == 'room' || _category == 'agency' || _category == 'reward') ? null : const LinearGradient(
             begin: Alignment.topCenter, end: Alignment.bottomCenter,
             colors: [Color(0xFF6A370C), Color(0xFF321807), Color(0xFF160B06)]),
         ),
         child: Stack(children: [
           // Subtle palace columns and warm royal lighting, kept behind live ranking data.
-          if (_category != 'charm' && _category != 'room' && _category != 'reward') ...[
+          if (_category != 'charm' && _category != 'room' && _category != 'agency' && _category != 'reward') ...[
             Positioned(left: 0, top: 0, bottom: 0, child: Container(width: 9,
               decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFFFFE9A0), Color(0xFF8C4B12), Color(0xFFFFD15B)])))),
             Positioned(right: 0, top: 0, bottom: 0, child: Container(width: 9,
@@ -11800,8 +11917,39 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                           ]),
                         )),
                       ])
-                    : _category == 'charm'
-                        ? Stack(children: [
+                    : _category == 'agency'
+                        ? LayoutBuilder(builder: (context, constraints) {
+                            final podiumHeight = constraints.maxWidth * 941 / 1670;
+                            return Stack(children: [
+                              Positioned(
+                                top: podiumHeight,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                child: ClipRect(
+                                  child: RefreshIndicator(
+                                    color: _royalGold,
+                                    onRefresh: _load,
+                                    child: ListView(
+                                      padding: const EdgeInsets.fromLTRB(13, 0, 13, 10),
+                                      children: [
+                                        if (rest.isNotEmpty)
+                                          ...rest.asMap().entries.map((e) => _userRow(e.key, e.value)),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                child: _agencyTopThree(top),
+                              ),
+                            ]);
+                          })
+                        : _category == 'charm'
+                            ? Stack(children: [
                             // Rank 4+ scrolls underneath the fixed top-three podium.
                             Positioned(
                               top: 205,
