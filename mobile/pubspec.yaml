@@ -41,10 +41,8 @@ flutter:
     - assets/ranking/wealth/frames/wealth_top2.png
     - assets/ranking/wealth/frames/wealth_top3.png
     - assets/ranking/wealth/backgrounds/wealth_gold_background.png
-    - assets/ranking/charm/Charm_top1.png
-    - assets/ranking/charm/Charm_top2.png
-    - assets/ranking/charm/Charm_top3.png
     - assets/ranking/charm/charm_rankings_daily_weekly_monthly.png
+    - assets/ranking/charm/charm_ranking_frames.png
     - assets/ranking/room/room_ranking_frames.png
     - assets/ranking/room/room_ranking_background.png
     - assets/ranking/agency/Agency_ranking_background.png
