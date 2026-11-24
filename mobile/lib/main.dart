@@ -11264,9 +11264,12 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
             clipBehavior: Clip.none,
             children: [
               // Draw all three DPs underneath the single combined transparent frame.
-              avatarFor(2, 280 / 1671, 473 / 941, width * .145),
-              avatarFor(1, 831 / 1671, 382 / 941, width * .185),
-              avatarFor(3, 1376 / 1671, 473 / 941, width * .145),
+              // Frame 2: 3% larger; position unchanged.
+              avatarFor(2, 280 / 1671, 473 / 941, width * .145 * 1.03),
+              // Frame 1: shift 0.50% right and enlarge by 2%.
+              avatarFor(1, (831 / 1671) + .005, 382 / 941, width * .185 * 1.02),
+              // Frame 3: shift 1% right and enlarge by 3%.
+              avatarFor(3, (1376 / 1671) + .01, 473 / 941, width * .145 * 1.03),
               Positioned.fill(
                 child: Image.asset(
                   asset,
