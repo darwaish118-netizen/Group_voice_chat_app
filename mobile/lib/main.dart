@@ -10924,7 +10924,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
       final endRaw = result['period_end']?.toString();
       final end = endRaw == null ? null : DateTime.tryParse(endRaw)?.toLocal();
       final limited = list.take(
-        (requestCategory == 'wealth' || requestCategory == 'charm') ? 30 : 50,
+        (requestCategory == 'wealth' || requestCategory == 'charm' || requestCategory == 'agency') ? 30 : 50,
       ).toList();
 
       // Cache the result for instant return when the user revisits this tab.
@@ -11613,16 +11613,17 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
             height: diameter,
             child: ClipOval(
               child: url.isNotEmpty
-                  ? Image.network(url, fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
-                        color: const Color(0xFF351018),
-                        alignment: Alignment.center,
-                        child: const Icon(Icons.person, color: Colors.white),
-                      ))
-                  : Container(
-                      color: const Color(0xFF351018),
-                      alignment: Alignment.center,
-                      child: const Icon(Icons.person, color: Colors.white),
+                  ? Image.network(
+                      url,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Image.asset(
+                        'assets/ChatGPT Image Oct 8, 2026, 11_35_07 PM.png',
+                        fit: BoxFit.cover,
+                      ),
+                    )
+                  : Image.asset(
+                      'assets/ChatGPT Image Oct 8, 2026, 11_35_07 PM.png',
+                      fit: BoxFit.cover,
                     ),
             ),
           );
@@ -11642,7 +11643,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 5),
                 child: RoomCoverMarqueeRainbowText(
-                  text: _displayName(user),
+                  text: user.isEmpty ? '*******' : _displayName(user),
                   fontSize: 12,
                   fontWeight: FontWeight.w900,
                   scrollPixelsPerSecond: 25,
@@ -11686,7 +11687,11 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
           child: Stack(
             clipBehavior: Clip.none,
             children: [
-              for (var i = 0; i < top.length && i < 3; i++) avatar(i + 1, top[i]),
+              for (var rank = 1; rank <= 3; rank++)
+                avatar(
+                  rank,
+                  rank <= top.length ? top[rank - 1] : <String, dynamic>{},
+                ),
               Positioned.fill(
                 child: Image.asset(
                   'assets/ranking/agency/agency_ranking_frames.png',
@@ -11694,9 +11699,15 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                   errorBuilder: (_, __, ___) => const SizedBox.shrink(),
                 ),
               ),
-              for (var i = 0; i < top.length && i < 3; i++) ...[
-                nameBar(i + 1, top[i]),
-                coinValue(i + 1, top[i]),
+              for (var rank = 1; rank <= 3; rank++) ...[
+                nameBar(
+                  rank,
+                  rank <= top.length ? top[rank - 1] : <String, dynamic>{},
+                ),
+                coinValue(
+                  rank,
+                  rank <= top.length ? top[rank - 1] : <String, dynamic>{},
+                ),
               ],
             ],
           ),
@@ -11919,10 +11930,9 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                       ])
                     : _category == 'agency'
                         ? LayoutBuilder(builder: (context, constraints) {
-                            final podiumHeight = constraints.maxWidth * 941 / 1670;
                             return Stack(children: [
                               Positioned(
-                                top: podiumHeight,
+                                top: 205,
                                 left: 0,
                                 right: 0,
                                 bottom: 0,
