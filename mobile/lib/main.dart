@@ -11599,7 +11599,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        final height = width * 941 / 1670 * 1.01;
+        final height = width * 941 / 1670 * 1.03;
 
         Widget avatar(int rank, Map<String, dynamic> user) {
           final baseCenterX = width * (rank == 1 ? 821 / 1670 : rank == 2 ? 275 / 1670 : 1372 / 1670);
@@ -11609,15 +11609,17 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
           // Frame 2: +1.5% down, +2% overall size.
           // Frame 3: +1.5% right, +1.5% down, +2% overall size.
           // Preserve previous adjustments, then apply the latest fine-tuning:
-          // Frame 1: move 1% left; Frame 2: move 0.5% up;
-          // Frame 3: move 1% left. Increase every DP by a further 2%.
+          // Frame 1: additional 0.30% right; Frame 2: no position change;
+          // Frame 3: additional 0.70% right.
           final centerX = baseCenterX +
-              (rank == 1 || rank == 3 ? width * (.015 - .01) : 0);
+              (rank == 1 ? width * (.015 - .01 + .003) :
+               rank == 3 ? width * (.015 - .01 + .007) : 0);
           final centerY = baseCenterY +
               (rank == 2 || rank == 3 ? height * (.015 - (rank == 2 ? .005 : 0)) : 0);
           final baseDiameter = width * (rank == 1 ? 302 / 1670 : 224 / 1670);
           final previousSizeFactor = rank == 1 ? 1.015 : 1.02;
-          final diameter = baseDiameter * previousSizeFactor * 1.02 * 1.02;
+          final latestSizeFactor = rank == 1 ? 1.02 : 1.035;
+          final diameter = baseDiameter * previousSizeFactor * 1.02 * 1.02 * latestSizeFactor;
           final url = _avatar(user);
           return Positioned(
             left: centerX - diameter / 2,
@@ -11697,7 +11699,10 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
           );
         }
 
-        return SizedBox(
+        return Transform.translate(
+          // Increase the frame sheet upward by 2%, keeping its lower edge anchored.
+          offset: Offset(0, -(width * 941 / 1670) * .02),
+          child: SizedBox(
           width: width,
           height: height,
           child: Stack(
@@ -11726,6 +11731,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                 ),
               ],
             ],
+          ),
           ),
         );
       },
