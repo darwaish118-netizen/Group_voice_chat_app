@@ -11599,7 +11599,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        final height = width * 941 / 1670;
+        final height = width * 941 / 1670 * 1.01;
 
         Widget avatar(int rank, Map<String, dynamic> user) {
           final baseCenterX = width * (rank == 1 ? 821 / 1670 : rank == 2 ? 275 / 1670 : 1372 / 1670);
@@ -11617,7 +11617,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
               (rank == 2 || rank == 3 ? height * (.015 - (rank == 2 ? .005 : 0)) : 0);
           final baseDiameter = width * (rank == 1 ? 302 / 1670 : 224 / 1670);
           final previousSizeFactor = rank == 1 ? 1.015 : 1.02;
-          final diameter = baseDiameter * previousSizeFactor * 1.02;
+          final diameter = baseDiameter * previousSizeFactor * 1.02 * 1.02;
           final url = _avatar(user);
           return Positioned(
             left: centerX - diameter / 2,
@@ -11757,7 +11757,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
       child: Row(children: [
         SizedBox(width: 28, child: Text('$rank', textAlign: TextAlign.center,
           style: TextStyle(
-            color: _category == 'charm' ? Colors.white : const Color(0xFFFFD46A),
+            color: (_category == 'charm' || _category == 'agency') ? Colors.white : const Color(0xFFFFD46A),
             fontSize: 17,
             fontWeight: FontWeight.w900,
           ))),
