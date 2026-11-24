@@ -11171,157 +11171,119 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
     );
   }
 
-  Widget _charmPodiumUser(int rank, Map<String, dynamic> user) {
-    final isFirst = rank == 1;
-    final asset = rank == 1
-        ? 'assets/ranking/charm/Charm_top1.png'
-        : rank == 2
-            ? 'assets/ranking/charm/Charm_top2.png'
-            : 'assets/ranking/charm/Charm_top3.png';
+  Widget _charmPodium(
+    List<Map<String, dynamic>> top,
+  ) {
+    const asset = 'assets/ranking/charm/charm_ranking_frames.png';
+    const imageAspect = 1671 / 941;
+    final users = <int, Map<String, dynamic>>{
+      1: top.isNotEmpty ? top[0] : <String, dynamic>{},
+      2: top.length > 1 ? top[1] : <String, dynamic>{},
+      3: top.length > 2 ? top[2] : <String, dynamic>{},
+    };
 
-    // These ratios follow the supplied Charm PNG dimensions and circular
-    // portrait openings. The DP is painted behind the transparent frame.
-    // The source PNGs are rendered 5% taller than the layout box below
-    // (expandedFrameHeight), so divide each source image's true H/W ratio
-    // by 1.05. This keeps the artwork at its native aspect ratio instead of
-    // stretching it vertically.
-    // All three final Charm frame assets use 618 x 950 dimensions.
-    // The artwork is rendered 5% taller, so compensate in the layout ratio.
-    final frameAspect = (950 / 618) / 1.05;
-    final apertureCenterX = .50;
-    final apertureCenterY = rank == 2 ? .475 : .465;
-    final avatarSizeFactor = .52;
-    final avatar = _avatar(user);
-
-    return Expanded(
-      child: Padding(
-        padding: EdgeInsets.only(top: isFirst ? 0 : 24),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final frameWidth = constraints.maxWidth;
-            final frameHeight = frameWidth * frameAspect;
-            // Extend the frame upward by 5% while keeping its bottom edge
-            // anchored, so the name and coin plates stay in their positions.
-            final expandedFrameHeight = frameHeight * 1.05;
-            // Shared by Daily, Weekly and Monthly Charm podiums.
-            // Increase all three Charm podium DPs by an additional 2.5%.
-            // Preserve the existing size adjustment and apply 2.5% on top.
-            final avatarSize = frameWidth * avatarSizeFactor * 1.04 * 1.025 * 1.02 * 1.015 * 1.01;
-            final avatarLeft = frameWidth * apertureCenterX - avatarSize / 2;
-            // Recalculate the aperture centre for the upward-extended frame.
-            final adjustedApertureCenterY =
-                (expandedFrameHeight * apertureCenterY) - (frameHeight * .05);
-            // Frame 1 and 3 DPs move 1.5% down; Frame 2 keeps
-            // its existing vertical position and extra upward adjustment.
-            final allDpsUpShift = frameHeight * .08;
-            final rank2DpUpShift = rank == 2 ? frameHeight * .015 : 0.0;
-            final rank1And3DpDownShift =
-                (rank == 1 || rank == 3) ? frameHeight * .015 : 0.0;
-            final avatarTop = adjustedApertureCenterY -
-                avatarSize / 2 - allDpsUpShift - rank2DpUpShift +
-                rank1And3DpDownShift;
-            // Move every frame artwork down 2%. Keep rank-2's prior 1.5%
-            // upward adjustment as a separate offset, so it is preserved.
-            final allFramesDownShift = frameHeight * .02;
-            final rank2FrameUpShift = rank == 2 ? frameHeight * .015 : 0.0;
-            final frameArtworkTop = -frameHeight * .05 +
-                allFramesDownShift - rank2FrameUpShift;
-            final nameTop = frameHeight * .625 -
-                (rank == 2 ? frameHeight * .02 : frameHeight * .01);
-
-            return SizedBox(
-              width: frameWidth,
-              height: frameHeight,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Positioned(
-                    left: avatarLeft,
-                    top: avatarTop,
-                    child: GestureDetector(
-                      onTap: user.isEmpty ? null : () => _openRankingProfile(user),
-                      child: SizedBox(
-                        width: avatarSize,
-                        height: avatarSize,
-                        child: ClipOval(
-                          child: avatar.isNotEmpty
-                              ? Image.network(
-                                  avatar,
-                                  width: avatarSize,
-                                  height: avatarSize,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => Image.asset(
-                                    'assets/ChatGPT Image Oct 8, 2026, 11_35_07 PM.png',
-                                    width: avatarSize,
-                                    height: avatarSize,
-                                    fit: BoxFit.cover,
-                                  ),
-                                )
-                              : Image.asset(
-                                  'assets/ChatGPT Image Oct 8, 2026, 11_35_07 PM.png',
-                                  width: avatarSize,
-                                  height: avatarSize,
-                                  fit: BoxFit.cover,
-                                ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final height = width / imageAspect;
+        Widget avatarFor(int rank, double centerX, double centerY, double diameter) {
+          final user = users[rank]!;
+          final avatar = _avatar(user);
+          return Positioned(
+            left: width * centerX - diameter / 2,
+            top: height * centerY - diameter / 2,
+            width: diameter,
+            height: diameter,
+            child: GestureDetector(
+              onTap: user.isEmpty ? null : () => _openRankingProfile(user),
+              child: ClipOval(
+                child: avatar.isNotEmpty
+                    ? Image.network(
+                        avatar,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Image.asset(
+                          'assets/ChatGPT Image Oct 8, 2026, 11_35_07 PM.png',
+                          fit: BoxFit.cover,
                         ),
+                      )
+                    : Image.asset(
+                        'assets/ChatGPT Image Oct 8, 2026, 11_35_07 PM.png',
+                        fit: BoxFit.cover,
                       ),
-                    ),
-                  ),
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    top: frameArtworkTop,
-                    height: expandedFrameHeight,
-                    child: Image.asset(
-                      asset,
-                      fit: BoxFit.fill,
-                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                    ),
-                  ),
-                  // Rank 2 name moves up 2%; Ranks 1 and 3 move up 1%.
-                  Positioned(
-                    left: frameWidth * .17,
-                    right: frameWidth * .17,
-                    top: nameTop,
-                    // Give the marquee enough vertical room so glyphs are not
-                    // clipped at the bottom inside the name plate.
-                    height: frameHeight * .090,
-                    child: Center(
-                      child: RoomCoverMarqueeRainbowText(
-                        text: user.isEmpty ? '*******' : _displayName(user),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w900,
-                        scrollPixelsPerSecond: 27,
-                        startPause: const Duration(seconds: 2),
-                      ),
-                    ),
-                  ),
-                  // Charm value is displayed slightly higher, centred in the lower coin bar.
-                  Positioned(
-                    left: frameWidth * .19,
-                    right: frameWidth * .19,
-                    top: frameHeight * (.775 - (rank == 2 ? .01 : 0.0)),
-                    height: frameHeight * .070,
-                    child: Center(
-                      child: Text(
-                        user.isEmpty ? '' : _compact(_coins(user)),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: const Color(0xFFFFE08A),
-                          fontWeight: FontWeight.w900,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
               ),
-            );
-          },
-        ),
-      ),
+            ),
+          );
+        }
+
+        Widget nameFor(int rank, double left, double top, double boxWidth, double boxHeight) {
+          final user = users[rank]!;
+          return Positioned(
+            left: width * left,
+            top: height * top,
+            width: width * boxWidth,
+            height: height * boxHeight,
+            child: Center(
+              child: RoomCoverMarqueeRainbowText(
+                text: user.isEmpty ? '*******' : _displayName(user),
+                fontSize: width * (rank == 1 ? .021 : .017),
+                fontWeight: FontWeight.w900,
+                scrollPixelsPerSecond: 27,
+                startPause: const Duration(seconds: 2),
+              ),
+            ),
+          );
+        }
+
+        Widget coinsFor(int rank, double left, double top, double boxWidth, double boxHeight) {
+          final user = users[rank]!;
+          return Positioned(
+            left: width * left,
+            top: height * top,
+            width: width * boxWidth,
+            height: height * boxHeight,
+            child: Center(
+              child: Text(
+                user.isEmpty ? '' : _compact(_coins(user)),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: const Color(0xFFFFE08A),
+                  fontWeight: FontWeight.w900,
+                  fontSize: width * .018,
+                ),
+              ),
+            ),
+          );
+        }
+
+        return SizedBox(
+          width: width,
+          height: height,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              // Draw all three DPs underneath the single combined transparent frame.
+              avatarFor(2, 280 / 1671, 473 / 941, width * .145),
+              avatarFor(1, 831 / 1671, 382 / 941, width * .185),
+              avatarFor(3, 1376 / 1671, 473 / 941, width * .145),
+              Positioned.fill(
+                child: Image.asset(
+                  asset,
+                  fit: BoxFit.fill,
+                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                ),
+              ),
+              nameFor(2, .075, .675, .19, .075),
+              nameFor(1, .365, .590, .255, .075),
+              nameFor(3, .735, .675, .19, .075),
+              coinsFor(2, .075, .790, .19, .070),
+              coinsFor(1, .365, .785, .255, .070),
+              coinsFor(3, .735, .790, .19, .070),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -12000,13 +11962,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                             Positioned(top: 0, left: 13, right: 13, child: Container(
                               padding: const EdgeInsets.only(bottom: 5),
                               color: Colors.transparent,
-                              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                _charmPodiumUser(2, top.length > 1 ? top[1] : <String, dynamic>{}),
-                                const SizedBox(width: 4),
-                                _charmPodiumUser(1, top.isNotEmpty ? top[0] : <String, dynamic>{}),
-                                const SizedBox(width: 4),
-                                _charmPodiumUser(3, top.length > 2 ? top[2] : <String, dynamic>{}),
-                              ]),
+                              child: _charmPodium(top),
                             )),
                           ])
                         : RefreshIndicator(color: _royalGold, onRefresh: _load, child: ListView(padding: const EdgeInsets.fromLTRB(13, 8, 13, 10), children: [
