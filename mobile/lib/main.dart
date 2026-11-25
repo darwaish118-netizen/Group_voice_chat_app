@@ -11012,170 +11012,10 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
     }
   }
 
-  Widget _wealthPodiumUser(int rank, Map<String, dynamic> user) {
-    final isFirst = rank == 1;
-    // Daily is being tuned independently first; Weekly and Monthly retain
-    // their current geometry until the Daily layout is approved.
-    final isDaily = _period == 'daily';
-    final isWeekly = _period == 'weekly';
-    final isMonthly = _period == 'monthly';
-    final adjustTopOne = rank == 1 && (isDaily || isWeekly);
-    final asset = rank == 1
-        ? 'assets/ranking/wealth/frames/wealth_top1.png'
-        : rank == 2
-            ? 'assets/ranking/wealth/frames/wealth_top2.png'
-            : 'assets/ranking/wealth/frames/wealth_top3.png';
-
-    // Match each frame widget to its PNG's real aspect ratio. The earlier
-    // estimated ratios stretched the frame artwork and shifted its circular aperture.
-    final aspectHeight = rank == 1
-        ? 1425 / 1104
-        : rank == 2
-            ? 908 / 692
-            : 902 / 708;
-
-    // Measured from the transparent circular opening in each supplied PNG.
-    // Values are normalized to the original image dimensions.
-    final apertureCenterX = rank == 1 ? 546.5 / 1104 : rank == 2 ? 340.8 / 692 : 347.2 / 708;
-    final apertureCenterY = rank == 1 ? 518.2 / 1425 : rank == 2 ? 329.8 / 908 : 331.8 / 902;
-    final apertureDiameter = rank == 1 ? 559.0 / 1104 : rank == 2 ? 317.0 / 692 : 309.0 / 708;
-    final avatar = _avatar(user);
-
-    return Expanded(
-      flex: isFirst ? 12 : 10,
-      child: Padding(
-        // Top 1 sits higher in the middle; Top 2 and Top 3 share the same top edge.
-        padding: EdgeInsets.only(top: isFirst ? 0 : 24),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final frameWidth = constraints.maxWidth;
-            final frameHeight = frameWidth * aspectHeight;
-            // Keep the portrait just inside the transparent aperture, and
-            // align its centre to the measured aperture centre (not guessed top offsets).
-            // Top 1 keeps its existing size. Top 2 and Top 3 receive
-            // an additional 2.5% increase across Daily, Weekly and Monthly.
-            // Use the same DP size for all three podium frames:
-            // 52% of the rendered frame width on Daily, Weekly and Monthly.
-            final avatarSize = frameWidth * 0.52;
-            final avatarLeft = frameWidth * apertureCenterX - avatarSize / 2;
-            // Apply the requested downward adjustment consistently on Daily,
-            // Weekly and Monthly: Top 1 = 0.5%, Top 2/3 = 1% of frame height.
-            final avatarTop =
-                frameHeight * apertureCenterY -
-                avatarSize / 2 +
-                frameHeight * (rank == 1 ? 0.005 : 0.01);
-
-            return SizedBox(
-              width: frameWidth,
-              height: frameHeight,
-              child: Stack(
-                alignment: Alignment.topCenter,
-                clipBehavior: Clip.none,
-                children: [
-                  // The square avatar is painted first, behind the transparent
-                  // circular opening in the PNG frame.
-                  Positioned(
-                    left: avatarLeft,
-                    top: avatarTop,
-                    child: GestureDetector(
-                      onTap: user.isEmpty ? null : () => _openRankingProfile(user),
-                      child: SizedBox(
-                        width: avatarSize,
-                        height: avatarSize,
-                        child: ClipOval(
-                          child: avatar.isNotEmpty
-                              ? Image.network(
-                                  avatar,
-                                  width: avatarSize,
-                                  height: avatarSize,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => Image.asset(
-                                    'assets/ChatGPT Image Oct 8, 2026, 11_35_07 PM.png',
-                                    width: avatarSize,
-                                    height: avatarSize,
-                                    fit: BoxFit.cover,
-                                  ),
-                                )
-                              : Image.asset(
-                                  'assets/ChatGPT Image Oct 8, 2026, 11_35_07 PM.png',
-                                  width: avatarSize,
-                                  height: avatarSize,
-                                  fit: BoxFit.cover,
-                                ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Frame overlays the DP; contain the image at its true aspect
-                  // ratio so its round portrait aperture is not vertically stretched.
-                  Positioned.fill(
-                    child: Image.asset(
-                      asset,
-                      fit: BoxFit.fill,
-                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                    ),
-                  ),
-                  // Centre the user name vertically and horizontally in the black nameplate.
-                  Positioned(
-                    left: frameWidth * .19,
-                    // Keep only a small safety gap for the Top 1 status marker.
-                    // Top 2 and Top 3 use the full available nameplate width.
-                    right: frameWidth * (rank == 1 ? .22 : .15),
-                    top: frameHeight * (rank == 1 ? .66 : rank == 3 ? .675 : .665),
-                    height: frameHeight * .10,
-                    child: Center(
-                      child: RoomCoverMarqueeRainbowText(
-                        text: user.isEmpty ? '*******' : _displayName(user),
-                        fontSize: isFirst ? 12 : 10.5,
-                        fontWeight: FontWeight.w900,
-                        scrollPixelsPerSecond: 27,
-                        startPause: const Duration(seconds: 2),
-                      ),
-                    ),
-                  ),
-                  // Coin total remains centred in the bottom black bar.
-                  Positioned(
-                    left: frameWidth * (isWeekly && rank == 2 ? .26 : .19),
-                    right: frameWidth * .15,
-                    top: frameHeight *
-                        (isDaily
-                            ? (rank == 1 ? .780 : .805)
-                            : isMonthly
-                                ? .780
-                                : (adjustTopOne
-                                    ? .780
-                                    : (isWeekly && rank == 2
-                                        ? .790
-                                        : (isWeekly && rank == 3 ? .795 : .815)))),
-                    height: frameHeight * (isMonthly ? .10 : (adjustTopOne ? .10 : .09)),
-                    child: Center(
-                      child: Text(
-                        user.isEmpty ? '' : _compact(_coins(user)),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: const Color(0xFFFFE08A),
-                          fontWeight: FontWeight.w900,
-                          fontSize: isFirst ? 13 : 11.5,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _charmPodium(
-    List<Map<String, dynamic>> top,
-  ) {
-    const asset = 'assets/ranking/charm/charm_ranking_frames.png';
-    const imageAspect = 1671 / 941;
+  Widget _wealthPodium(List<Map<String, dynamic>> top) {
+    const asset = 'assets/ranking/wealth/frames/wealth_ranking_frames.png';
+    const imageWidth = 1671.0;
+    const imageHeight = 941.0;
     final users = <int, Map<String, dynamic>>{
       1: top.isNotEmpty ? top[0] : <String, dynamic>{},
       2: top.length > 1 ? top[1] : <String, dynamic>{},
@@ -11185,7 +11025,8 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        final height = width / imageAspect;
+        final height = width * imageHeight / imageWidth;
+
         Widget avatarFor(int rank, double centerX, double centerY, double diameter) {
           final user = users[rank]!;
           final avatar = _avatar(user);
@@ -11215,17 +11056,17 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
           );
         }
 
-        Widget nameFor(int rank, double left, double top, double boxWidth, double boxHeight) {
+        Widget nameFor(int rank, double left, double topY, double boxWidth, double boxHeight) {
           final user = users[rank]!;
           return Positioned(
             left: width * left,
-            top: height * top,
+            top: height * topY,
             width: width * boxWidth,
             height: height * boxHeight,
             child: Center(
               child: RoomCoverMarqueeRainbowText(
                 text: user.isEmpty ? '*******' : _displayName(user),
-                fontSize: 13,
+                fontSize: rank == 1 ? 13 : 11,
                 fontWeight: FontWeight.w900,
                 scrollPixelsPerSecond: 27,
                 startPause: const Duration(seconds: 2),
@@ -11234,11 +11075,11 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
           );
         }
 
-        Widget coinsFor(int rank, double left, double top, double boxWidth, double boxHeight) {
+        Widget coinsFor(int rank, double left, double topY, double boxWidth, double boxHeight) {
           final user = users[rank]!;
           return Positioned(
             left: width * left,
-            top: height * top,
+            top: height * topY,
             width: width * boxWidth,
             height: height * boxHeight,
             child: Center(
@@ -11247,8 +11088,8 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: const Color(0xFFFFE08A),
+                style: const TextStyle(
+                  color: Color(0xFFFFE08A),
                   fontWeight: FontWeight.w900,
                   fontSize: 11.5,
                 ),
@@ -11263,16 +11104,13 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
           child: Stack(
             clipBehavior: Clip.none,
             children: [
-              // 1) Render avatars first, at their already-approved positions and sizes.
-              // The circular DP clipping remains unchanged.
-              // Frame 2 DP: position unchanged; all DPs enlarged by an additional 0.70%.
-              avatarFor(2, (280 / 1671) - .017, (473 / 941) + .005, width * .145 * 1.03 * 1.03 * 1.02 * 1.015 * 1.007 * 1.005),
-              // Frame 1 DP: position unchanged; all DPs enlarged by an additional 0.70%.
-              avatarFor(1, (831 / 1671), (382 / 941) - .015, width * .185 * 1.02 * 1.03 * 1.02 * 1.01 * 1.007 * 1.005),
-              // Frame 3 DP: 0.20% left from current position; all DPs enlarged by 0.70%.
-              avatarFor(3, (1376 / 1671) + .025, (473 / 941) + .005, width * .145 * 1.03 * 1.03 * 1.015 * 1.007 * 1.005),
-              // 2) Render the complete combined frame AFTER the DPs.
-              // This keeps the 1/2/3 number badges and metallic rims in the foreground.
+              // Circular avatars are clipped and placed behind the transparent
+              // openings in the single combined Wealth frame image.
+              avatarFor(2, 273.8 / imageWidth, 496.5 / imageHeight, width * .165),
+              avatarFor(1, 834.5 / imageWidth, 404.2 / imageHeight, width * .205),
+              avatarFor(3, 1394.9 / imageWidth, 495.8 / imageHeight, width * .165),
+
+              // Keep the complete combined frame artwork in front of the DPs.
               Positioned.fill(
                 child: IgnorePointer(
                   child: Image.asset(
@@ -11282,13 +11120,16 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                   ),
                 ),
               ),
-              // Name positions follow their corresponding DP adjustments.
-              nameFor(2, .065, .685, .19, .075),
-              nameFor(1, .375, .620, .255, .075),
-              nameFor(3, .765, .685, .19, .075),
-              coinsFor(2, .075, .7935, .19, .070),
-              coinsFor(1, .375, .765, .255, .070),
-              coinsFor(3, .775, .7935, .19, .070),
+
+              // User names inside the three name plates.
+              nameFor(2, .045, .735, .245, .065),
+              nameFor(1, .355, .675, .290, .075),
+              nameFor(3, .710, .735, .245, .065),
+
+              // Coin totals inside the lower plates.
+              coinsFor(2, .055, .820, .230, .060),
+              coinsFor(1, .370, .805, .260, .065),
+              coinsFor(3, .720, .820, .230, .060),
             ],
           ),
         );
@@ -11908,11 +11749,7 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                           padding: const EdgeInsets.only(bottom: 5),
                           color: Colors.transparent,
                           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            _wealthPodiumUser(2, top.length > 1 ? top[1] : <String, dynamic>{}),
-                            const SizedBox(width: 4),
-                            _wealthPodiumUser(1, top.isNotEmpty ? top[0] : <String, dynamic>{}),
-                            const SizedBox(width: 4),
-                            _wealthPodiumUser(3, top.length > 2 ? top[2] : <String, dynamic>{}),
+                            _wealthPodium(top),
                           ]),
                         )),
                       ])
