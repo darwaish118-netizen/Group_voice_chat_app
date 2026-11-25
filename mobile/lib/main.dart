@@ -2308,13 +2308,22 @@ class _RoomsScreenState
   int _selectedTab = 0;
   int _bannerIndex = 0;
   final PageController _bannerController = PageController();
-
+  Timer? _welcomeBlinkTimer;
+  int _welcomeColorIndex = 0;
+  static const List<Color> _welcomeColors = [
+    Color(0xFFFFD700), Color(0xFFB44CFF), Color(0xFF35E7FF),
+    Color(0xFFFF55B8), Color(0xFF65F2A3), Color(0xFFFF8A32),
+  ];
 
   @override
   void initState() {
     super.initState();
     loadRooms();
     loadMineData();
+    _welcomeBlinkTimer = Timer.periodic(const Duration(milliseconds: 550), (_) {
+      if (!mounted) return;
+      setState(() => _welcomeColorIndex = (_welcomeColorIndex + 1) % _welcomeColors.length);
+    });
   }
 
   // Called by the main bottom navigation when Rooms is tapped again.
@@ -3302,22 +3311,99 @@ try {
                 SliverPersistentHeader(
                   pinned: true,
                   delegate: _RoomsPinnedHeaderDelegate(
-                    extent: MediaQuery.of(context).padding.top + 55,
+                    extent: MediaQuery.of(context).padding.top + 80,
                     child: Container(
                       color: const Color(0xFF10051F),
                       padding: EdgeInsets.fromLTRB(
                         14,
-                        MediaQuery.of(context).padding.top + 7,
+                        MediaQuery.of(context).padding.top,
                         14,
                         0,
                       ),
-                      child: Row(children: [
-                        SizedBox(width: 118, child: _homeTabButton('Mine', 1)),
-                        const Spacer(),
-                        _headerAction(Icons.search_rounded, _openSearch, 'Search'),
-                        const SizedBox(width: 8),
-                        _headerAction(Icons.emoji_events_rounded, _openRanking, 'Ranking'),
-                      ]),
+                      child: SizedBox(
+                        height: 80,
+                        width: double.infinity,
+                        child: LayoutBuilder(
+                          builder: (context, headerConstraints) => Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              Image.asset(
+                                'assets/home_screen_top_header.png',
+                                fit: BoxFit.fill,
+                                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                              ),
+                              // The image supplies the artwork; transparent hit areas
+                              // keep Mine, Search and Ranking fully interactive.
+                              Positioned(
+                                left: 0,
+                                top: 0,
+                                bottom: 0,
+                                width: headerConstraints.maxWidth * .30,
+                                child: GestureDetector(
+                                  behavior: HitTestBehavior.opaque,
+                                  onTap: () => setState(() {
+                                    _selectedTab = 1;
+                                  }),
+                                ),
+                              ),
+                              Positioned(
+                                left: headerConstraints.maxWidth * .72,
+                                top: 0,
+                                bottom: 0,
+                                width: headerConstraints.maxWidth * .14,
+                                child: GestureDetector(
+                                  behavior: HitTestBehavior.opaque,
+                                  onTap: _openSearch,
+                                ),
+                              ),
+                              Positioned(
+                                right: 0,
+                                top: 0,
+                                bottom: 0,
+                                width: headerConstraints.maxWidth * .14,
+                                child: GestureDetector(
+                                  behavior: HitTestBehavior.opaque,
+                                  onTap: _openRanking,
+                                ),
+                              ),
+                              Positioned(
+                                left: headerConstraints.maxWidth * .31,
+                                right: headerConstraints.maxWidth * .29,
+                                top: 0,
+                                bottom: 0,
+                                child: IgnorePointer(
+                                  child: Center(
+                                    child: AnimatedSwitcher(
+                                      duration: const Duration(milliseconds: 180),
+                                      child: Text(
+                                        'WELCOME',
+                                        key: ValueKey(_welcomeColorIndex),
+                                        maxLines: 1,
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontSize: 19,
+                                          fontWeight: FontWeight.w900,
+                                          letterSpacing: 2.0,
+                                          fontStyle: FontStyle.italic,
+                                          color: _welcomeColors[_welcomeColorIndex],
+                                          shadows: [
+                                            Shadow(
+                                              color: _welcomeColors[_welcomeColorIndex].withOpacity(.95),
+                                              blurRadius: 12,
+                                            ),
+                                            const Shadow(color: Color(0xFF3B145A), blurRadius: 2, offset: Offset(1, 2)),
+                                            const Shadow(color: Colors.black87, blurRadius: 3, offset: Offset(1, 2)),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -3455,6 +3541,7 @@ try {
 
   @override
   void dispose() {
+    _welcomeBlinkTimer?.cancel();
     _bannerController.dispose();
     super.dispose();
   }
