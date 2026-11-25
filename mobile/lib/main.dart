@@ -11232,9 +11232,9 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
             children: [
               // Circular avatars are clipped and placed behind the transparent
               // openings in the single combined Wealth frame image.
-              avatarFor(2, 273.8 / imageWidth, 496.5 / imageHeight, width * .165),
-              avatarFor(1, 834.5 / imageWidth, 404.2 / imageHeight, width * .205),
-              avatarFor(3, 1394.9 / imageWidth, 495.8 / imageHeight, width * .165),
+              avatarFor(2, 273.8 / imageWidth, 496.5 / imageHeight, width * .165 * 1.02),
+              avatarFor(1, 834.5 / imageWidth, 404.2 / imageHeight, width * .205 * 1.02),
+              avatarFor(3, 1394.9 / imageWidth, 495.8 / imageHeight, width * .165 * 1.02),
 
               // Keep the complete combined frame artwork in front of the DPs.
               Positioned.fill(
@@ -11248,9 +11248,9 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
               ),
 
               // User names inside the three name plates.
-              nameFor(2, .045, .735, .245, .065),
-              nameFor(1, .355, .675, .290, .075),
-              nameFor(3, .710, .735, .245, .065),
+              nameFor(2, .045, .740, .245, .065),
+              nameFor(1, .355, .685, .290, .075),
+              nameFor(3, .710, .740, .245, .065),
 
               // Coin totals inside the lower plates.
               coinsFor(2, .055, .820, .230, .060),
@@ -11850,37 +11850,41 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                     const SizedBox(height: 12), OutlinedButton.icon(onPressed: _load, icon: const Icon(Icons.refresh), label: const Text('Retry')),
                   ])))
                 : _category == 'wealth'
-                    ? Stack(children: [
-                        // Wealth rank 4-30 scrolls behind the fixed top-three frames.
-                        Positioned(
-                          top: 180,
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          child: ClipRect(
-                            child: RefreshIndicator(
-                              color: _royalGold,
-                              onRefresh: _load,
-                              child: ListView(
-                                padding: const EdgeInsets.fromLTRB(13, 0, 13, 10),
-                                children: [
-                                  if (rest.isNotEmpty)
-                                    ...rest.asMap().entries.map((e) => _wealthUserRow(e.key, e.value)),
-                                ],
+                    ? LayoutBuilder(builder: (context, constraints) {
+                        // Keep Rank 4+ below the full combined podium image.
+                        // The podium height follows its original 1671:941 aspect ratio.
+                        final podiumHeight = (constraints.maxWidth - 26) * 941 / 1671;
+                        return Stack(children: [
+                          Positioned(
+                            top: podiumHeight + 8,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            child: ClipRect(
+                              child: RefreshIndicator(
+                                color: _royalGold,
+                                onRefresh: _load,
+                                child: ListView(
+                                  padding: const EdgeInsets.fromLTRB(13, 0, 13, 10),
+                                  children: [
+                                    if (rest.isNotEmpty)
+                                      ...rest.asMap().entries.map((e) => _wealthUserRow(e.key, e.value)),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        Positioned(
-                          top: 0,
-                          left: 13,
-                          right: 13,
-                          child: Padding(
-                            padding: const EdgeInsets.only(bottom: 5),
-                            child: _wealthPodium(top),
+                          Positioned(
+                            top: 0,
+                            left: 13,
+                            right: 13,
+                            child: Padding(
+                              padding: const EdgeInsets.only(bottom: 5),
+                              child: _wealthPodium(top),
+                            ),
                           ),
-                        ),
-                      ])
+                        ]);
+                      })
                     : _category == 'agency'
                         ? LayoutBuilder(builder: (context, constraints) {
                             return Stack(children: [
