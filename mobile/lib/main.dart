@@ -11265,12 +11265,12 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
             children: [
               // 1) Render avatars first, at their already-approved positions and sizes.
               // The circular DP clipping remains unchanged.
-              // Frame 2 DP: 1% left; size unchanged.
-              avatarFor(2, (280 / 1671) - .01, 473 / 941, width * .145 * 1.03 * 1.03 * 1.02),
-              // Frame 1 DP: 1% up; existing horizontal position and size preserved.
-              avatarFor(1, (831 / 1671) + .005, (382 / 941) - .01, width * .185 * 1.02 * 1.03 * 1.02),
-              // Frame 3 DP: additional 1% right; size unchanged.
-              avatarFor(3, (1376 / 1671) + .02, 473 / 941, width * .145 * 1.03 * 1.03),
+              // Frame 2 DP: additional 0.70% left, 0.50% down and 1.5% larger.
+              avatarFor(2, (280 / 1671) - .017, (473 / 941) + .005, width * .145 * 1.03 * 1.03 * 1.02 * 1.015),
+              // Frame 1 DP: additional 0.50% left, 0.50% up and 1% larger.
+              avatarFor(1, (831 / 1671), (382 / 941) - .015, width * .185 * 1.02 * 1.03 * 1.02 * 1.01),
+              // Frame 3 DP: additional 0.70% right, 0.50% down and 1.5% larger.
+              avatarFor(3, (1376 / 1671) + .027, (473 / 941) + .005, width * .145 * 1.03 * 1.03 * 1.015),
               // 2) Render the complete combined frame AFTER the DPs.
               // This keeps the 1/2/3 number badges and metallic rims in the foreground.
               Positioned.fill(
@@ -11284,8 +11284,8 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
               ),
               // Name positions follow their corresponding DP adjustments.
               nameFor(2, .065, .685, .19, .075),
-              nameFor(1, .365, .620, .255, .075),
-              nameFor(3, .745, .685, .19, .075),
+              nameFor(1, .375, .620, .255, .075),
+              nameFor(3, .765, .685, .19, .075),
               coinsFor(2, .075, .7935, .19, .070),
               coinsFor(1, .375, .765, .255, .070),
               coinsFor(3, .775, .7935, .19, .070),
