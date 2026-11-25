@@ -3311,7 +3311,7 @@ try {
                 SliverPersistentHeader(
                   pinned: true,
                   delegate: _RoomsPinnedHeaderDelegate(
-                    extent: MediaQuery.of(context).padding.top + 84,
+                    extent: MediaQuery.of(context).padding.top + 100,
                     child: Container(
                       color: const Color(0xFF10051F),
                       padding: EdgeInsets.fromLTRB(
@@ -3321,13 +3321,13 @@ try {
                         0,
                       ),
                       child: SizedBox(
-                        height: 80,
+                        height: 100,
                         width: double.infinity,
                         child: Transform.translate(
-                          offset: const Offset(0, -1.6),
+                          offset: const Offset(0, -2.0),
                           child: Transform.scale(
-                            scaleX: 1.03,
-                            scaleY: 1.05,
+                            scaleX: 1.02,
+                            scaleY: 1.0,
                             child: LayoutBuilder(
                               builder: (context, headerConstraints) => Stack(
                             fit: StackFit.expand,
