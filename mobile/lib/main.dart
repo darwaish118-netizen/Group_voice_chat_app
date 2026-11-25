@@ -11871,13 +11871,15 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
                             ),
                           ),
                         ),
-                        Positioned(top: 0, left: 13, right: 13, child: Container(
-                          padding: const EdgeInsets.only(bottom: 5),
-                          color: Colors.transparent,
-                          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            _wealthPodium(top),
-                          ]),
-                        )),
+                        Positioned(
+                          top: 0,
+                          left: 13,
+                          right: 13,
+                          child: Padding(
+                            padding: const EdgeInsets.only(bottom: 5),
+                            child: _wealthPodium(top),
+                          ),
+                        ),
                       ])
                     : _category == 'agency'
                         ? LayoutBuilder(builder: (context, constraints) {
