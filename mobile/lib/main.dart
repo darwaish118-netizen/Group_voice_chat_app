@@ -11232,9 +11232,9 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
             children: [
               // Circular avatars are clipped and placed behind the transparent
               // openings in the single combined Wealth frame image.
-              avatarFor(2, 273.8 / imageWidth, 496.5 / imageHeight, width * .165 * 1.02),
-              avatarFor(1, 834.5 / imageWidth, 404.2 / imageHeight, width * .205 * 1.02),
-              avatarFor(3, 1394.9 / imageWidth, 495.8 / imageHeight, width * .165 * 1.02),
+              avatarFor(2, 273.8 / imageWidth, 496.5 / imageHeight, width * .165 * 1.02 * 1.015),
+              avatarFor(1, 834.5 / imageWidth, 404.2 / imageHeight, width * .205 * 1.02 * 1.015),
+              avatarFor(3, 1394.9 / imageWidth, 495.8 / imageHeight, width * .165 * 1.02 * 1.015),
 
               // Keep the complete combined frame artwork in front of the DPs.
               Positioned.fill(
