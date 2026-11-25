@@ -11012,6 +11012,132 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
     }
   }
 
+  Widget _charmPodium(
+    List<Map<String, dynamic>> top,
+  ) {
+    const asset = 'assets/ranking/charm/charm_ranking_frames.png';
+    const imageAspect = 1671 / 941;
+    final users = <int, Map<String, dynamic>>{
+      1: top.isNotEmpty ? top[0] : <String, dynamic>{},
+      2: top.length > 1 ? top[1] : <String, dynamic>{},
+      3: top.length > 2 ? top[2] : <String, dynamic>{},
+    };
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final height = width / imageAspect;
+        Widget avatarFor(int rank, double centerX, double centerY, double diameter) {
+          final user = users[rank]!;
+          final avatar = _avatar(user);
+          return Positioned(
+            left: width * centerX - diameter / 2,
+            top: height * centerY - diameter / 2,
+            width: diameter,
+            height: diameter,
+            child: GestureDetector(
+              onTap: user.isEmpty ? null : () => _openRankingProfile(user),
+              child: ClipOval(
+                child: avatar.isNotEmpty
+                    ? Image.network(
+                        avatar,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Image.asset(
+                          'assets/ChatGPT Image Oct 8, 2026, 11_35_07 PM.png',
+                          fit: BoxFit.cover,
+                        ),
+                      )
+                    : Image.asset(
+                        'assets/ChatGPT Image Oct 8, 2026, 11_35_07 PM.png',
+                        fit: BoxFit.cover,
+                      ),
+              ),
+            ),
+          );
+        }
+
+        Widget nameFor(int rank, double left, double top, double boxWidth, double boxHeight) {
+          final user = users[rank]!;
+          return Positioned(
+            left: width * left,
+            top: height * top,
+            width: width * boxWidth,
+            height: height * boxHeight,
+            child: Center(
+              child: RoomCoverMarqueeRainbowText(
+                text: user.isEmpty ? '*******' : _displayName(user),
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+                scrollPixelsPerSecond: 27,
+                startPause: const Duration(seconds: 2),
+              ),
+            ),
+          );
+        }
+
+        Widget coinsFor(int rank, double left, double top, double boxWidth, double boxHeight) {
+          final user = users[rank]!;
+          return Positioned(
+            left: width * left,
+            top: height * top,
+            width: width * boxWidth,
+            height: height * boxHeight,
+            child: Center(
+              child: Text(
+                user.isEmpty ? '' : _compact(_coins(user)),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: const Color(0xFFFFE08A),
+                  fontWeight: FontWeight.w900,
+                  fontSize: 11.5,
+                ),
+              ),
+            ),
+          );
+        }
+
+        return SizedBox(
+          width: width,
+          height: height,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              // 1) Render avatars first, at their already-approved positions and sizes.
+              // The circular DP clipping remains unchanged.
+              // Frame 2 DP: position unchanged; all DPs enlarged by an additional 0.70%.
+              avatarFor(2, (280 / 1671) - .017, (473 / 941) + .005, width * .145 * 1.03 * 1.03 * 1.02 * 1.015 * 1.007 * 1.005),
+              // Frame 1 DP: position unchanged; all DPs enlarged by an additional 0.70%.
+              avatarFor(1, (831 / 1671), (382 / 941) - .015, width * .185 * 1.02 * 1.03 * 1.02 * 1.01 * 1.007 * 1.005),
+              // Frame 3 DP: 0.20% left from current position; all DPs enlarged by 0.70%.
+              avatarFor(3, (1376 / 1671) + .025, (473 / 941) + .005, width * .145 * 1.03 * 1.03 * 1.015 * 1.007 * 1.005),
+              // 2) Render the complete combined frame AFTER the DPs.
+              // This keeps the 1/2/3 number badges and metallic rims in the foreground.
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: Image.asset(
+                    asset,
+                    fit: BoxFit.fill,
+                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                  ),
+                ),
+              ),
+              // Name positions follow their corresponding DP adjustments.
+              nameFor(2, .065, .685, .19, .075),
+              nameFor(1, .375, .620, .255, .075),
+              nameFor(3, .765, .685, .19, .075),
+              coinsFor(2, .075, .7935, .19, .070),
+              coinsFor(1, .375, .765, .255, .070),
+              coinsFor(3, .775, .7935, .19, .070),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+
   Widget _wealthPodium(List<Map<String, dynamic>> top) {
     const asset = 'assets/ranking/wealth/frames/wealth_ranking_frames.png';
     const imageWidth = 1671.0;
