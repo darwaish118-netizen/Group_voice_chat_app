@@ -11266,11 +11266,11 @@ class _GlobalWealthRankingScreenState extends State<GlobalWealthRankingScreen> {
               // 1) Render avatars first, at their already-approved positions and sizes.
               // The circular DP clipping remains unchanged.
               // Frame 2 DP: position unchanged; all DPs enlarged by an additional 0.70%.
-              avatarFor(2, (280 / 1671) - .017, (473 / 941) + .005, width * .145 * 1.03 * 1.03 * 1.02 * 1.015 * 1.007),
+              avatarFor(2, (280 / 1671) - .017, (473 / 941) + .005, width * .145 * 1.03 * 1.03 * 1.02 * 1.015 * 1.007 * 1.005),
               // Frame 1 DP: position unchanged; all DPs enlarged by an additional 0.70%.
-              avatarFor(1, (831 / 1671), (382 / 941) - .015, width * .185 * 1.02 * 1.03 * 1.02 * 1.01 * 1.007),
+              avatarFor(1, (831 / 1671), (382 / 941) - .015, width * .185 * 1.02 * 1.03 * 1.02 * 1.01 * 1.007 * 1.005),
               // Frame 3 DP: 0.20% left from current position; all DPs enlarged by 0.70%.
-              avatarFor(3, (1376 / 1671) + .025, (473 / 941) + .005, width * .145 * 1.03 * 1.03 * 1.015 * 1.007),
+              avatarFor(3, (1376 / 1671) + .025, (473 / 941) + .005, width * .145 * 1.03 * 1.03 * 1.015 * 1.007 * 1.005),
               // 2) Render the complete combined frame AFTER the DPs.
               // This keeps the 1/2/3 number badges and metallic rims in the foreground.
               Positioned.fill(
