@@ -38,6 +38,16 @@ class VoiceChatApp extends StatelessWidget {
     return MaterialApp(
       title: 'MINDO VOICE CHAT',
       debugShowCheckedModeBanner: false,
+      builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
+        value: const SystemUiOverlayStyle(
+          statusBarColor: Color(0xFF10051F),
+          statusBarIconBrightness: Brightness.light,
+          statusBarBrightness: Brightness.dark,
+          systemNavigationBarColor: Colors.black,
+          systemNavigationBarIconBrightness: Brightness.light,
+        ),
+        child: child ?? const SizedBox.shrink(),
+      ),
       theme: ThemeData(
         useMaterial3: true,
         colorSchemeSeed: Colors.deepPurple,
