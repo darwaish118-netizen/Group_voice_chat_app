@@ -2260,18 +2260,7 @@ bottomNavigationBar: SafeArea(
                   color: isSelected ? const Color(0xFF190D22) : colors[0],
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: isSelected ? colors[0] : const Color(0xFFD8C9E0),
-                  fontSize: 11,
-                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                  letterSpacing: 0.15,
-                ),
-              ),
+
             ],
           ),
         ),
@@ -3417,7 +3406,7 @@ try {
                 SliverPersistentHeader(
                   pinned: true,
                   delegate: _RoomsPinnedHeaderDelegate(
-                    extent: MediaQuery.of(context).padding.top + 100,
+                    extent: MediaQuery.of(context).padding.top + 95,
                     child: Container(
                       // Opaque backing prevents scrolling room cards from showing
                       // through the pinned header while the list moves underneath.
@@ -3428,7 +3417,7 @@ try {
                         right: 14,
                       ),
                       child: SizedBox(
-                        height: 100,
+                        height: 95,
                         width: double.infinity,
                         child: LayoutBuilder(
                           builder: (context, headerConstraints) => Stack(
@@ -3543,8 +3532,8 @@ try {
                   ),
                 ),
                 SliverToBoxAdapter(
-                  child: SafeArea(bottom: false, child: Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 7, 14, 0),
+                  child: SafeArea(top: false, bottom: false, child: Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 0, 14, 0),
                     child: Column(children: [
                       if (_selectedTab == 0) ...[
                         SizedBox(height: 130, child: PageView.builder(controller: _bannerController, itemCount: 3, onPageChanged: (index) => setState(() => _bannerIndex = index), itemBuilder: (_, index) => _bannerCard(index))),
