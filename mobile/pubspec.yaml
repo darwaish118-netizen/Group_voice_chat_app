@@ -18,6 +18,7 @@ dependencies:
   audioplayers: ^6.6.0
   flutter_svga_easyplayer: ^0.2.0
   video_player: ^2.14.1
+  flutter_tts: ^4.2.3
 
 dev_dependencies:
   flutter_test:
@@ -37,7 +38,9 @@ flutter:
     - assets/room_frames/MINDO_TOP2_FRAME_CLEAN.png
     - assets/room_frames/MINDO_TOP3_FRAME_CLEAN.png
     - assets/room_frames/MINDO_ROYAL_FRAME_CLEAN.png
-    - assets/ranking/wealth/frames/wealth_ranking_frames.png
+    - assets/ranking/wealth/frames/wealth_top1.png
+    - assets/ranking/wealth/frames/wealth_top2.png
+    - assets/ranking/wealth/frames/wealth_top3.png
     - assets/ranking/wealth/backgrounds/wealth_gold_background.png
     - assets/ranking/charm/charm_rankings_daily_weekly_monthly.png
     - assets/ranking/charm/charm_ranking_frames.png
@@ -46,4 +49,3 @@ flutter:
     - assets/ranking/agency/Agency_ranking_background.png
     - assets/ranking/agency/agency_ranking_frames.png
     - assets/mindo_coin.png
-    - assets/home_screen_top_header.png
