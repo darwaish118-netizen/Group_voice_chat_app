@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_svga_easyplayer/flutter_svga_easyplayer.dart';
 import 'package:video_player/video_player.dart';
@@ -673,6 +674,76 @@ Future<String?> uploadRoomCoverToCloudinary(
   }
 }
 
+
+// ============================================================
+// MINDO WELCOME VOICE (NO VISIBLE CONTROLS)
+// ============================================================
+
+class MindoWelcomeVoice {
+  MindoWelcomeVoice._();
+
+  static final MindoWelcomeVoice instance = MindoWelcomeVoice._();
+  final FlutterTts _tts = FlutterTts();
+  bool _initialized = false;
+  bool _speaking = false;
+
+  Future<void> _initialize() async {
+    if (_initialized) return;
+
+    await _tts.setLanguage('en-US');
+    await _tts.setSpeechRate(0.46);
+    await _tts.setPitch(1.04);
+    await _tts.setVolume(1.0);
+    await _tts.awaitSpeakCompletion(true);
+
+    // Prefer an installed English female voice when Android exposes one.
+    try {
+      final voices = await _tts.getVoices;
+      if (voices is List) {
+        for (final item in voices) {
+          if (item is Map) {
+            final name = (item['name'] ?? '').toString();
+            final locale = (item['locale'] ?? '').toString();
+            final isEnglish = locale.toLowerCase().startsWith('en');
+            final isFemale = name.toLowerCase().contains('female');
+            if (isEnglish && isFemale && name.isNotEmpty && locale.isNotEmpty) {
+              await _tts.setVoice({
+                'name': name,
+                'locale': locale,
+              });
+              break;
+            }
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('MINDO welcome voice selection: $e');
+    }
+
+    _initialized = true;
+  }
+
+  Future<void> _speak(String message) async {
+    if (_speaking) return;
+    _speaking = true;
+    try {
+      await _initialize();
+      await _tts.stop();
+      await _tts.speak(message);
+    } catch (e) {
+      debugPrint('MINDO welcome voice error: $e');
+    } finally {
+      _speaking = false;
+    }
+  }
+
+  Future<void> welcomeBack() => _speak('Welcome back to MINDO Voice Chat!');
+
+  Future<void> firstWelcome() => _speak(
+        "Welcome to MINDO Voice Chat! Thanks for joining us. We're happy to have you here!",
+      );
+}
+
 // ============================================================
 // AUTH GATE
 // ============================================================
@@ -708,6 +779,13 @@ Future<void> checkLogin() async {
       token = savedToken;
       loading = false;
     });
+
+    if (savedToken != null && savedToken.isNotEmpty) {
+      Future.delayed(
+        const Duration(milliseconds: 600),
+        () => MindoWelcomeVoice.instance.welcomeBack(),
+      );
+    }
   } catch (e) {
     debugPrint('AuthGate checkLogin error: $e');
 
@@ -849,6 +927,10 @@ class _LoginScreenState
             token: token,
           ),
         ),
+      );
+      Future.delayed(
+        const Duration(milliseconds: 600),
+        () => MindoWelcomeVoice.instance.welcomeBack(),
       );
     } catch (e) {
       showMessage(
@@ -1542,6 +1624,10 @@ class _RegisterScreenState
           builder: (_) => HomeScreen(token: token),
         ),
         (route) => false,
+      );
+      Future.delayed(
+        const Duration(milliseconds: 600),
+        () => MindoWelcomeVoice.instance.firstWelcome(),
       );
     } catch (e) {
       showMessage(
@@ -3421,6 +3507,7 @@ try {
                         ),
                           ),
                         ),
+                          ),
                         ],
                       ),
                     ),
