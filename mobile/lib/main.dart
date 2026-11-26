@@ -3438,7 +3438,26 @@ try {
                               Image.asset(
                                 'assets/home_screen_top_header.png',
                                 fit: BoxFit.fill,
-                                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                                errorBuilder: (context, error, stackTrace) {
+                                  debugPrint('MINDO header asset failed to load: $error');
+                                  return Container(
+                                    decoration: BoxDecoration(
+                                      gradient: const LinearGradient(
+                                        colors: [
+                                          Color(0xFF6B2600),
+                                          Color(0xFFFFD84A),
+                                          Color(0xFFFFA900),
+                                          Color(0xFF6B2600),
+                                        ],
+                                      ),
+                                      border: Border.all(
+                                        color: const Color(0xFFFFE8A0),
+                                        width: 2,
+                                      ),
+                                      borderRadius: BorderRadius.circular(18),
+                                    ),
+                                  );
+                                },
                               ),
                               Positioned(
                                 left: headerConstraints.maxWidth * .31,
