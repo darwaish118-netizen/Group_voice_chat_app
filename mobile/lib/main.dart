@@ -3313,14 +3313,25 @@ try {
                   delegate: _RoomsPinnedHeaderDelegate(
                     extent: MediaQuery.of(context).padding.top + 100,
                     child: Container(
-                      color: const Color(0xFF10051F),
+                      color: Colors.transparent,
                       padding: EdgeInsets.fromLTRB(
                         14,
                         MediaQuery.of(context).padding.top,
                         14,
                         0,
                       ),
-                      child: SizedBox(
+                      child: Stack(
+                        alignment: Alignment.center,
+                        clipBehavior: Clip.none,
+                        children: [
+                          // Background panel shortened by 5dp at top and bottom.
+                          // The gold header image remains at its original 100dp.
+                          Container(
+                            height: 90,
+                            width: double.infinity,
+                            color: const Color(0xFF10051F),
+                          ),
+                          SizedBox(
                         height: 100,
                         width: double.infinity,
                         child: Transform.translate(
@@ -3410,6 +3421,7 @@ try {
                         ),
                           ),
                         ),
+                        ],
                       ),
                     ),
                   ),
