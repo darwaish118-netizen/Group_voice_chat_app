@@ -3421,7 +3421,7 @@ try {
                         height: 100,
                         width: double.infinity,
                         child: Transform.translate(
-                          offset: const Offset(0, -2.0),
+                          offset: const Offset(0, -7.0),
                           child: Transform.scale(
                             scaleX: 1.02,
                             scaleY: 1.0,
@@ -3432,7 +3432,99 @@ try {
                               Image.asset(
                                 'assets/home_screen_top_header.png',
                                 fit: BoxFit.fill,
-                                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                                errorBuilder: (_, __, ___) => Container(
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [
+                                        Color(0xFF5B2600),
+                                        Color(0xFFFFC52E),
+                                        Color(0xFFFFE58A),
+                                        Color(0xFFFFB91F),
+                                        Color(0xFF5B2600),
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(18),
+                                    border: Border.all(
+                                      color: const Color(0xFFFFE6A0),
+                                      width: 2,
+                                    ),
+                                    boxShadow: const [
+                                      BoxShadow(
+                                        color: Color(0xAAFFB52E),
+                                        blurRadius: 10,
+                                        spreadRadius: 1,
+                                      ),
+                                    ],
+                                  ),
+                                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 20,
+                                          vertical: 10,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          gradient: const LinearGradient(
+                                            colors: [
+                                              Color(0xFF9A16B8),
+                                              Color(0xFF4B0878),
+                                            ],
+                                          ),
+                                          borderRadius: BorderRadius.circular(28),
+                                          border: Border.all(
+                                            color: const Color(0xFFFFD76A),
+                                            width: 2,
+                                          ),
+                                        ),
+                                        child: const Text(
+                                          'Mine',
+                                          style: TextStyle(
+                                            color: Color(0xFFFFD76A),
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w900,
+                                          ),
+                                        ),
+                                      ),
+                                      const Spacer(),
+                                      Container(
+                                        width: 48,
+                                        height: 48,
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF5A087E),
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: const Color(0xFFFFD76A),
+                                            width: 2,
+                                          ),
+                                        ),
+                                        child: const Icon(
+                                          Icons.search_rounded,
+                                          color: Color(0xFFFFD76A),
+                                          size: 29,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Container(
+                                        width: 48,
+                                        height: 48,
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF5A087E),
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: const Color(0xFFFFD76A),
+                                            width: 2,
+                                          ),
+                                        ),
+                                        child: const Icon(
+                                          Icons.emoji_events_rounded,
+                                          color: Color(0xFFFFD76A),
+                                          size: 27,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
                               // The image supplies the artwork; transparent hit areas
                               // keep Mine, Search and Ranking fully interactive.
