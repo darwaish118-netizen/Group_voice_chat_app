@@ -17,6 +17,16 @@ const String apiBaseUrl =
     'https://mindo-voice-chat-server.onrender.com';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Color(0xFF10051F),
+      statusBarIconBrightness: Brightness.light,
+      statusBarBrightness: Brightness.dark,
+      systemNavigationBarColor: Colors.black,
+      systemNavigationBarIconBrightness: Brightness.light,
+    ),
+  );
   runApp(const VoiceChatApp());
 }
 
@@ -3399,135 +3409,71 @@ try {
                   delegate: _RoomsPinnedHeaderDelegate(
                     extent: MediaQuery.of(context).padding.top + 100,
                     child: Container(
-                      color: Colors.transparent,
-                      padding: EdgeInsets.fromLTRB(
-                        14,
-                        MediaQuery.of(context).padding.top,
-                        14,
-                        0,
+                      // Opaque backing prevents scrolling room cards from showing
+                      // through the pinned header while the list moves underneath.
+                      color: const Color(0xFF10051F),
+                      padding: EdgeInsets.only(
+                        top: MediaQuery.of(context).padding.top,
+                        left: 14,
+                        right: 14,
                       ),
-                      child: Stack(
-                        alignment: Alignment.center,
-                        clipBehavior: Clip.none,
-                        children: [
-                          // Background panel shortened by 5dp at top and bottom.
-                          // The gold header image remains at its original 100dp.
-                          Container(
-                            height: 90,
-                            width: double.infinity,
-                            color: const Color(0xFF10051F),
-                          ),
-                          SizedBox(
+                      child: SizedBox(
                         height: 100,
                         width: double.infinity,
-                        child: Transform.translate(
-                          offset: const Offset(0, -7.0),
-                          child: Transform.scale(
-                            scaleX: 1.02,
-                            scaleY: 1.0,
-                            child: LayoutBuilder(
-                              builder: (context, headerConstraints) => Stack(
+                        child: LayoutBuilder(
+                          builder: (context, headerConstraints) => Stack(
                             fit: StackFit.expand,
                             children: [
+                              // Use the actual MINDO header artwork from assets.
                               Image.asset(
                                 'assets/home_screen_top_header.png',
                                 fit: BoxFit.fill,
-                                errorBuilder: (_, __, ___) => Container(
-                                  decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
-                                      colors: [
-                                        Color(0xFF5B2600),
-                                        Color(0xFFFFC52E),
-                                        Color(0xFFFFE58A),
-                                        Color(0xFFFFB91F),
-                                        Color(0xFF5B2600),
-                                      ],
+                                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                              ),
+                              Positioned(
+                                left: headerConstraints.maxWidth * .31,
+                                right: headerConstraints.maxWidth * .29,
+                                top: 0,
+                                bottom: 0,
+                                child: IgnorePointer(
+                                  child: Center(
+                                    child: AnimatedSwitcher(
+                                      duration: const Duration(milliseconds: 180),
+                                      child: Text(
+                                        'WELCOME',
+                                        key: ValueKey(_welcomeColorIndex),
+                                        maxLines: 1,
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontSize: 19,
+                                          fontWeight: FontWeight.w900,
+                                          letterSpacing: 2.0,
+                                          fontStyle: FontStyle.italic,
+                                          color: _welcomeColors[_welcomeColorIndex],
+                                          shadows: [
+                                            Shadow(
+                                              color: _welcomeColors[_welcomeColorIndex].withOpacity(.95),
+                                              blurRadius: 12,
+                                            ),
+                                            const Shadow(
+                                              color: Color(0xFF3B145A),
+                                              blurRadius: 2,
+                                              offset: Offset(1, 2),
+                                            ),
+                                            const Shadow(
+                                              color: Colors.black87,
+                                              blurRadius: 3,
+                                              offset: Offset(1, 2),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
                                     ),
-                                    borderRadius: BorderRadius.circular(18),
-                                    border: Border.all(
-                                      color: const Color(0xFFFFE6A0),
-                                      width: 2,
-                                    ),
-                                    boxShadow: const [
-                                      BoxShadow(
-                                        color: Color(0xAAFFB52E),
-                                        blurRadius: 10,
-                                        spreadRadius: 1,
-                                      ),
-                                    ],
-                                  ),
-                                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                                  child: Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 20,
-                                          vertical: 10,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          gradient: const LinearGradient(
-                                            colors: [
-                                              Color(0xFF9A16B8),
-                                              Color(0xFF4B0878),
-                                            ],
-                                          ),
-                                          borderRadius: BorderRadius.circular(28),
-                                          border: Border.all(
-                                            color: const Color(0xFFFFD76A),
-                                            width: 2,
-                                          ),
-                                        ),
-                                        child: const Text(
-                                          'Mine',
-                                          style: TextStyle(
-                                            color: Color(0xFFFFD76A),
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.w900,
-                                          ),
-                                        ),
-                                      ),
-                                      const Spacer(),
-                                      Container(
-                                        width: 48,
-                                        height: 48,
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFF5A087E),
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                            color: const Color(0xFFFFD76A),
-                                            width: 2,
-                                          ),
-                                        ),
-                                        child: const Icon(
-                                          Icons.search_rounded,
-                                          color: Color(0xFFFFD76A),
-                                          size: 29,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Container(
-                                        width: 48,
-                                        height: 48,
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFF5A087E),
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                            color: const Color(0xFFFFD76A),
-                                            width: 2,
-                                          ),
-                                        ),
-                                        child: const Icon(
-                                          Icons.emoji_events_rounded,
-                                          color: Color(0xFFFFD76A),
-                                          size: 27,
-                                        ),
-                                      ),
-                                    ],
                                   ),
                                 ),
                               ),
-                              // The image supplies the artwork; transparent hit areas
-                              // keep Mine, Search and Ranking fully interactive.
+                              // Transparent hit areas preserve the existing actions
+                              // printed on the header image.
                               Positioned(
                                 left: 0,
                                 top: 0,
@@ -3560,47 +3506,9 @@ try {
                                   onTap: _openRanking,
                                 ),
                               ),
-                              Positioned(
-                                left: headerConstraints.maxWidth * .31,
-                                right: headerConstraints.maxWidth * .29,
-                                top: 0,
-                                bottom: 0,
-                                child: IgnorePointer(
-                                  child: Center(
-                                    child: AnimatedSwitcher(
-                                      duration: const Duration(milliseconds: 180),
-                                      child: Text(
-                                        'WELCOME',
-                                        key: ValueKey(_welcomeColorIndex),
-                                        maxLines: 1,
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          fontSize: 19,
-                                          fontWeight: FontWeight.w900,
-                                          letterSpacing: 2.0,
-                                          fontStyle: FontStyle.italic,
-                                          color: _welcomeColors[_welcomeColorIndex],
-                                          shadows: [
-                                            Shadow(
-                                              color: _welcomeColors[_welcomeColorIndex].withOpacity(.95),
-                                              blurRadius: 12,
-                                            ),
-                                            const Shadow(color: Color(0xFF3B145A), blurRadius: 2, offset: Offset(1, 2)),
-                                            const Shadow(color: Colors.black87, blurRadius: 3, offset: Offset(1, 2)),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
                             ],
                           ),
                         ),
-                          ),
-                        ),
-                          ),
-                        ],
                       ),
                     ),
                   ),
