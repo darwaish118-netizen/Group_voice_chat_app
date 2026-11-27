@@ -3456,35 +3456,68 @@ try {
                                 child: IgnorePointer(
                                   child: Center(
                                     child: AnimatedSwitcher(
-                                      duration: const Duration(milliseconds: 180),
-                                      child: Text(
-                                        'WELCOME',
+                                      duration: const Duration(milliseconds: 260),
+                                      switchInCurve: Curves.easeInOut,
+                                      switchOutCurve: Curves.easeInOut,
+                                      child: Column(
                                         key: ValueKey(_welcomeColorIndex),
-                                        maxLines: 1,
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          fontSize: 19,
-                                          fontWeight: FontWeight.w900,
-                                          letterSpacing: 2.0,
-                                          fontStyle: FontStyle.italic,
-                                          color: _welcomeColors[_welcomeColorIndex],
-                                          shadows: [
-                                            Shadow(
-                                              color: _welcomeColors[_welcomeColorIndex].withOpacity(.95),
-                                              blurRadius: 12,
+                                        mainAxisSize: MainAxisSize.min,
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            'MINDO',
+                                            maxLines: 1,
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              fontSize: 19,
+                                              height: 1.0,
+                                              fontWeight: FontWeight.w900,
+                                              letterSpacing: 2.0,
+                                              fontStyle: FontStyle.italic,
+                                              color: _welcomeColors[_welcomeColorIndex],
+                                              shadows: [
+                                                Shadow(
+                                                  color: _welcomeColors[_welcomeColorIndex].withOpacity(.95),
+                                                  blurRadius: 12,
+                                                ),
+                                                const Shadow(
+                                                  color: Color(0xFF3B145A),
+                                                  blurRadius: 2,
+                                                  offset: Offset(1, 2),
+                                                ),
+                                                const Shadow(
+                                                  color: Colors.black87,
+                                                  blurRadius: 3,
+                                                  offset: Offset(1, 2),
+                                                ),
+                                              ],
                                             ),
-                                            const Shadow(
-                                              color: Color(0xFF3B145A),
-                                              blurRadius: 2,
-                                              offset: Offset(1, 2),
+                                          ),
+                                          const SizedBox(height: 3),
+                                          Text(
+                                            'GROUP VOICE CHAT',
+                                            maxLines: 1,
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              fontSize: 8.5,
+                                              height: 1.0,
+                                              fontWeight: FontWeight.w900,
+                                              letterSpacing: 1.15,
+                                              color: _welcomeColors[_welcomeColorIndex],
+                                              shadows: [
+                                                Shadow(
+                                                  color: _welcomeColors[_welcomeColorIndex].withOpacity(.95),
+                                                  blurRadius: 8,
+                                                ),
+                                                const Shadow(
+                                                  color: Color(0xFF3B145A),
+                                                  blurRadius: 2,
+                                                  offset: Offset(1, 1),
+                                                ),
+                                              ],
                                             ),
-                                            const Shadow(
-                                              color: Colors.black87,
-                                              blurRadius: 3,
-                                              offset: Offset(1, 2),
-                                            ),
-                                          ],
-                                        ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ),
