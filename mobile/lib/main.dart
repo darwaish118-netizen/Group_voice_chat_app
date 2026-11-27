@@ -3461,12 +3461,9 @@ try {
                                             color: Color(0xFF35E8FF),
                                             shadows: [
                                               Shadow(
-                                                color: Color(0xFF00BFFF),
-                                                blurRadius: 12,
-                                              ),
-                                              Shadow(
-                                                color: Color(0xFF008CFF),
-                                                blurRadius: 22,
+                                                color: Color(0x5500BFFF),
+                                                blurRadius: 2,
+                                                offset: Offset(0, 1),
                                               ),
                                             ],
                                           ),
@@ -3484,12 +3481,9 @@ try {
                                             color: Color(0xFF35E8FF),
                                             shadows: [
                                               Shadow(
-                                                color: Color(0xFF00BFFF),
-                                                blurRadius: 10,
-                                              ),
-                                              Shadow(
-                                                color: Color(0xFF008CFF),
-                                                blurRadius: 18,
+                                                color: Color(0x5500BFFF),
+                                                blurRadius: 2,
+                                                offset: Offset(0, 1),
                                               ),
                                             ],
                                           ),
