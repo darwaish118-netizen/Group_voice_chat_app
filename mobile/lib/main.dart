@@ -2388,7 +2388,7 @@ class RoomsScreen
 }
 
 class _RoomsScreenState
-    extends State<RoomsScreen> {
+    extends State<RoomsScreen> with SingleTickerProviderStateMixin {
   List<dynamic> rooms = [];
   List<dynamic> followedRooms = [];
   List<dynamic> latestRooms = [];
@@ -2403,10 +2403,15 @@ class _RoomsScreenState
   int _selectedTab = 0;
   int _bannerIndex = 0;
   final PageController _bannerController = PageController();
+  late final AnimationController _headerColorController;
 
   @override
   void initState() {
     super.initState();
+    _headerColorController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2400),
+    )..repeat();
     loadRooms();
     loadMineData();
   }
@@ -3445,37 +3450,59 @@ try {
                                 bottom: 0,
                                 child: IgnorePointer(
                                   child: Center(
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Text(
-                                          'MINDO',
-                                          maxLines: 1,
-                                          textAlign: TextAlign.center,
-                                          style: const TextStyle(
-                                            fontSize: 21,
-                                            height: 1.0,
-                                            fontWeight: FontWeight.w900,
-                                            letterSpacing: 2.0,
-                                            fontStyle: FontStyle.italic,
-                                            color: Color(0xFFFF36B7),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 3),
-                                        Text(
-                                          'GROUP VOICE CHAT',
-                                          maxLines: 1,
-                                          textAlign: TextAlign.center,
-                                          style: const TextStyle(
-                                            fontSize: 9.5,
-                                            height: 1.0,
-                                            fontWeight: FontWeight.w900,
-                                            letterSpacing: 1.15,
-                                            color: Color(0xFFFF36B7),
-                                          ),
-                                        ),
-                                      ],
+                                    child: AnimatedBuilder(
+                                      animation: _headerColorController,
+                                      builder: (context, child) {
+                                        const headerColors = <Color>[
+                                          Color(0xFFFF36B7), // pink
+                                          Color(0xFF35E8FF), // cyan
+                                          Color(0xFFFFE34D), // gold
+                                          Color(0xFF7CFF8A), // green
+                                          Color(0xFFC78BFF), // purple
+                                          Color(0xFFFFFFFF), // white
+                                        ];
+                                        final progress = _headerColorController.value;
+                                        final colorIndex =
+                                            (progress * headerColors.length).floor() %
+                                                headerColors.length;
+                                        final blink =
+                                            (math.sin(progress * math.pi * 2 * headerColors.length) + 1) /
+                                                2;
+                                        final textColor = headerColors[colorIndex]
+                                            .withOpacity(0.35 + (blink * 0.65));
+                                        return Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Text(
+                                              'MINDO',
+                                              maxLines: 1,
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                fontSize: 21,
+                                                height: 1.0,
+                                                fontWeight: FontWeight.w900,
+                                                letterSpacing: 2.0,
+                                                fontStyle: FontStyle.italic,
+                                                color: textColor,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 3),
+                                            Text(
+                                              'GROUP VOICE CHAT',
+                                              maxLines: 1,
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                fontSize: 9.5,
+                                                height: 1.0,
+                                                fontWeight: FontWeight.w900,
+                                                letterSpacing: 1.15,
+                                                color: textColor,
+                                              ),
+                                            ),
+                                          ],
+                                        );
+                                      },
                                     ),
                                   ),
                                 ),
@@ -3656,6 +3683,7 @@ try {
   @override
   void dispose() {
     _bannerController.dispose();
+    _headerColorController.dispose();
     super.dispose();
   }
 
