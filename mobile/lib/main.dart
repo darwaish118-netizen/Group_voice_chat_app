@@ -2410,7 +2410,7 @@ class _RoomsScreenState
     super.initState();
     _headerColorController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2400),
+      duration: const Duration(milliseconds: 5400),
     )..repeat();
     loadRooms();
     loadMineData();
@@ -3461,22 +3461,21 @@ try {
                                           Color(0xFFC78BFF), // purple
                                           Color(0xFFFFFFFF), // white
                                         ];
-                                        // Keep the branding fully opaque at all times.
-                                        // Only its color changes, smoothly cycling through
-                                        // the palette so the text never fades or disappears.
-                                        final progress = _headerColorController.value *
-                                            headerColors.length;
-                                        final colorIndex = progress.floor() %
-                                            headerColors.length;
-                                        final nextColorIndex =
-                                            (colorIndex + 1) % headerColors.length;
-                                        final colorProgress =
-                                            progress - progress.floor();
-                                        final textColor = Color.lerp(
-                                          headerColors[colorIndex],
-                                          headerColors[nextColorIndex],
-                                          Curves.easeInOut.transform(colorProgress),
-                                        )!;
+                                        // Each colour occupies one fixed blink cycle:
+                                        // stay fully visible, switch fully OFF, then
+                                        // show the next colour. No fading or colour
+                                        // interpolation occurs during a blink.
+                                        final cyclePosition =
+                                            _headerColorController.value * headerColors.length;
+                                        final colorIndex =
+                                            cyclePosition.floor() % headerColors.length;
+                                        final phase = cyclePosition - cyclePosition.floor();
+                                        // 650 ms ON + 250 ms OFF per 900 ms colour step.
+                                        // The next colour appears only after the OFF phase.
+                                        final isVisible = phase < (650 / 900);
+                                        final textColor = isVisible
+                                            ? headerColors[colorIndex]
+                                            : Colors.transparent;
                                         return Column(
                                           mainAxisSize: MainAxisSize.min,
                                           mainAxisAlignment: MainAxisAlignment.center,
