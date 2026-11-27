@@ -3448,45 +3448,74 @@ try {
                                       mainAxisSize: MainAxisSize.min,
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
-                                        Text(
-                                          'MINDO',
-                                          maxLines: 1,
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(
-                                            fontSize: 21,
-                                            height: 1.0,
-                                            fontWeight: FontWeight.w900,
-                                            letterSpacing: 2.0,
-                                            fontStyle: FontStyle.italic,
-                                            color: Color(0xFF35E8FF),
-                                            shadows: [
-                                              Shadow(
-                                                color: Color(0x5500BFFF),
-                                                blurRadius: 2,
-                                                offset: Offset(0, 1),
+                                        // Crisp royal-blue branding with a clean white outline.
+                                        // Stroke is painted first, then the solid blue text on top.
+                                        Stack(
+                                          alignment: Alignment.center,
+                                          children: [
+                                            Text(
+                                              'MINDO',
+                                              maxLines: 1,
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                fontSize: 21,
+                                                height: 1.0,
+                                                fontWeight: FontWeight.w900,
+                                                letterSpacing: 2.0,
+                                                fontStyle: FontStyle.italic,
+                                                foreground: Paint()
+                                                  ..style = PaintingStyle.stroke
+                                                  ..strokeWidth = 1.6
+                                                  ..color = Colors.white,
                                               ),
-                                            ],
-                                          ),
+                                            ),
+                                            const Text(
+                                              'MINDO',
+                                              maxLines: 1,
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                fontSize: 21,
+                                                height: 1.0,
+                                                fontWeight: FontWeight.w900,
+                                                letterSpacing: 2.0,
+                                                fontStyle: FontStyle.italic,
+                                                color: Color(0xFF174BFF),
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                         SizedBox(height: 3),
-                                        Text(
-                                          'GROUP VOICE CHAT',
-                                          maxLines: 1,
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(
-                                            fontSize: 9.5,
-                                            height: 1.0,
-                                            fontWeight: FontWeight.w900,
-                                            letterSpacing: 1.15,
-                                            color: Color(0xFF35E8FF),
-                                            shadows: [
-                                              Shadow(
-                                                color: Color(0x5500BFFF),
-                                                blurRadius: 2,
-                                                offset: Offset(0, 1),
+                                        Stack(
+                                          alignment: Alignment.center,
+                                          children: [
+                                            Text(
+                                              'GROUP VOICE CHAT',
+                                              maxLines: 1,
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                fontSize: 9.5,
+                                                height: 1.0,
+                                                fontWeight: FontWeight.w900,
+                                                letterSpacing: 1.15,
+                                                foreground: Paint()
+                                                  ..style = PaintingStyle.stroke
+                                                  ..strokeWidth = 1.25
+                                                  ..color = Colors.white,
                                               ),
-                                            ],
-                                          ),
+                                            ),
+                                            const Text(
+                                              'GROUP VOICE CHAT',
+                                              maxLines: 1,
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                fontSize: 9.5,
+                                                height: 1.0,
+                                                fontWeight: FontWeight.w900,
+                                                letterSpacing: 1.15,
+                                                color: Color(0xFF174BFF),
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ],
                                     ),
