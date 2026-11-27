@@ -2387,8 +2387,7 @@ class RoomsScreen
       _RoomsScreenState();
 }
 
-class _RoomsScreenState
-    extends State<RoomsScreen> with SingleTickerProviderStateMixin {
+class _RoomsScreenState extends State<RoomsScreen> {
   List<dynamic> rooms = [];
   List<dynamic> followedRooms = [];
   List<dynamic> latestRooms = [];
@@ -2403,15 +2402,10 @@ class _RoomsScreenState
   int _selectedTab = 0;
   int _bannerIndex = 0;
   final PageController _bannerController = PageController();
-  late final AnimationController _headerColorController;
 
   @override
   void initState() {
     super.initState();
-    _headerColorController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 5400),
-    )..repeat();
     loadRooms();
     loadMineData();
   }
@@ -3450,65 +3444,57 @@ try {
                                 bottom: 0,
                                 child: IgnorePointer(
                                   child: Center(
-                                    child: AnimatedBuilder(
-                                      animation: _headerColorController,
-                                      builder: (context, child) {
-                                        const headerColors = <Color>[
-                                          Color(0xFFFF36B7), // pink
-                                          Color(0xFF35E8FF), // cyan
-                                          Color(0xFFFFE34D), // gold
-                                          Color(0xFF7CFF8A), // green
-                                          Color(0xFFC78BFF), // purple
-                                          Color(0xFFFFFFFF), // white
-                                        ];
-                                        // Each colour occupies one fixed blink cycle:
-                                        // stay fully visible, switch fully OFF, then
-                                        // show the next colour. No fading or colour
-                                        // interpolation occurs during a blink.
-                                        final cyclePosition =
-                                            _headerColorController.value * headerColors.length;
-                                        final colorIndex =
-                                            cyclePosition.floor() % headerColors.length;
-                                        final phase = cyclePosition - cyclePosition.floor();
-                                        // 650 ms ON + 250 ms OFF per 900 ms colour step.
-                                        // The next colour appears only after the OFF phase.
-                                        final isVisible = phase < (650 / 900);
-                                        final textColor = isVisible
-                                            ? headerColors[colorIndex]
-                                            : Colors.transparent;
-                                        return Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            Text(
-                                              'MINDO',
-                                              maxLines: 1,
-                                              textAlign: TextAlign.center,
-                                              style: TextStyle(
-                                                fontSize: 21,
-                                                height: 1.0,
-                                                fontWeight: FontWeight.w900,
-                                                letterSpacing: 2.0,
-                                                fontStyle: FontStyle.italic,
-                                                color: textColor,
+                                    child: const Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          'MINDO',
+                                          maxLines: 1,
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            fontSize: 21,
+                                            height: 1.0,
+                                            fontWeight: FontWeight.w900,
+                                            letterSpacing: 2.0,
+                                            fontStyle: FontStyle.italic,
+                                            color: Color(0xFF35E8FF),
+                                            shadows: [
+                                              Shadow(
+                                                color: Color(0xFF00BFFF),
+                                                blurRadius: 12,
                                               ),
-                                            ),
-                                            const SizedBox(height: 3),
-                                            Text(
-                                              'GROUP VOICE CHAT',
-                                              maxLines: 1,
-                                              textAlign: TextAlign.center,
-                                              style: TextStyle(
-                                                fontSize: 9.5,
-                                                height: 1.0,
-                                                fontWeight: FontWeight.w900,
-                                                letterSpacing: 1.15,
-                                                color: textColor,
+                                              Shadow(
+                                                color: Color(0xFF008CFF),
+                                                blurRadius: 22,
                                               ),
-                                            ),
-                                          ],
-                                        );
-                                      },
+                                            ],
+                                          ),
+                                        ),
+                                        SizedBox(height: 3),
+                                        Text(
+                                          'GROUP VOICE CHAT',
+                                          maxLines: 1,
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            fontSize: 9.5,
+                                            height: 1.0,
+                                            fontWeight: FontWeight.w900,
+                                            letterSpacing: 1.15,
+                                            color: Color(0xFF35E8FF),
+                                            shadows: [
+                                              Shadow(
+                                                color: Color(0xFF00BFFF),
+                                                blurRadius: 10,
+                                              ),
+                                              Shadow(
+                                                color: Color(0xFF008CFF),
+                                                blurRadius: 18,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ),
@@ -3689,7 +3675,6 @@ try {
   @override
   void dispose() {
     _bannerController.dispose();
-    _headerColorController.dispose();
     super.dispose();
   }
 
