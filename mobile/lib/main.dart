@@ -2403,22 +2403,12 @@ class _RoomsScreenState
   int _selectedTab = 0;
   int _bannerIndex = 0;
   final PageController _bannerController = PageController();
-  Timer? _welcomeBlinkTimer;
-  int _welcomeColorIndex = 0;
-  static const List<Color> _welcomeColors = [
-    Color(0xFFFFD700), Color(0xFFB44CFF), Color(0xFF35E7FF),
-    Color(0xFFFF55B8), Color(0xFF65F2A3), Color(0xFFFF8A32),
-  ];
 
   @override
   void initState() {
     super.initState();
     loadRooms();
     loadMineData();
-    _welcomeBlinkTimer = Timer.periodic(const Duration(milliseconds: 550), (_) {
-      if (!mounted) return;
-      setState(() => _welcomeColorIndex = (_welcomeColorIndex + 1) % _welcomeColors.length);
-    });
   }
 
   // Called by the main bottom navigation when Rooms is tapped again.
@@ -3449,76 +3439,43 @@ try {
                                 },
                               ),
                               Positioned(
-                                left: headerConstraints.maxWidth * .31,
-                                right: headerConstraints.maxWidth * .29,
+                                left: headerConstraints.maxWidth * .27,
+                                right: headerConstraints.maxWidth * .25,
                                 top: 0,
                                 bottom: 0,
                                 child: IgnorePointer(
                                   child: Center(
-                                    child: AnimatedSwitcher(
-                                      duration: const Duration(milliseconds: 260),
-                                      switchInCurve: Curves.easeInOut,
-                                      switchOutCurve: Curves.easeInOut,
-                                      child: Column(
-                                        key: ValueKey(_welcomeColorIndex),
-                                        mainAxisSize: MainAxisSize.min,
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Text(
-                                            'MINDO',
-                                            maxLines: 1,
-                                            textAlign: TextAlign.center,
-                                            style: TextStyle(
-                                              fontSize: 19,
-                                              height: 1.0,
-                                              fontWeight: FontWeight.w900,
-                                              letterSpacing: 2.0,
-                                              fontStyle: FontStyle.italic,
-                                              color: _welcomeColors[_welcomeColorIndex],
-                                              shadows: [
-                                                Shadow(
-                                                  color: _welcomeColors[_welcomeColorIndex].withOpacity(.95),
-                                                  blurRadius: 12,
-                                                ),
-                                                const Shadow(
-                                                  color: Color(0xFF3B145A),
-                                                  blurRadius: 2,
-                                                  offset: Offset(1, 2),
-                                                ),
-                                                const Shadow(
-                                                  color: Colors.black87,
-                                                  blurRadius: 3,
-                                                  offset: Offset(1, 2),
-                                                ),
-                                              ],
-                                            ),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          'MINDO',
+                                          maxLines: 1,
+                                          textAlign: TextAlign.center,
+                                          style: const TextStyle(
+                                            fontSize: 21,
+                                            height: 1.0,
+                                            fontWeight: FontWeight.w900,
+                                            letterSpacing: 2.0,
+                                            fontStyle: FontStyle.italic,
+                                            color: Color(0xFFFF36B7),
                                           ),
-                                          const SizedBox(height: 3),
-                                          Text(
-                                            'GROUP VOICE CHAT',
-                                            maxLines: 1,
-                                            textAlign: TextAlign.center,
-                                            style: TextStyle(
-                                              fontSize: 8.5,
-                                              height: 1.0,
-                                              fontWeight: FontWeight.w900,
-                                              letterSpacing: 1.15,
-                                              color: _welcomeColors[_welcomeColorIndex],
-                                              shadows: [
-                                                Shadow(
-                                                  color: _welcomeColors[_welcomeColorIndex].withOpacity(.95),
-                                                  blurRadius: 8,
-                                                ),
-                                                const Shadow(
-                                                  color: Color(0xFF3B145A),
-                                                  blurRadius: 2,
-                                                  offset: Offset(1, 1),
-                                                ),
-                                              ],
-                                            ),
+                                        ),
+                                        const SizedBox(height: 3),
+                                        Text(
+                                          'GROUP VOICE CHAT',
+                                          maxLines: 1,
+                                          textAlign: TextAlign.center,
+                                          style: const TextStyle(
+                                            fontSize: 9.5,
+                                            height: 1.0,
+                                            fontWeight: FontWeight.w900,
+                                            letterSpacing: 1.15,
+                                            color: Color(0xFFFF36B7),
                                           ),
-                                        ],
-                                      ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ),
@@ -3698,7 +3655,6 @@ try {
 
   @override
   void dispose() {
-    _welcomeBlinkTimer?.cancel();
     _bannerController.dispose();
     super.dispose();
   }
