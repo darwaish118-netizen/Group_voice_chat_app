@@ -3461,15 +3461,22 @@ try {
                                           Color(0xFFC78BFF), // purple
                                           Color(0xFFFFFFFF), // white
                                         ];
-                                        final progress = _headerColorController.value;
-                                        final colorIndex =
-                                            (progress * headerColors.length).floor() %
-                                                headerColors.length;
-                                        final blink =
-                                            (math.sin(progress * math.pi * 2 * headerColors.length) + 1) /
-                                                2;
-                                        final textColor = headerColors[colorIndex]
-                                            .withOpacity(0.35 + (blink * 0.65));
+                                        // Keep the branding fully opaque at all times.
+                                        // Only its color changes, smoothly cycling through
+                                        // the palette so the text never fades or disappears.
+                                        final progress = _headerColorController.value *
+                                            headerColors.length;
+                                        final colorIndex = progress.floor() %
+                                            headerColors.length;
+                                        final nextColorIndex =
+                                            (colorIndex + 1) % headerColors.length;
+                                        final colorProgress =
+                                            progress - progress.floor();
+                                        final textColor = Color.lerp(
+                                          headerColors[colorIndex],
+                                          headerColors[nextColorIndex],
+                                          Curves.easeInOut.transform(colorProgress),
+                                        )!;
                                         return Column(
                                           mainAxisSize: MainAxisSize.min,
                                           mainAxisAlignment: MainAxisAlignment.center,
