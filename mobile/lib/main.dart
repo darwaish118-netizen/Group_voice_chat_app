@@ -2141,35 +2141,35 @@ final pages = [
       body: pages[selectedIndex],
 bottomNavigationBar: SafeArea(
   top: false,
-  child: Container(
-    padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
-    decoration: BoxDecoration(
-      gradient: const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [Color(0xFF21102F), Color(0xFF100719)],
-      ),
-      border: const Border(
-        top: BorderSide(color: Color(0xFF75408D), width: 1.1),
-      ),
-      boxShadow: [
-        BoxShadow(
-          color: const Color(0xFFB5179E).withOpacity(0.18),
-          blurRadius: 20,
-          offset: const Offset(0, -5),
-        ),
-      ],
-    ),
-    child: Row(
+  child: SizedBox(
+    width: double.infinity,
+    height: 72,
+    child: Stack(
+      fit: StackFit.expand,
       children: [
-        _buildMindoNavItem(0, 'Rooms', Icons.groups_rounded,
-            const [Color(0xFFFFC857), Color(0xFFFF8A3D)]),
-        _buildMindoNavItem(1, 'Events', Icons.event_available_rounded,
-            const [Color(0xFF48D7FF), Color(0xFF397BFF)]),
-        _buildMindoNavItem(2, 'Messages', Icons.forum_rounded,
-            const [Color(0xFFE879F9), Color(0xFF9B5CFF)]),
-        _buildMindoNavItem(3, 'Profile', Icons.account_circle_rounded,
-            const [Color(0xFF55E6B5), Color(0xFF16A887)]),
+        Image.asset(
+          'assets/home_bottom_buttons_navigate.png',
+          fit: BoxFit.fill,
+          alignment: Alignment.center,
+        ),
+        Row(
+          children: List.generate(4, (index) {
+            return Expanded(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {
+                  if (index == 0 && selectedIndex == 0) {
+                    // Rooms is already selected; return its inner Mine tab to Popular.
+                    _roomsScreenKey.currentState?.showPopularHome();
+                  } else {
+                    setState(() => selectedIndex = index);
+                  }
+                },
+                child: const SizedBox.expand(),
+              ),
+            );
+          }),
+        ),
       ],
     ),
   ),
