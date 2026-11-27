@@ -3444,7 +3444,7 @@ try {
                                 bottom: 0,
                                 child: IgnorePointer(
                                   child: Center(
-                                    child: const Column(
+                                    child: Column(
                                       mainAxisSize: MainAxisSize.min,
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
