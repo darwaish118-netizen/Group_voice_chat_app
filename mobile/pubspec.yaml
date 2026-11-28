@@ -30,6 +30,7 @@ flutter:
   uses-material-design: true
 
   assets:
+    - assets/mindo_room_bottom_buttons.png
     - assets/home_bottom_buttons_navigate.png
     - assets/home_screen_top_header.png
     - assets/ChatGPT Image Oct 8, 2026, 11_35_07 PM.png
