@@ -9632,52 +9632,69 @@ child: Column(
           ),
 
 Container(
-    transform: Matrix4.translationValues(0, -20, 0),
-  padding: const EdgeInsets.symmetric(
-    horizontal: 4,
-    vertical: 0,
-  ),
+  transform: Matrix4.translationValues(0, -20, 0),
+  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+  child: LayoutBuilder(
+    builder: (context, constraints) {
+      final width = constraints.maxWidth;
+      final height = width * 724 / 2172;
+      final smallHitSize = width * 0.13;
+      final largeHitSize = width * 0.18;
 
-  child: Row(
-    crossAxisAlignment: CrossAxisAlignment.end,
-    children: [
-      Expanded(
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      Positioned hitTarget({
+        required double x,
+        required double y,
+        required double size,
+        required VoidCallback onTap,
+      }) {
+        return Positioned(
+          left: width * x - size / 2,
+          top: height * y - size / 2,
+          width: size,
+          height: size,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onTap,
+            child: const SizedBox.expand(),
+          ),
+        );
+      }
+
+      return SizedBox(
+        width: width,
+        height: height,
+        child: Stack(
+          fit: StackFit.expand,
           children: [
-            _roomButton(
-              icon: Icons.chat_bubble_outline,
-              label: '',
-              onTap: () {},
+            Image.asset(
+              'assets/mindo_room_bottom_buttons.png',
+              fit: BoxFit.contain,
+              alignment: Alignment.center,
             ),
-            _roomButton(
-              icon: speakerOn ? Icons.volume_up_outlined : Icons.volume_off_outlined,
-              label: '',
-              active: !speakerOn,
-              onTap: () { setState(() => speakerOn = !speakerOn); _roomMessage('Speaker output control requires the room voice/RTC audio service.'); },
-            ),
-            _roomButton(
-              icon: microphoneOn ? Icons.mic : Icons.mic_off,
-              label: '',
+            hitTarget(x: 195 / 2172, y: 545 / 724, size: smallHitSize, onTap: () {}),
+            hitTarget(
+              x: 455 / 2172,
+              y: 545 / 724,
+              size: smallHitSize,
               onTap: () {
-                setState(() {
-                  microphoneOn = !microphoneOn;
-                });
+                setState(() => speakerOn = !speakerOn);
+                _roomMessage('Speaker output control requires the room voice/RTC audio service.');
               },
             ),
-            _roomButton(
-              icon: Icons.emoji_emotions_outlined,
-              label: '',
-              onTap: _openEmojiPicker,
+            hitTarget(
+              x: 710 / 2172,
+              y: 545 / 724,
+              size: smallHitSize,
+              onTap: () {
+                setState(() => microphoneOn = !microphoneOn);
+              },
             ),
-            _roomButton(
-              icon: Icons.weekend,
-              label: '',
-              onTap: _showSeatRequests,
-            ),
-            _roomButton(
-              icon: Icons.settings,
-              label: '',
+            hitTarget(x: 970 / 2172, y: 545 / 724, size: smallHitSize, onTap: _openEmojiPicker),
+            hitTarget(x: 1220 / 2172, y: 545 / 724, size: smallHitSize, onTap: _showSeatRequests),
+            hitTarget(
+              x: 1475 / 2172,
+              y: 545 / 724,
+              size: smallHitSize,
               onTap: () {
                 showModalBottomSheet(
                   context: context,
@@ -9688,21 +9705,14 @@ Container(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           ListTile(
-                            leading: const Icon(
-                              Icons.settings,
-                              color: Colors.white,
-                            ),
-                            title: const Text(
-                              'Room Settings',
-                              style: TextStyle(color: Colors.white),
-                            ),
+                            leading: const Icon(Icons.settings, color: Colors.white),
+                            title: const Text('Room Settings', style: TextStyle(color: Colors.white)),
                             onTap: () {
                               Navigator.pop(sheetContext);
                               Navigator.push(
                                 this.context,
                                 MaterialPageRoute(
-                                  builder: (pageContext) =>
-                                      RoomSettingsScreen(
+                                  builder: (pageContext) => RoomSettingsScreen(
                                     roomName: widget.roomName,
                                     seatCount: widget.seatCount,
                                     greeting: '',
@@ -9713,23 +9723,12 @@ Container(
                             },
                           ),
                           ListTile(
-                            leading: const Icon(
-                              Icons.music_note,
-                              color: Colors.white,
-                            ),
-                            title: const Text(
-                              'Music Player',
-                              style: TextStyle(color: Colors.white),
-                            ),
+                            leading: const Icon(Icons.music_note, color: Colors.white),
+                            title: const Text('Music Player', style: TextStyle(color: Colors.white)),
                             onTap: () {
                               Navigator.pop(sheetContext);
-                              ScaffoldMessenger.of(this.context)
-                                  .showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Music Player will be connected later.',
-                                  ),
-                                ),
+                              ScaffoldMessenger.of(this.context).showSnackBar(
+                                const SnackBar(content: Text('Music Player will be connected later.')),
                               );
                             },
                           ),
@@ -9740,69 +9739,40 @@ Container(
                 );
               },
             ),
+            hitTarget(
+              x: 1830 / 2172,
+              y: 165 / 724,
+              size: largeHitSize,
+              onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (dialogContext) => AlertDialog(
+                    backgroundColor: const Color(0xFF171225),
+                    title: const Text('Games', style: TextStyle(color: Colors.white)),
+                    content: const Text(
+                      'Game feature will be connected here.',
+                      style: TextStyle(color: Colors.white70),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(dialogContext),
+                        child: const Text('OK'),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+            hitTarget(
+              x: 1830 / 2172,
+              y: 510 / 724,
+              size: largeHitSize,
+              onTap: _openRoomGiftSheet,
+            ),
           ],
         ),
-      ),
-      const SizedBox(width: 6),
-      Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          GestureDetector(
-            onTap: () {
-              showDialog(
-                context: context,
-                builder: (dialogContext) => AlertDialog(
-                  backgroundColor: const Color(0xFF171225),
-                  title: const Text(
-                    'Games',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  content: const Text(
-                    'Game feature will be connected here.',
-                    style: TextStyle(color: Colors.white70),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () =>
-                          Navigator.pop(dialogContext),
-                      child: const Text('OK'),
-                    ),
-                  ],
-                ),
-              );
-            },
-            child: const SizedBox(
-              width: 54,
-              height: 54,
-              child: Icon(
-                Icons.sports_esports,
-                color: Color(0xFFFFD54F),
-                size: 60,
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          GestureDetector(
-            onTap: _openRoomGiftSheet,
-            child: Container(
-              width: 58,
-              height: 58,
-              decoration: const BoxDecoration(
-                color: Color(0xFF58C900),
-                shape: BoxShape.circle,
-              ),
-              child: const Center(
-                child: Icon(
-                  Icons.card_giftcard,
-                  color: Color(0xFFFFE082),
-                  size: 36,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    ],
+      );
+    },
   ),
 ),
 ],
