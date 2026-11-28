@@ -3962,61 +3962,11 @@ class _MindoWalletScreenState extends State<MindoWalletScreen> {
 
 
 Widget _mCoinLogo({required double size}) {
-  return Container(
+  return Image.asset(
+    'assets/mindo_coin.png',
     width: size,
     height: size,
-    decoration: BoxDecoration(
-      shape: BoxShape.circle,
-      gradient: const RadialGradient(
-        colors: [
-          Color(0xFFFFF1A8),
-          Color(0xFFFFC83D),
-          Color(0xFF9A4D08),
-        ],
-      ),
-      border: Border.all(
-        color: const Color(0xFFFFF5A5),
-        width: 1.5,
-      ),
-      boxShadow: const [
-        BoxShadow(
-          color: Color(0x99FFB52E),
-          blurRadius: 18,
-          spreadRadius: 2,
-        ),
-      ],
-    ),
-    child: Container(
-      margin: const EdgeInsets.all(7),
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFFF6B2C2),
-            Color(0xFFFF90C3),
-            Color(0xFF7FA2B0),
-          ],
-        ),
-        border: Border.all(
-          color: const Color(0xFFFFF6D6),
-          width: 2,
-        ),
-      ),
-      child: Center(
-        child: FittedBox(
-          child: Text(
-            'M',
-            style: TextStyle(
-              color: const Color(0xFFFFD700),
-              fontSize: size * 0.55,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-        ),
-      ),
-    ),
+    fit: BoxFit.contain,
   );
 }
     
@@ -4255,9 +4205,9 @@ class _DiamondWalletScreenState extends State<DiamondWalletScreen> {
     final enabled = config['enabled'] == true;
     return Scaffold(backgroundColor: dark, appBar: AppBar(title: const Text('Diamond Exchange', style: TextStyle(fontWeight: FontWeight.w900)), backgroundColor: const Color(0xFF101329), foregroundColor: gold, actions: [IconButton(tooltip: 'Diamond History', onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => DiamondHistoryScreen(token: widget.token))), icon: const Icon(Icons.history_rounded))]),
       body: Stack(fit: StackFit.expand, children: [Image.asset('assets/Futuristic Gold Carbon Fiber Frame.png', fit: BoxFit.cover, errorBuilder: (_, __, ___) => const ColoredBox(color: dark)), Container(color: const Color(0xE6080A18)), RefreshIndicator(color: gold, onRefresh: load, child: ListView(padding: const EdgeInsets.all(18), children: [
-        Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xE9221035), Color(0xE6080A18)]), borderRadius: BorderRadius.circular(24), border: Border.all(color: gold)), child: Column(children: [const Icon(Icons.diamond_rounded, size: 76, color: Color(0xFFB58CFF), shadows: [Shadow(color: Color(0xFF8A2BE2), blurRadius: 22)]), const SizedBox(height: 8), const Text('MY DIAMONDS', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)), Text(loading ? '...' : '$diamonds', style: const TextStyle(color: Color(0xFFD9B7FF), fontSize: 34, fontWeight: FontWeight.w900)), const SizedBox(height: 12), const Divider(color: Colors.white24), Row(mainAxisAlignment: MainAxisAlignment.center, children: [Container(width: 34, height: 34, decoration: const BoxDecoration(shape: BoxShape.circle, gradient: RadialGradient(colors: [Color(0xFFFFF1A8), Color(0xFFFFC83D), Color(0xFF9A4D08)])), child: const Center(child: Text('M', style: TextStyle(color: Color(0xFF371B08), fontWeight: FontWeight.w900, fontSize: 21)))), const SizedBox(width: 9), Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('MY M COINS', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)), Text('$coins', style: const TextStyle(color: gold, fontSize: 24, fontWeight: FontWeight.w900))])])])),
+        Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xE9221035), Color(0xE6080A18)]), borderRadius: BorderRadius.circular(24), border: Border.all(color: gold)), child: Column(children: [const Icon(Icons.diamond_rounded, size: 76, color: Color(0xFFB58CFF), shadows: [Shadow(color: Color(0xFF8A2BE2), blurRadius: 22)]), const SizedBox(height: 8), const Text('MY DIAMONDS', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)), Text(loading ? '...' : '$diamonds', style: const TextStyle(color: Color(0xFFD9B7FF), fontSize: 34, fontWeight: FontWeight.w900)), const SizedBox(height: 12), const Divider(color: Colors.white24), Row(mainAxisAlignment: MainAxisAlignment.center, children: [Image.asset('assets/mindo_coin.png', width: 34, height: 34, fit: BoxFit.contain), const SizedBox(width: 9), Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('MY M COINS', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)), Text('$coins', style: const TextStyle(color: gold, fontSize: 24, fontWeight: FontWeight.w900))])])])),
         const SizedBox(height: 20), const Text('EXCHANGE DIAMONDS', style: TextStyle(color: gold, fontSize: 22, fontWeight: FontWeight.w900)), const SizedBox(height: 12),
-        Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: const Color(0xE9151027), borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFF8D6A32))), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Diamonds to exchange', style: TextStyle(color: Colors.white70)), const SizedBox(height: 8), TextField(controller: controller, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], onChanged: (_) => setState(() {}), style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold), decoration: InputDecoration(prefixIcon: const Icon(Icons.diamond_rounded, color: Color(0xFFD9B7FF)), filled: true, fillColor: const Color(0xFF080A18), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)), hintText: 'Enter diamonds', hintStyle: const TextStyle(color: Colors.white38))), const SizedBox(height: 12), Text(config['enabled'] == true ? 'Rate: ${config['diamonds_per_exchange']} Diamonds = ${config['coins_per_exchange']} M Coins' : 'Diamond exchange is currently disabled by admin', style: const TextStyle(color: gold, fontWeight: FontWeight.bold)), const SizedBox(height: 12), Row(children: [const Expanded(child: Text('You will receive', style: TextStyle(color: Colors.white70))), const Icon(Icons.arrow_forward_rounded, color: gold), const SizedBox(width: 8), const Text('M', style: TextStyle(color: gold, fontSize: 22, fontWeight: FontWeight.w900)), const SizedBox(width: 6), Text('$estimatedCoins', style: const TextStyle(color: gold, fontSize: 24, fontWeight: FontWeight.w900))]), if (error != null) Padding(padding: const EdgeInsets.only(top: 12), child: Text(error!, style: const TextStyle(color: Colors.redAccent))), ])),
+        Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: const Color(0xE9151027), borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFF8D6A32))), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Diamonds to exchange', style: TextStyle(color: Colors.white70)), const SizedBox(height: 8), TextField(controller: controller, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], onChanged: (_) => setState(() {}), style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold), decoration: InputDecoration(prefixIcon: const Icon(Icons.diamond_rounded, color: Color(0xFFD9B7FF)), filled: true, fillColor: const Color(0xFF080A18), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)), hintText: 'Enter diamonds', hintStyle: const TextStyle(color: Colors.white38))), const SizedBox(height: 12), Text(config['enabled'] == true ? 'Rate: ${config['diamonds_per_exchange']} Diamonds = ${config['coins_per_exchange']} M Coins' : 'Diamond exchange is currently disabled by admin', style: const TextStyle(color: gold, fontWeight: FontWeight.bold)), const SizedBox(height: 12), Row(children: [const Expanded(child: Text('You will receive', style: TextStyle(color: Colors.white70))), const Icon(Icons.arrow_forward_rounded, color: gold), const SizedBox(width: 8), Image.asset('assets/mindo_coin.png', width: 28, height: 28, fit: BoxFit.contain), const SizedBox(width: 6), Text('$estimatedCoins', style: const TextStyle(color: gold, fontSize: 24, fontWeight: FontWeight.w900))]), if (error != null) Padding(padding: const EdgeInsets.only(top: 12), child: Text(error!, style: const TextStyle(color: Colors.redAccent))), ])),
         const SizedBox(height: 14),
         SizedBox(
           width: double.infinity,
