@@ -5074,6 +5074,7 @@ Center(
               text: name,
               fontSize: 24,
               fontWeight: FontWeight.bold,
+              boxHeight: 34,
             ),
 
 if (gender.isNotEmpty) ...[
@@ -5130,6 +5131,7 @@ AnimatedRainbowText(
   text: uid.isEmpty ? '-------' : uid,
   fontSize: 15,
   fontWeight: FontWeight.bold,
+  boxHeight: 23,
 ),
                 if (uid.isNotEmpty) ...[
                   const SizedBox(width: 4),
@@ -5142,17 +5144,17 @@ AnimatedRainbowText(
                       if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('UID copied'),
+                          content: Text('ID Copied Successfully!'),
                           duration: Duration(seconds: 1),
                         ),
                       );
                     },
                     child: const Padding(
-                      padding: EdgeInsets.all(4),
+                      padding: EdgeInsets.all(6),
                       child: Icon(
-                        Icons.copy_outlined,
-                        size: 18,
-                        color: Colors.deepPurple,
+                        Icons.copy_rounded,
+                        size: 20,
+                        color: Color(0xFFFFD36A),
                       ),
                     ),
                   ),
@@ -10236,6 +10238,7 @@ class AnimatedRainbowText extends StatefulWidget {
   final double fontSize;
   final FontWeight fontWeight;
   final Duration animationDuration;
+  final double? boxHeight;
 
   const AnimatedRainbowText({
     super.key,
@@ -10243,6 +10246,7 @@ class AnimatedRainbowText extends StatefulWidget {
     required this.fontSize,
     required this.fontWeight,
     this.animationDuration = const Duration(seconds: 4),
+    this.boxHeight,
   });
 
   @override
@@ -10291,7 +10295,7 @@ Widget build(BuildContext context) {
           ).createShader(bounds);
         },
         child: SizedBox(
-          height: 20,
+          height: widget.boxHeight ?? 20,
           child: Text(
             widget.text,
             maxLines: 1,
